@@ -56,10 +56,10 @@ it('publishes a draft after preview confirmation, audits, and queues indexing', 
 
     $document->refresh();
 
-    expect($document->status)->toBe(CurriculumDocumentStatus::Published)
-        ->and($document->published_at)->not->toBeNull()
-        ->and($document->isTutorRetrievable())->toBeTrue()
-        ->and(CurriculumDocument::query()->published()->count())->toBe(1);
+    expect($document->status)->toBe(CurriculumDocumentStatus::Publishing)
+        ->and($document->published_at)->toBeNull()
+        ->and($document->isTutorRetrievable())->toBeFalse()
+        ->and(CurriculumDocument::query()->tutorRetrievable()->count())->toBe(0);
 
     Queue::assertPushed(IndexCurriculumDocumentJob::class, fn (IndexCurriculumDocumentJob $job): bool => $job->document->is($document));
 
@@ -119,16 +119,17 @@ it('records a failed index without losing the published state when the API key i
 
     $document->refresh();
 
-    expect($document->status)->toBe(CurriculumDocumentStatus::Published)
+    expect($document->status)->toBe(CurriculumDocumentStatus::PublishFailed)
         ->and($document->index_status)->toBe(CurriculumIndexStatus::Failed)
         ->and($document->index_error)->toContain('API key');
 });
 
-it('skips indexing when the document is no longer published at job runtime', function (): void {
+it('skips indexing when the document is no longer eligible at job runtime', function (): void {
     config(['gemini.api_key' => 'test-key']);
     Http::fake();
 
     $document = glcCurriculumDraftDocument();
+    $document->update(['status' => CurriculumDocumentStatus::Draft]);
 
     (new IndexCurriculumDocumentJob($document))->handle(app(App\Services\Glc\Curriculum\CurriculumIndexService::class));
 

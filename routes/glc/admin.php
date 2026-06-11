@@ -3,14 +3,17 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Glc\Admin\AccessCodeController;
+use App\Http\Controllers\Glc\Admin\AiModelSettingsController;
 use App\Http\Controllers\Glc\Admin\AuditLogController;
 use App\Http\Controllers\Glc\Admin\CurriculumIndexRebuildController;
 use App\Http\Controllers\Glc\Admin\ExportController;
 use App\Http\Controllers\Glc\Admin\SettingsController;
+use App\Http\Controllers\Glc\Admin\SpeakingGuidelinesController;
 use App\Http\Controllers\Glc\Admin\UserAnonymizeController;
 use App\Http\Controllers\Glc\Admin\UserConsentController;
 use App\Http\Controllers\Glc\Admin\UserController;
 use App\Http\Controllers\Glc\Admin\UserImportController;
+use App\Http\Controllers\Glc\Admin\WritingGuidelinesController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'glc.role:admin'])->group(function (): void {
@@ -33,5 +36,14 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'glc.role:admin'])->
     Route::get('audit', [AuditLogController::class, 'index'])->name('audit.index');
     Route::get('settings', [SettingsController::class, 'edit'])->name('settings.edit');
     Route::put('settings', [SettingsController::class, 'update'])->name('settings.update');
+    Route::get('settings/ai', [AiModelSettingsController::class, 'edit'])->name('settings.ai.edit');
+    Route::put('settings/ai/selection', [AiModelSettingsController::class, 'updateSelection'])->name('settings.ai.selection.update');
+    Route::put('settings/ai/keys', [AiModelSettingsController::class, 'updateKey'])->name('settings.ai.keys.update');
+    Route::get('settings/writing-guidelines', [WritingGuidelinesController::class, 'edit'])->name('settings.writing-guidelines.edit');
+    Route::put('settings/writing-guidelines', [WritingGuidelinesController::class, 'update'])->name('settings.writing-guidelines.update');
+    Route::delete('settings/writing-guidelines', [WritingGuidelinesController::class, 'destroy'])->name('settings.writing-guidelines.reset');
+    Route::get('settings/speaking-guidelines', [SpeakingGuidelinesController::class, 'edit'])->name('settings.speaking-guidelines.edit');
+    Route::put('settings/speaking-guidelines', [SpeakingGuidelinesController::class, 'update'])->name('settings.speaking-guidelines.update');
+    Route::delete('settings/speaking-guidelines', [SpeakingGuidelinesController::class, 'destroy'])->name('settings.speaking-guidelines.reset');
     Route::post('curriculum-index/rebuild', [CurriculumIndexRebuildController::class, 'store'])->name('curriculum-index.rebuild');
 });

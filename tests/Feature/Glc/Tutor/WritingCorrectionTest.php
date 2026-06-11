@@ -4,25 +4,49 @@ declare(strict_types=1);
 
 use App\Models\Glc\WritingSubmission;
 use App\Models\User;
+use App\Services\Glc\Tutor\TutorWritingCorrectionAgent;
 use App\Services\Glc\Tutor\WritingCorrectionService;
-use Illuminate\Support\Facades\Http;
-use Tests\Fixtures\Glc\GeminiFake;
 
 use function Pest\Laravel\actingAs;
 
 beforeEach(function (): void {
     $this->withoutVite();
-    config(['gemini.api_key' => 'test-key']);
+    config([
+        'gemini.api_key' => 'test-key',
+        'ai.providers.gemini.key' => 'test-key',
+    ]);
 });
 
 const WRITING_SAMPLE = 'I goes to school every day. My teacher is very kind and the lessons are interesting to me.';
 
+/**
+ * @param  array<string, mixed>  $overrides
+ */
+function fakeWritingCorrectionAgent(array $overrides = []): void
+{
+    $default = [
+        'dimensions' => [
+            'grammar' => ['score' => 3, 'comment' => 'Watch your verb tenses.'],
+            'vocabulary' => ['score' => 4, 'comment' => 'Good word variety.'],
+            'structure' => ['score' => 3, 'comment' => 'Add clearer paragraphs.'],
+            'coherence' => ['score' => 4, 'comment' => 'Ideas connect well.'],
+            'task_completion' => ['score' => 5, 'comment' => 'Fully addresses the task.'],
+        ],
+        'summary' => 'A solid attempt. Focus on grammar accuracy next.',
+        'highlights' => [
+            ['start' => 0, 'end' => 5, 'type' => 'grammar', 'comment' => 'Check the verb form here.'],
+        ],
+    ];
+
+    $payload = array_replace($default, $overrides);
+
+    TutorWritingCorrectionAgent::fake([$payload])->preventStrayPrompts();
+}
+
 it('evaluates a submission into five dimensions with highlights', function (): void {
     $student = User::factory()->student()->create();
 
-    Http::fake([
-        'generativelanguage.googleapis.com/*' => Http::response(GeminiFake::writing()),
-    ]);
+    fakeWritingCorrectionAgent();
 
     actingAs($student)
         ->post(route('tutor.writing.store'), ['text' => WRITING_SAMPLE])
@@ -47,16 +71,14 @@ it('evaluates a submission into five dimensions with highlights', function (): v
 it('clamps dimension scores into the 1-5 range', function (): void {
     $student = User::factory()->student()->create();
 
-    Http::fake([
-        'generativelanguage.googleapis.com/*' => Http::response(GeminiFake::writing([
-            'dimensions' => [
-                'grammar' => ['score' => 9, 'comment' => 'High.'],
-                'vocabulary' => ['score' => 0, 'comment' => 'Low.'],
-                'structure' => ['score' => 3, 'comment' => 'Mid.'],
-                'coherence' => ['score' => 4, 'comment' => 'Good.'],
-                'task_completion' => ['score' => 5, 'comment' => 'Done.'],
-            ],
-        ])),
+    fakeWritingCorrectionAgent([
+        'dimensions' => [
+            'grammar' => ['score' => 9, 'comment' => 'High.'],
+            'vocabulary' => ['score' => 0, 'comment' => 'Low.'],
+            'structure' => ['score' => 3, 'comment' => 'Mid.'],
+            'coherence' => ['score' => 4, 'comment' => 'Good.'],
+            'task_completion' => ['score' => 5, 'comment' => 'Done.'],
+        ],
     ]);
 
     actingAs($student)->post(route('tutor.writing.store'), ['text' => WRITING_SAMPLE]);
@@ -70,16 +92,14 @@ it('clamps dimension scores into the 1-5 range', function (): void {
 it('drops highlights with invalid offsets or unknown types', function (): void {
     $student = User::factory()->student()->create();
 
-    Http::fake([
-        'generativelanguage.googleapis.com/*' => Http::response(GeminiFake::writing([
-            'highlights' => [
-                ['start' => 0, 'end' => 5, 'type' => 'grammar', 'comment' => 'Valid.'],
-                ['start' => 2, 'end' => 4, 'type' => 'grammar', 'comment' => 'Overlaps previous.'],
-                ['start' => 50, 'end' => 5000, 'type' => 'grammar', 'comment' => 'Out of range.'],
-                ['start' => 10, 'end' => 15, 'type' => 'letter_grade', 'comment' => 'Unknown type.'],
-                ['start' => 20, 'end' => 18, 'type' => 'vocabulary', 'comment' => 'Inverted.'],
-            ],
-        ])),
+    fakeWritingCorrectionAgent([
+        'highlights' => [
+            ['start' => 0, 'end' => 5, 'type' => 'grammar', 'comment' => 'Valid.'],
+            ['start' => 2, 'end' => 4, 'type' => 'grammar', 'comment' => 'Overlaps previous.'],
+            ['start' => 50, 'end' => 5000, 'type' => 'grammar', 'comment' => 'Out of range.'],
+            ['start' => 10, 'end' => 15, 'type' => 'letter_grade', 'comment' => 'Unknown type.'],
+            ['start' => 20, 'end' => 18, 'type' => 'vocabulary', 'comment' => 'Inverted.'],
+        ],
     ]);
 
     actingAs($student)->post(route('tutor.writing.store'), ['text' => WRITING_SAMPLE]);
@@ -92,12 +112,10 @@ it('drops highlights with invalid offsets or unknown types', function (): void {
 it('marks the submission failed with a friendly error when a dimension is missing', function (): void {
     $student = User::factory()->student()->create();
 
-    Http::fake([
-        'generativelanguage.googleapis.com/*' => Http::response(GeminiFake::writing([
-            'dimensions' => [
-                'grammar' => ['score' => 3, 'comment' => 'Only one dimension.'],
-            ],
-        ])),
+    fakeWritingCorrectionAgent([
+        'dimensions' => [
+            'grammar' => ['score' => 3, 'comment' => 'Only one dimension.'],
+        ],
     ]);
 
     actingAs($student)->post(route('tutor.writing.store'), ['text' => WRITING_SAMPLE]);
@@ -111,7 +129,9 @@ it('marks the submission failed with a friendly error when a dimension is missin
 it('marks the submission failed when the provider errors', function (): void {
     $student = User::factory()->student()->create();
 
-    Http::fake(['generativelanguage.googleapis.com/*' => Http::response('nope', 500)]);
+    TutorWritingCorrectionAgent::fake(function (): never {
+        throw new RuntimeException('boom');
+    })->preventStrayPrompts();
 
     actingAs($student)->post(route('tutor.writing.store'), ['text' => WRITING_SAMPLE]);
 
@@ -122,14 +142,16 @@ it('marks the submission failed when the provider errors', function (): void {
 });
 
 it('marks the submission failed when the API key is missing', function (): void {
-    config(['gemini.api_key' => null]);
+    config(['gemini.api_key' => null, 'ai.providers.gemini.key' => null]);
 
     $student = User::factory()->student()->create();
+
+    TutorWritingCorrectionAgent::fake()->preventStrayPrompts();
 
     actingAs($student)->post(route('tutor.writing.store'), ['text' => WRITING_SAMPLE]);
 
     expect(WritingSubmission::query()->sole()->status)->toBe('failed');
-    Http::assertNothingSent();
+    TutorWritingCorrectionAgent::assertNeverPrompted();
 });
 
 it('renders the correction detail with dimension scores and no letter grade or band', function (): void {

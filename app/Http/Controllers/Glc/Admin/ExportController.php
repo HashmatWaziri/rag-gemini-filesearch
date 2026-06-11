@@ -104,7 +104,9 @@ final readonly class ExportController
     {
         return match ($status) {
             CurriculumDocumentStatus::Draft => 'Draft — not yet available to the AI Tutor',
+            CurriculumDocumentStatus::Publishing => 'Publishing — indexing for the AI Tutor',
             CurriculumDocumentStatus::Published => 'Published — available to the AI Tutor',
+            CurriculumDocumentStatus::PublishFailed => 'Publish failed — not available to the AI Tutor',
             CurriculumDocumentStatus::Archived => 'Archived — removed from the AI Tutor',
         };
     }

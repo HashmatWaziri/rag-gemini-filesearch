@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Glc\Staff;
 
 use App\Enums\Glc\GlcLevel;
+use App\Enums\Glc\PlacementAiDraftStatus;
 use App\Enums\Glc\PlacementItemType;
 use App\Enums\Glc\PlacementSection;
 use App\Enums\Glc\UserRole;
@@ -14,6 +15,10 @@ use App\Models\Glc\PlacementResultLink;
 use App\Models\Glc\PlacementReview;
 use App\Models\Glc\PlacementReviewNote;
 use App\Models\User;
+use App\Services\Glc\Admin\SpeakingEvaluationGuidelines;
+use App\Services\Glc\Admin\WritingEvaluationGuidelines;
+use App\Services\Glc\Ai\PlacementAiSettings;
+use App\Services\Glc\Review\ObjectiveContextBuilder;
 use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
@@ -22,11 +27,17 @@ use Inertia\Response;
 
 final readonly class ReviewController
 {
-    public function show(PlacementReview $review, #[CurrentUser] User $user): Response
-    {
+    public function show(
+        PlacementReview $review,
+        #[CurrentUser] User $user,
+        ObjectiveContextBuilder $objectiveContext,
+        WritingEvaluationGuidelines $guidelines,
+        SpeakingEvaluationGuidelines $speakingGuidelines,
+        PlacementAiSettings $aiSettings,
+    ): Response {
         $this->authorizeAccess($review, $user);
 
-        $attempt = $review->attempt->load(['score', 'aiDrafts', 'integrityEvents', 'answers.item', 'resultLinks.sender']);
+        $attempt = $review->attempt->load(['score', 'aiDrafts', 'aiRecommendation', 'integrityEvents', 'answers.item', 'resultLinks.sender']);
 
         if ($attempt->integrityEvents->isNotEmpty() && ! $review->hasFlag('integrity')) {
             $review->update(['flags' => [...($review->flags ?? []), 'integrity']]);
@@ -37,9 +48,20 @@ final readonly class ReviewController
         $answersByItem = $attempt->answers->keyBy('placement_item_id');
         $score = $attempt->score;
 
+        $recommendation = $attempt->aiRecommendation;
+        $recommendationCompleted = $recommendation?->status === PlacementAiDraftStatus::Completed;
+
         $suggestedSkillLevels = [];
 
         foreach (PlacementSection::ordered() as $section) {
+            $aiLevel = $recommendationCompleted ? ($recommendation->skill_levels[$section->value] ?? null) : null;
+
+            if (is_string($aiLevel) && GlcLevel::tryFrom($aiLevel) !== null) {
+                $suggestedSkillLevels[$section->value] = $aiLevel;
+
+                continue;
+            }
+
             $pct = $score?->section_scores[$section->value] ?? null;
             $suggestedSkillLevels[$section->value] = is_numeric($pct) ? GlcLevel::fromComposite((float) $pct)->value : null;
         }
@@ -84,6 +106,31 @@ final readonly class ReviewController
                 'computed_at' => $score->computed_at?->toDateTimeString(),
             ],
             'suggested_skill_levels' => $suggestedSkillLevels,
+            'ai_recommendation' => $recommendation === null ? null : [
+                'status' => $recommendation->status->value,
+                'recommended_level' => $recommendation->recommended_level?->value,
+                'recommended_level_label' => $recommendation->recommended_level?->label(),
+                'skill_levels' => $recommendation->skill_levels,
+                'skill_summaries' => $recommendation->skill_summaries,
+                'confidence' => $recommendation->confidence,
+                'rationale' => $recommendation->rationale,
+                'error' => $recommendation->error,
+                'generated_at' => $recommendation->generated_at?->toDateTimeString(),
+            ],
+            'objective_breakdown' => $objectiveContext->summary($attempt),
+            'writing_guidelines' => [
+                'titles' => array_column($guidelines->effective(), 'title'),
+                'customized' => $guidelines->isCustomized(),
+            ],
+            'speaking_guidelines' => [
+                'titles' => array_column($speakingGuidelines->effective(), 'title'),
+                'customized' => $speakingGuidelines->isCustomized(),
+            ],
+            'ai_models' => [
+                'writing' => $this->aiModelAttribution($aiSettings, PlacementAiSettings::TASK_WRITING),
+                'speaking_evaluation' => $this->aiModelAttribution($aiSettings, PlacementAiSettings::TASK_SPEAKING_EVALUATION),
+                'speaking' => $this->aiModelAttribution($aiSettings, PlacementAiSettings::TASK_SPEAKING),
+            ],
             'sections' => $this->sectionPayload($review, $answersByItem),
             'ai_drafts' => $attempt->aiDrafts->mapWithKeys(fn ($draft): array => [
                 $draft->section->value => [
@@ -126,6 +173,22 @@ final readonly class ReviewController
                 : [],
             'supervises' => $supervises,
         ]);
+    }
+
+    /**
+     * @return array{provider: string, model: string}
+     */
+    private function aiModelAttribution(PlacementAiSettings $aiSettings, string $task): array
+    {
+        $selection = $aiSettings->selection($task);
+        $catalog = $aiSettings->catalog($task);
+        $providerEntry = $catalog[$selection['provider']] ?? null;
+        $modelEntry = $providerEntry['models'][$selection['model']] ?? null;
+
+        return [
+            'provider' => is_string($providerEntry['label'] ?? null) ? $providerEntry['label'] : $selection['provider'],
+            'model' => is_array($modelEntry) && is_string($modelEntry['label'] ?? null) ? $modelEntry['label'] : $selection['model'],
+        ];
     }
 
     private function authorizeAccess(PlacementReview $review, User $user): void

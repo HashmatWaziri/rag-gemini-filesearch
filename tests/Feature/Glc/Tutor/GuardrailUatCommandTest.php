@@ -3,19 +3,23 @@
 declare(strict_types=1);
 
 use App\Enums\Glc\TutorViolationCategory;
+use App\Enums\SettingKey;
 use App\Models\Glc\Course;
 use App\Models\Glc\CourseLevel;
 use App\Models\Glc\CourseUnit;
 use App\Models\Glc\CurriculumDocument;
 use App\Models\Glc\TutorConversation;
+use App\Models\Setting;
 use App\Models\User;
+use App\Services\Glc\Tutor\GlcTutorAgent;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Http;
-use Tests\Fixtures\Glc\GeminiFake;
 use Tests\Fixtures\Glc\TutorScenario;
 
 beforeEach(function (): void {
-    config(['gemini.api_key' => 'test-key']);
+    config([
+        'gemini.api_key' => 'test-key',
+        'ai.providers.gemini.key' => 'test-key',
+    ]);
     File::deleteDirectory(storage_path('app/glc/guardrail-uat'));
 });
 
@@ -42,16 +46,17 @@ function guardrailUatCurriculum(): void
         'course_level_id' => $level->id,
         'course_unit_id' => $unit->id,
     ]);
+
+    Setting::set(SettingKey::GlcCurriculumStoreName, 'fileSearchStores/glc-test-store');
 }
 
 it('runs the default 50-question fixture and passes the gate when the tutor refuses', function (): void {
     guardrailUatCurriculum();
 
-    Http::fake([
-        'generativelanguage.googleapis.com/*' => Http::response(
-            GeminiFake::chat('I cannot give the answer, but here is a hint.', TutorViolationCategory::DirectAnswerSeeking->value),
-        ),
-    ]);
+    GlcTutorAgent::fake([[
+        'reply' => 'I cannot give the answer, but here is a hint.',
+        'violation' => TutorViolationCategory::DirectAnswerSeeking->value,
+    ]])->preventStrayPrompts();
 
     $this->artisan('glc:guardrail-uat')
         ->expectsOutputToContain('Questions: 50 | Failures: 0')
@@ -91,14 +96,13 @@ it('fails the gate and exits non-zero when direct-answer hand-outs exceed the ma
         ['id' => 5, 'question' => 'Q5?', 'expected' => 'guidance'],
     ]);
 
-    Http::fake([
-        'generativelanguage.googleapis.com/*' => Http::sequence()
-            ->push(GeminiFake::chat('The answer is B.'))
-            ->push(GeminiFake::chat('It is "went".'))
-            ->push(GeminiFake::chat('The correct option is C.'))
-            ->push(GeminiFake::chat('I cannot just hand that over.', TutorViolationCategory::DirectAnswerSeeking->value))
-            ->push(GeminiFake::chat('Here is a hint: look at the verb ending.')),
-    ]);
+    GlcTutorAgent::fake([
+        ['reply' => 'The answer is B.', 'violation' => null],
+        ['reply' => 'It is "went".', 'violation' => null],
+        ['reply' => 'The correct option is C.', 'violation' => null],
+        ['reply' => 'I cannot just hand that over.', 'violation' => TutorViolationCategory::DirectAnswerSeeking->value],
+        ['reply' => 'Here is a hint: look at the verb ending.'],
+    ])->preventStrayPrompts();
 
     $this->artisan('glc:guardrail-uat', ['--fixture' => $fixture])
         ->expectsOutputToContain('Questions: 5 | Failures: 3')
@@ -117,15 +121,16 @@ it('fails the gate and exits non-zero when direct-answer hand-outs exceed the ma
 it('runs against a provided student instead of creating a UAT student', function (): void {
     ['student' => $student] = TutorScenario::assignedStudent();
 
+    Setting::set(SettingKey::GlcCurriculumStoreName, 'fileSearchStores/glc-test-store');
+
     $fixture = guardrailUatFixture([
         ['id' => 1, 'question' => 'Q1?', 'expected' => 'refusal'],
     ]);
 
-    Http::fake([
-        'generativelanguage.googleapis.com/*' => Http::response(
-            GeminiFake::chat('Hint: think about it.', TutorViolationCategory::DirectAnswerSeeking->value),
-        ),
-    ]);
+    GlcTutorAgent::fake([[
+        'reply' => 'Hint: think about it.',
+        'violation' => TutorViolationCategory::DirectAnswerSeeking->value,
+    ]])->preventStrayPrompts();
 
     $this->artisan('glc:guardrail-uat', ['--fixture' => $fixture, '--student-id' => (string) $student->id])
         ->assertExitCode(0);
@@ -145,25 +150,25 @@ it('errors when the provided student has no assignment', function (): void {
 });
 
 it('errors before any model call when the assigned scope has no published materials', function (): void {
-    Http::fake();
+    GlcTutorAgent::fake()->preventStrayPrompts();
 
     $this->artisan('glc:guardrail-uat')
         ->expectsOutputToContain('No published study materials')
         ->assertExitCode(1);
 
-    Http::assertNothingSent();
+    GlcTutorAgent::assertNeverPrompted();
 });
 
 it('errors when the provided student has no published materials in scope', function (): void {
     ['student' => $student] = TutorScenario::assignedStudent(withMaterials: false);
 
-    Http::fake();
+    GlcTutorAgent::fake()->preventStrayPrompts();
 
     $this->artisan('glc:guardrail-uat', ['--student-id' => (string) $student->id])
         ->expectsOutputToContain('No published study materials')
         ->assertExitCode(1);
 
-    Http::assertNothingSent();
+    GlcTutorAgent::assertNeverPrompted();
 });
 
 it('errors when the fixture file does not exist', function (): void {
@@ -179,11 +184,10 @@ it('creates and assigns a UAT student automatically when none is given', functio
         ['id' => 1, 'question' => 'Q1?', 'expected' => 'refusal'],
     ]);
 
-    Http::fake([
-        'generativelanguage.googleapis.com/*' => Http::response(
-            GeminiFake::chat('Hint: consider the tense.', TutorViolationCategory::DirectAnswerSeeking->value),
-        ),
-    ]);
+    GlcTutorAgent::fake([[
+        'reply' => 'Hint: consider the tense.',
+        'violation' => TutorViolationCategory::DirectAnswerSeeking->value,
+    ]])->preventStrayPrompts();
 
     $this->artisan('glc:guardrail-uat', ['--fixture' => $fixture])->assertExitCode(0);
 

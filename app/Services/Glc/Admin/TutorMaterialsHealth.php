@@ -46,14 +46,10 @@ final class TutorMaterialsHealth
     {
         return match ($status) {
             CurriculumDocumentStatus::Draft => 'draft',
+            CurriculumDocumentStatus::Publishing => 'publishing',
+            CurriculumDocumentStatus::Published => 'published',
+            CurriculumDocumentStatus::PublishFailed => 'publish_failed',
             CurriculumDocumentStatus::Archived => 'archived',
-            CurriculumDocumentStatus::Published => match ($indexStatus) {
-                CurriculumIndexStatus::Indexed => 'published',
-                CurriculumIndexStatus::Pending,
-                CurriculumIndexStatus::Indexing => 'publishing',
-                CurriculumIndexStatus::Failed,
-                CurriculumIndexStatus::Removed => 'publish_failed',
-            },
         };
     }
 }

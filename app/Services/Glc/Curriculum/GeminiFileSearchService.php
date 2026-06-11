@@ -27,7 +27,7 @@ final readonly class GeminiFileSearchService
             return ['total' => 0, 'succeeded' => 0, 'failed' => 0];
         }
 
-        $documents = CurriculumDocument::query()->published()->orderBy('id')->get();
+        $documents = CurriculumDocument::query()->tutorRetrievable()->orderBy('id')->get();
         $total = $documents->count();
 
         try {

@@ -32,6 +32,14 @@ final class CurriculumIndexService
 
     public function index(CurriculumDocument $document): void
     {
+        if (! in_array($document->status, [
+            CurriculumDocumentStatus::Publishing,
+            CurriculumDocumentStatus::Published,
+            CurriculumDocumentStatus::PublishFailed,
+        ], true)) {
+            return;
+        }
+
         if (! $this->isConfigured()) {
             $document->update([
                 'index_status' => CurriculumIndexStatus::Failed,

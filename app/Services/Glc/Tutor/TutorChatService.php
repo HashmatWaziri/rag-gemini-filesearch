@@ -12,8 +12,12 @@ use App\Models\Glc\StudentAssignment;
 use App\Models\Glc\TutorConversation;
 use App\Models\Glc\TutorMessage;
 use App\Models\Setting;
+use App\Services\Glc\Admin\TutorOperationalSettings;
+use App\Services\Glc\Ai\PlacementAiSettings;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
+use Laravel\Ai\Responses\StructuredAgentResponse;
+use Throwable;
 
 final class TutorChatService
 {
@@ -24,9 +28,10 @@ final class TutorChatService
     public const MATERIALS_NOT_READY_MESSAGE = "Your study materials aren't ready yet — please check back soon or contact your teacher.";
 
     public function __construct(
-        private readonly GeminiTutorClient $client,
+        private readonly PlacementAiSettings $aiSettings,
         private readonly TutorSystemPrompt $systemPrompt,
         private readonly TutorViolationRecorder $violations,
+        private readonly TutorOperationalSettings $operationalSettings,
     ) {}
 
     public function respond(TutorConversation $conversation, string $text): TutorMessage
@@ -52,7 +57,11 @@ final class TutorChatService
             return $this->finishWithoutModelCall($conversation, self::MATERIALS_NOT_READY_MESSAGE);
         }
 
-        [$reply, $violation, $citations] = $this->generateReply($conversation, $assignment);
+        if (! $this->storeIsConfigured()) {
+            return $this->finishWithoutModelCall($conversation, self::MATERIALS_NOT_READY_MESSAGE);
+        }
+
+        [$reply, $violation, $citations] = $this->generateReply($conversation, $assignment, $text);
 
         $assistantMessage = $this->persistAssistantMessage($conversation, $reply, $violation, $citations);
 
@@ -63,7 +72,9 @@ final class TutorChatService
         $conversation->last_activity_at = now();
         $conversation->save();
 
-        if ($this->activePairCount($conversation) > config()->integer('glc.tutor.rotation_threshold_pairs', 40)) {
+        $settings = $this->operationalSettings->effective();
+
+        if ($this->activePairCount($conversation) > $settings['rotation_threshold_pairs']) {
             RotateConversationJob::dispatch($conversation);
         }
 
@@ -83,9 +94,16 @@ final class TutorChatService
     public function hasPublishedMaterials(StudentAssignment $assignment): bool
     {
         return CurriculumDocument::query()
-            ->published()
+            ->tutorRetrievable()
             ->withinAssignment($assignment)
             ->exists();
+    }
+
+    private function storeIsConfigured(): bool
+    {
+        $storeName = Setting::get(SettingKey::GlcCurriculumStoreName);
+
+        return is_string($storeName) && $storeName !== '';
     }
 
     private function finishWithoutModelCall(TutorConversation $conversation, string $reply): TutorMessage
@@ -100,23 +118,46 @@ final class TutorChatService
     /**
      * @return array{0: string, 1: TutorViolationCategory|null, 2: list<string>}
      */
-    private function generateReply(TutorConversation $conversation, StudentAssignment $assignment): array
+    private function generateReply(TutorConversation $conversation, StudentAssignment $assignment, string $text): array
     {
-        $response = $this->client->generateContent($this->buildPayload($conversation, $assignment));
-
-        if ($response === null) {
+        if (! $this->aiSettings->taskIsConfigured(PlacementAiSettings::TASK_TUTOR_CHAT)) {
             return [self::UNAVAILABLE_MESSAGE, null, []];
         }
 
-        $text = $this->client->extractText($response);
+        try {
+            $this->aiSettings->hydrateProviderConfig();
+            $selection = $this->aiSettings->selection(PlacementAiSettings::TASK_TUTOR_CHAT);
 
-        if ($text === null) {
+            $agent = new GlcTutorAgent(
+                student: $conversation->user,
+                assignment: $assignment,
+                conversation: $conversation,
+                systemPrompt: $this->systemPrompt,
+            );
+
+            $response = $agent->prompt(
+                $text,
+                provider: $selection['provider'],
+                model: $selection['model'],
+            );
+
+            if (! $response instanceof StructuredAgentResponse) {
+                return [self::UNAVAILABLE_MESSAGE, null, []];
+            }
+
+            $reply = is_string($response['reply'] ?? null) ? $response['reply'] : null;
+
+            if ($reply === null || $reply === '') {
+                return [self::UNAVAILABLE_MESSAGE, null, []];
+            }
+
+            $rawViolation = $response['violation'] ?? null;
+            $violation = is_string($rawViolation) ? TutorViolationCategory::tryFrom($rawViolation) : null;
+
+            return [$reply, $violation, $this->formatCitations($agent->citationTitles, $assignment)];
+        } catch (Throwable) {
             return [self::UNAVAILABLE_MESSAGE, null, []];
         }
-
-        [$reply, $violation] = $this->parseStructuredReply($text);
-
-        return [$reply, $violation, $this->formatCitations($this->client->extractCitations($response), $assignment)];
     }
 
     /**
@@ -132,7 +173,7 @@ final class TutorChatService
         $assignment->loadMissing(['course', 'unit']);
 
         $documents = CurriculumDocument::query()
-            ->published()
+            ->tutorRetrievable()
             ->withinAssignment($assignment)
             ->whereIn('title', $titles)
             ->with('lesson')
@@ -153,95 +194,6 @@ final class TutorChatService
             },
             $titles,
         );
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function buildPayload(TutorConversation $conversation, StudentAssignment $assignment): array
-    {
-        $payload = [
-            'system_instruction' => [
-                'parts' => [['text' => $this->systemPrompt->build($conversation->user, $assignment)]],
-            ],
-            'contents' => $this->buildContents($conversation),
-            'generationConfig' => [
-                'responseMimeType' => 'application/json',
-                'responseSchema' => [
-                    'type' => 'OBJECT',
-                    'properties' => [
-                        'reply' => ['type' => 'STRING'],
-                        'violation' => [
-                            'type' => 'STRING',
-                            'enum' => array_map(
-                                fn (TutorViolationCategory $category): string => $category->value,
-                                TutorViolationCategory::cases(),
-                            ),
-                            'nullable' => true,
-                        ],
-                    ],
-                    'required' => ['reply'],
-                ],
-            ],
-        ];
-
-        $storeName = Setting::get(SettingKey::GlcCurriculumStoreName);
-
-        if (is_string($storeName) && $storeName !== '') {
-            $payload['tools'] = [[
-                'file_search' => [
-                    'file_search_store_names' => [$storeName],
-                    'metadata_filter' => $this->metadataFilter($assignment),
-                ],
-            ]];
-        }
-
-        return $payload;
-    }
-
-    /**
-     * @return list<array<string, mixed>>
-     */
-    private function buildContents(TutorConversation $conversation): array
-    {
-        $contents = [];
-
-        if (is_string($conversation->summary) && $conversation->summary !== '') {
-            $contents[] = [
-                'role' => 'user',
-                'parts' => [['text' => "Summary of the earlier part of this conversation:\n".$conversation->summary]],
-            ];
-            $contents[] = [
-                'role' => 'model',
-                'parts' => [['text' => 'Understood. I will keep that earlier context in mind.']],
-            ];
-        }
-
-        foreach ($this->activeMessages($conversation) as $message) {
-            $contents[] = [
-                'role' => $message->role === 'assistant' ? 'model' : 'user',
-                'parts' => [['text' => $message->content]],
-            ];
-        }
-
-        return $contents;
-    }
-
-    /**
-     * @return array{0: string, 1: TutorViolationCategory|null}
-     */
-    private function parseStructuredReply(string $text): array
-    {
-        $decoded = json_decode($text, true);
-
-        if (is_array($decoded) && is_string($decoded['reply'] ?? null) && $decoded['reply'] !== '') {
-            $rawViolation = $decoded['violation'] ?? null;
-            $violation = is_string($rawViolation) ? TutorViolationCategory::tryFrom($rawViolation) : null;
-
-            return [$decoded['reply'], $violation];
-        }
-
-        return [$text, null];
     }
 
     /**

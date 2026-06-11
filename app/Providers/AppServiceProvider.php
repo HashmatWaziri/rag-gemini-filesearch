@@ -98,7 +98,7 @@ final class AppServiceProvider extends ServiceProvider
 
     private function bootUrlDefaults(): void
     {
-        if (app()->isProduction()) {
+        if (app()->isProduction() || str_starts_with(config()->string('app.url', ''), 'https://')) {
             URL::forceScheme('https');
         }
     }

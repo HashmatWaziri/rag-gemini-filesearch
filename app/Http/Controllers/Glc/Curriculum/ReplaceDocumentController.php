@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Glc\Curriculum;
 
 use App\Enums\Glc\AuditAction;
-use App\Enums\Glc\CurriculumDocumentStatus;
 use App\Models\Glc\CurriculumDocument;
 use App\Services\Glc\AuditLogger;
 use App\Services\Glc\Curriculum\CurriculumUploadService;
@@ -28,8 +27,7 @@ final readonly class ReplaceDocumentController
             'file' => ['required', 'file'],
         ]);
 
-        $wasLive = $document->status === CurriculumDocumentStatus::Published
-            && $document->gemini_document_name !== null;
+        $wasLive = $document->isTutorRetrievable();
         $previousVersion = $document->version;
 
         /** @var UploadedFile $file */

@@ -104,7 +104,8 @@ final class CurriculumDocument extends Model
 
     public function isTutorRetrievable(): bool
     {
-        return $this->status === CurriculumDocumentStatus::Published;
+        return $this->status === CurriculumDocumentStatus::Published
+            && $this->index_status === CurriculumIndexStatus::Indexed;
     }
 
     /**
@@ -114,6 +115,16 @@ final class CurriculumDocument extends Model
     protected function published(Builder $query): void
     {
         $query->where('status', CurriculumDocumentStatus::Published);
+    }
+
+    /**
+     * @param  Builder<CurriculumDocument>  $query
+     */
+    #[Scope]
+    protected function tutorRetrievable(Builder $query): void
+    {
+        $query->where('status', CurriculumDocumentStatus::Published)
+            ->where('index_status', CurriculumIndexStatus::Indexed);
     }
 
     /**

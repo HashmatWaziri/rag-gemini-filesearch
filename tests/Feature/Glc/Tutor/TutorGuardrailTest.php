@@ -3,31 +3,40 @@
 declare(strict_types=1);
 
 use App\Enums\Glc\TutorViolationCategory;
+use App\Enums\SettingKey;
 use App\Models\Glc\TutorConversation;
 use App\Models\Glc\TutorViolation;
+use App\Models\Setting;
 use App\Models\User;
 use App\Notifications\Glc\PersistentDirectAnswerSeekingNotification;
+use App\Services\Glc\Tutor\GlcTutorAgent;
 use Illuminate\Notifications\DatabaseNotification;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
-use Tests\Fixtures\Glc\GeminiFake;
 use Tests\Fixtures\Glc\TutorScenario;
 
 use function Pest\Laravel\actingAs;
 
 beforeEach(function (): void {
     $this->withoutVite();
-    config(['gemini.api_key' => 'test-key']);
+    config([
+        'gemini.api_key' => 'test-key',
+        'ai.providers.gemini.key' => 'test-key',
+    ]);
 });
+
+function prepareTutorGuardrailScenario(): void
+{
+    Setting::set(SettingKey::GlcCurriculumStoreName, 'fileSearchStores/glc-test-store');
+}
 
 it('logs each violation category distinguishably with student, timestamp, and excerpt', function (TutorViolationCategory $category): void {
     ['student' => $student] = TutorScenario::assignedStudent();
+    prepareTutorGuardrailScenario();
 
-    Http::fake([
-        'generativelanguage.googleapis.com/*' => Http::response(
-            GeminiFake::chat('Let me redirect you back to your lesson.', $category->value),
-        ),
-    ]);
+    GlcTutorAgent::fake([[
+        'reply' => 'Let me redirect you back to your lesson.',
+        'violation' => $category->value,
+    ]])->preventStrayPrompts();
 
     $conversation = TutorConversation::factory()->create(['user_id' => $student->id]);
 
@@ -51,6 +60,7 @@ it('notifies linked teachers once the direct-answer threshold is reached in the 
     Notification::fake();
 
     ['student' => $student, 'teacher' => $teacher] = TutorScenario::assignedStudent();
+    prepareTutorGuardrailScenario();
 
     TutorViolation::factory()->count(2)->create([
         'user_id' => $student->id,
@@ -58,11 +68,10 @@ it('notifies linked teachers once the direct-answer threshold is reached in the 
         'occurred_at' => now()->subDays(2),
     ]);
 
-    Http::fake([
-        'generativelanguage.googleapis.com/*' => Http::response(
-            GeminiFake::chat('I can guide you, but not give the answer.', TutorViolationCategory::DirectAnswerSeeking->value),
-        ),
-    ]);
+    GlcTutorAgent::fake([[
+        'reply' => 'I can guide you, but not give the answer.',
+        'violation' => TutorViolationCategory::DirectAnswerSeeking->value,
+    ]])->preventStrayPrompts();
 
     $conversation = TutorConversation::factory()->create(['user_id' => $student->id]);
 
@@ -86,6 +95,7 @@ it('does not notify below the threshold', function (): void {
     Notification::fake();
 
     ['student' => $student] = TutorScenario::assignedStudent();
+    prepareTutorGuardrailScenario();
 
     TutorViolation::factory()->create([
         'user_id' => $student->id,
@@ -93,11 +103,10 @@ it('does not notify below the threshold', function (): void {
         'occurred_at' => now()->subDay(),
     ]);
 
-    Http::fake([
-        'generativelanguage.googleapis.com/*' => Http::response(
-            GeminiFake::chat('Here is a hint instead.', TutorViolationCategory::DirectAnswerSeeking->value),
-        ),
-    ]);
+    GlcTutorAgent::fake([[
+        'reply' => 'Here is a hint instead.',
+        'violation' => TutorViolationCategory::DirectAnswerSeeking->value,
+    ]])->preventStrayPrompts();
 
     $conversation = TutorConversation::factory()->create(['user_id' => $student->id]);
 
@@ -110,6 +119,7 @@ it('ignores direct-answer violations outside the window', function (): void {
     Notification::fake();
 
     ['student' => $student] = TutorScenario::assignedStudent();
+    prepareTutorGuardrailScenario();
 
     TutorViolation::factory()->count(2)->create([
         'user_id' => $student->id,
@@ -117,11 +127,10 @@ it('ignores direct-answer violations outside the window', function (): void {
         'occurred_at' => now()->subDays(8),
     ]);
 
-    Http::fake([
-        'generativelanguage.googleapis.com/*' => Http::response(
-            GeminiFake::chat('Here is a hint instead.', TutorViolationCategory::DirectAnswerSeeking->value),
-        ),
-    ]);
+    GlcTutorAgent::fake([[
+        'reply' => 'Here is a hint instead.',
+        'violation' => TutorViolationCategory::DirectAnswerSeeking->value,
+    ]])->preventStrayPrompts();
 
     $conversation = TutorConversation::factory()->create(['user_id' => $student->id]);
 
@@ -134,6 +143,7 @@ it('does not notify for non direct-answer categories even at volume', function (
     Notification::fake();
 
     ['student' => $student] = TutorScenario::assignedStudent();
+    prepareTutorGuardrailScenario();
 
     TutorViolation::factory()->count(3)->create([
         'user_id' => $student->id,
@@ -141,11 +151,10 @@ it('does not notify for non direct-answer categories even at volume', function (
         'occurred_at' => now()->subDay(),
     ]);
 
-    Http::fake([
-        'generativelanguage.googleapis.com/*' => Http::response(
-            GeminiFake::chat('Back to the lesson please.', TutorViolationCategory::OffTopic->value),
-        ),
-    ]);
+    GlcTutorAgent::fake([[
+        'reply' => 'Back to the lesson please.',
+        'violation' => TutorViolationCategory::OffTopic->value,
+    ]])->preventStrayPrompts();
 
     $conversation = TutorConversation::factory()->create(['user_id' => $student->id]);
 
@@ -156,6 +165,7 @@ it('does not notify for non direct-answer categories even at volume', function (
 
 it('throttles to one database notification per teacher per student per window', function (): void {
     ['student' => $student, 'teacher' => $teacher] = TutorScenario::assignedStudent();
+    prepareTutorGuardrailScenario();
 
     TutorViolation::factory()->count(2)->create([
         'user_id' => $student->id,
@@ -163,11 +173,10 @@ it('throttles to one database notification per teacher per student per window', 
         'occurred_at' => now()->subDays(2),
     ]);
 
-    Http::fake([
-        'generativelanguage.googleapis.com/*' => Http::response(
-            GeminiFake::chat('Guidance only, no answers.', TutorViolationCategory::DirectAnswerSeeking->value),
-        ),
-    ]);
+    GlcTutorAgent::fake([[
+        'reply' => 'Guidance only, no answers.',
+        'violation' => TutorViolationCategory::DirectAnswerSeeking->value,
+    ]])->preventStrayPrompts();
 
     $conversation = TutorConversation::factory()->create(['user_id' => $student->id]);
 
@@ -184,6 +193,8 @@ it('notifies every linked teacher of the student', function (): void {
     Notification::fake();
 
     ['student' => $student, 'teacher' => $teacher] = TutorScenario::assignedStudent();
+    prepareTutorGuardrailScenario();
+
     $secondTeacher = User::factory()->teacher()->create();
     $secondTeacher->assignedStudents()->attach($student);
 
@@ -193,11 +204,10 @@ it('notifies every linked teacher of the student', function (): void {
         'occurred_at' => now()->subDay(),
     ]);
 
-    Http::fake([
-        'generativelanguage.googleapis.com/*' => Http::response(
-            GeminiFake::chat('Guidance only.', TutorViolationCategory::DirectAnswerSeeking->value),
-        ),
-    ]);
+    GlcTutorAgent::fake([[
+        'reply' => 'Guidance only.',
+        'violation' => TutorViolationCategory::DirectAnswerSeeking->value,
+    ]])->preventStrayPrompts();
 
     $conversation = TutorConversation::factory()->create(['user_id' => $student->id]);
 

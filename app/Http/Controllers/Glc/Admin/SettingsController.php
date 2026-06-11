@@ -8,6 +8,7 @@ use App\Enums\Glc\AuditAction;
 use App\Enums\Glc\PlacementSection;
 use App\Services\Glc\Admin\SectionTimeLimits;
 use App\Services\Glc\Admin\TutorMaterialsHealth;
+use App\Services\Glc\Admin\TutorOperationalSettings;
 use App\Services\Glc\AuditLogger;
 use App\Services\Glc\Curriculum\GeminiFileSearchService;
 use Illuminate\Http\RedirectResponse;
@@ -20,6 +21,7 @@ final readonly class SettingsController
     public function __construct(
         private SectionTimeLimits $timeLimits,
         private TutorMaterialsHealth $tutorMaterialsHealth,
+        private TutorOperationalSettings $tutorOperationalSettings,
         private AuditLogger $auditLogger,
     ) {}
 
@@ -35,6 +37,28 @@ final readonly class SettingsController
             'bounds' => [
                 'min' => SectionTimeLimits::MIN_SECONDS,
                 'max' => SectionTimeLimits::MAX_SECONDS,
+            ],
+            'tutorOperational' => [
+                'defaults' => $this->tutorOperationalSettings->defaults(),
+                'effective' => $this->tutorOperationalSettings->effective(),
+                'bounds' => [
+                    'rotation_threshold_pairs' => [
+                        'min' => TutorOperationalSettings::MIN_ROTATION_THRESHOLD,
+                        'max' => TutorOperationalSettings::MAX_ROTATION_THRESHOLD,
+                    ],
+                    'rotation_summarize_pairs' => [
+                        'min' => TutorOperationalSettings::MIN_ROTATION_SUMMARIZE,
+                        'max' => TutorOperationalSettings::MAX_ROTATION_SUMMARIZE,
+                    ],
+                    'violation_notification_threshold' => [
+                        'min' => TutorOperationalSettings::MIN_VIOLATION_THRESHOLD,
+                        'max' => TutorOperationalSettings::MAX_VIOLATION_THRESHOLD,
+                    ],
+                    'violation_notification_window_days' => [
+                        'min' => TutorOperationalSettings::MIN_VIOLATION_WINDOW_DAYS,
+                        'max' => TutorOperationalSettings::MAX_VIOLATION_WINDOW_DAYS,
+                    ],
+                ],
             ],
             'tutorMaterials' => [
                 'counts' => $this->tutorMaterialsHealth->counts(),
@@ -56,14 +80,40 @@ final readonly class SettingsController
             ];
         }
 
+        $rules['tutor_operational.rotation_threshold_pairs'] = [
+            'required',
+            'integer',
+            'between:'.TutorOperationalSettings::MIN_ROTATION_THRESHOLD.','.TutorOperationalSettings::MAX_ROTATION_THRESHOLD,
+        ];
+        $rules['tutor_operational.rotation_summarize_pairs'] = [
+            'required',
+            'integer',
+            'between:'.TutorOperationalSettings::MIN_ROTATION_SUMMARIZE.','.TutorOperationalSettings::MAX_ROTATION_SUMMARIZE,
+        ];
+        $rules['tutor_operational.violation_notification_threshold'] = [
+            'required',
+            'integer',
+            'between:'.TutorOperationalSettings::MIN_VIOLATION_THRESHOLD.','.TutorOperationalSettings::MAX_VIOLATION_THRESHOLD,
+        ];
+        $rules['tutor_operational.violation_notification_window_days'] = [
+            'required',
+            'integer',
+            'between:'.TutorOperationalSettings::MIN_VIOLATION_WINDOW_DAYS.','.TutorOperationalSettings::MAX_VIOLATION_WINDOW_DAYS,
+        ];
+
         $validated = $request->validate($rules);
 
         $limits = array_map(intval(...), $validated['section_time_limits']);
 
         $this->timeLimits->update($limits);
 
+        $tutorOperational = array_map(intval(...), $validated['tutor_operational']);
+
+        $this->tutorOperationalSettings->update($tutorOperational);
+
         $this->auditLogger->log(AuditAction::SettingsUpdated, $request->user(), null, [
             'section_time_limits' => $limits,
+            'tutor_operational' => $tutorOperational,
         ]);
 
         return to_route('admin.settings.edit')->with('glc_status', 'Settings saved.');

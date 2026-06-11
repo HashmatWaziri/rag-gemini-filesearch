@@ -7,19 +7,29 @@ namespace App\Services\Glc\Review;
 use App\Enums\Glc\PlacementAiDraftStatus;
 use App\Enums\Glc\PlacementItemType;
 use App\Enums\Glc\PlacementSection;
+use App\Enums\Glc\SpeakingDimension;
 use App\Enums\Glc\WritingDimension;
 use App\Models\Glc\PlacementAiDraft;
 use App\Models\Glc\PlacementAnswer;
 use App\Models\Glc\PlacementAttempt;
+use App\Services\Glc\Admin\SpeakingEvaluationGuidelines;
+use App\Services\Glc\Admin\WritingEvaluationGuidelines;
+use App\Services\Glc\Ai\PlacementAiSettings;
 use Illuminate\Support\Facades\Storage;
+use Laravel\Ai\Responses\AgentResponse;
+use Laravel\Ai\Responses\StructuredAgentResponse;
+use Laravel\Ai\Transcription;
 use RuntimeException;
 use Throwable;
 
 final readonly class AiDraftService
 {
-    private const array CONFIDENCE_LEVELS = ['low', 'medium', 'high'];
-
-    public function __construct(private GeminiClient $gemini) {}
+    public function __construct(
+        private PlacementAiSettings $settings,
+        private WritingEvaluationGuidelines $writingGuidelines,
+        private SpeakingEvaluationGuidelines $speakingGuidelines,
+        private ObjectiveContextBuilder $objectiveContext,
+    ) {}
 
     public function generate(PlacementAttempt $attempt, PlacementSection $section): PlacementAiDraft
     {
@@ -35,6 +45,16 @@ final readonly class AiDraftService
                 'status' => PlacementAiDraftStatus::Completed,
                 'error' => null,
                 'generated_at' => now(),
+            ]);
+        } catch (SpeakingEvaluationFailed $exception) {
+            return $this->persist($attempt, $section, [
+                'dimension_scores' => null,
+                'transcript' => $exception->transcript,
+                'feedback' => null,
+                'confidence' => null,
+                'status' => PlacementAiDraftStatus::Failed,
+                'error' => mb_substr($exception->getMessage(), 0, 1000),
+                'generated_at' => null,
             ]);
         } catch (Throwable $exception) {
             return $this->persist($attempt, $section, [
@@ -61,25 +81,18 @@ final readonly class AiDraftService
             throw new RuntimeException('No essay text was found for this attempt.');
         }
 
-        $prompt = <<<'PROMPT'
-You are an English placement assessor for a language center. Evaluate the candidate essay below.
-Score each dimension from 1 (very weak) to 5 (very strong): grammar, vocabulary, structure, coherence, task_completion.
-Provide short factual feedback (3-5 sentences) and your confidence in this evaluation (low, medium or high).
-Respond with JSON only.
+        $this->settings->hydrateProviderConfig();
+        $selection = $this->settings->selection(PlacementAiSettings::TASK_WRITING);
 
-Candidate essay:
-PROMPT;
-
-        $result = $this->gemini->generateJson(
-            [['text' => $prompt."\n".$essay]],
-            $this->evaluationSchema(withTranscript: false),
+        $response = new WritingEvaluationAgent()->prompt(
+            $this->writingPrompt($attempt, $essay),
+            provider: $selection['provider'],
+            model: $selection['model'],
         );
 
         return [
-            'dimension_scores' => $this->normalizeDimensions($result),
+            ...$this->normalizeEvaluation($this->structuredResult($response), WritingDimension::cases()),
             'transcript' => null,
-            'feedback' => $this->stringField($result, 'feedback'),
-            'confidence' => $this->normalizeConfidence($result),
         ];
     }
 
@@ -95,32 +108,93 @@ PROMPT;
             throw new RuntimeException('No speaking recording was found for this attempt.');
         }
 
-        $mimeType = $answer->response['mime_type'] ?? 'audio/webm';
+        $transcript = $this->transcribe($audioPath);
 
-        $prompt = <<<'PROMPT'
-You are an English placement assessor for a language center. Listen to the candidate speaking response attached as audio.
-First transcribe it, then score each dimension from 1 (very weak) to 5 (very strong): grammar, vocabulary, structure, coherence, task_completion.
-Provide short factual feedback (3-5 sentences) and your confidence in this evaluation (low, medium or high).
-Respond with JSON only.
-PROMPT;
+        try {
+            $selection = $this->settings->selection(PlacementAiSettings::TASK_SPEAKING_EVALUATION);
 
-        $result = $this->gemini->generateJson(
-            [
-                ['text' => $prompt],
-                ['inlineData' => [
-                    'mimeType' => is_string($mimeType) ? $mimeType : 'audio/webm',
-                    'data' => base64_encode((string) Storage::disk('local')->get($audioPath)),
-                ]],
-            ],
-            $this->evaluationSchema(withTranscript: true),
+            $response = new SpeakingEvaluationAgent()->prompt(
+                $this->speakingPrompt($attempt, $transcript),
+                provider: $selection['provider'],
+                model: $selection['model'],
+            );
+
+            return [
+                ...$this->normalizeEvaluation($this->structuredResult($response), SpeakingDimension::cases()),
+                'transcript' => $transcript,
+            ];
+        } catch (Throwable $exception) {
+            throw new SpeakingEvaluationFailed($transcript, $exception);
+        }
+    }
+
+    private function writingPrompt(PlacementAttempt $attempt, string $essay): string
+    {
+        return implode("\n\n", [
+            "Evaluate the candidate essay against these GLC writing evaluation guidelines:\n".$this->writingGuidelines->asPromptBlock(),
+            "Candidate's objective-section performance for context — do not let it override your assessment of the essay itself:\n".$this->objectiveContext->build($attempt),
+            "Candidate essay:\n".$essay,
+        ]);
+    }
+
+    private function speakingPrompt(PlacementAttempt $attempt, string $transcript): string
+    {
+        return implode("\n\n", [
+            "Evaluate the candidate's spoken response transcript against these GLC speaking evaluation guidelines:\n".$this->speakingGuidelines->asPromptBlock(),
+            "Candidate's objective-section performance for context — do not let it override your assessment of the spoken response itself:\n".$this->objectiveContext->build($attempt),
+            "Candidate speaking transcript:\n".$transcript,
+        ]);
+    }
+
+    private function transcribe(string $audioPath): string
+    {
+        $this->settings->hydrateProviderConfig();
+        $selection = $this->settings->selection(PlacementAiSettings::TASK_SPEAKING);
+
+        $response = Transcription::fromStorage($audioPath, 'local')->generate(
+            provider: $selection['provider'],
+            model: $selection['model'],
         );
 
+        $transcript = mb_trim($response->text);
+
+        if ($transcript === '') {
+            throw new RuntimeException('Transcription produced an empty transcript for this recording.');
+        }
+
+        return $transcript;
+    }
+
+    /**
+     * @param  array<string, mixed>  $result
+     * @param  list<WritingDimension|SpeakingDimension>  $dimensions
+     * @return array{dimension_scores: array<string, int>, feedback: string|null, confidence: string}
+     */
+    private function normalizeEvaluation(array $result, array $dimensions): array
+    {
         return [
-            'dimension_scores' => $this->normalizeDimensions($result),
-            'transcript' => $this->stringField($result, 'transcript'),
+            'dimension_scores' => $this->normalizeDimensions($result, $dimensions),
             'feedback' => $this->stringField($result, 'feedback'),
             'confidence' => $this->normalizeConfidence($result),
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function structuredResult(AgentResponse $response): array
+    {
+        if ($response instanceof StructuredAgentResponse) {
+            return $response->structured;
+        }
+
+        $decoded = json_decode($response->text, true);
+
+        if (! is_array($decoded)) {
+            throw new RuntimeException('The AI evaluation response could not be parsed as JSON.');
+        }
+
+        return $decoded;
     }
 
     private function sectionAnswer(PlacementAttempt $attempt, PlacementSection $section): ?PlacementAnswer
@@ -133,59 +207,25 @@ PROMPT;
     }
 
     /**
-     * @return array<string, mixed>
-     */
-    private function evaluationSchema(bool $withTranscript): array
-    {
-        $dimensionProperties = [];
-
-        foreach (WritingDimension::cases() as $dimension) {
-            $dimensionProperties[$dimension->value] = ['type' => 'INTEGER'];
-        }
-
-        $properties = [
-            'dimension_scores' => [
-                'type' => 'OBJECT',
-                'properties' => $dimensionProperties,
-                'required' => array_keys($dimensionProperties),
-            ],
-            'feedback' => ['type' => 'STRING'],
-            'confidence' => ['type' => 'STRING', 'enum' => self::CONFIDENCE_LEVELS],
-        ];
-
-        $required = ['dimension_scores', 'feedback', 'confidence'];
-
-        if ($withTranscript) {
-            $properties = ['transcript' => ['type' => 'STRING'], ...$properties];
-            $required = ['transcript', ...$required];
-        }
-
-        return [
-            'type' => 'OBJECT',
-            'properties' => $properties,
-            'required' => $required,
-        ];
-    }
-
-    /**
      * @param  array<string, mixed>  $result
+     * @param  list<WritingDimension|SpeakingDimension>  $dimensions
      * @return array<string, int>
      */
-    private function normalizeDimensions(array $result): array
+    private function normalizeDimensions(array $result, array $dimensions): array
     {
         $raw = $result['dimension_scores'] ?? null;
 
         if (! is_array($raw)) {
-            throw new RuntimeException('Gemini response is missing dimension scores.');
+            throw new RuntimeException('The AI evaluation response is missing dimension scores.');
         }
 
         $scores = [];
 
-        foreach (WritingDimension::cases() as $dimension) {
+        foreach ($dimensions as $dimension) {
             $value = $raw[$dimension->value] ?? null;
 
             if (! is_numeric($value)) {
-                throw new RuntimeException(sprintf('Gemini response is missing the %s score.', $dimension->value));
+                throw new RuntimeException(sprintf('The AI evaluation response is missing the %s score.', $dimension->value));
             }
 
             $scores[$dimension->value] = max(1, min(5, (int) $value));
@@ -211,7 +251,7 @@ PROMPT;
     {
         $value = $result['confidence'] ?? null;
 
-        return is_string($value) && in_array(mb_strtolower($value), self::CONFIDENCE_LEVELS, true)
+        return is_string($value) && in_array(mb_strtolower($value), WritingEvaluationAgent::CONFIDENCE_LEVELS, true)
             ? mb_strtolower($value)
             : 'low';
     }

@@ -40,8 +40,7 @@ final readonly class PublishDocumentController
         }
 
         $document->update([
-            'status' => CurriculumDocumentStatus::Published,
-            'published_at' => now(),
+            'status' => CurriculumDocumentStatus::Publishing,
             'index_status' => CurriculumIndexStatus::Pending,
             'index_error' => null,
         ]);

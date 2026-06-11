@@ -3,16 +3,28 @@
 declare(strict_types=1);
 
 use App\Enums\Glc\AuditAction;
-use App\Enums\Glc\CurriculumIndexStatus;
 use App\Enums\SettingKey;
 use App\Models\Glc\AuditLog;
 use App\Models\Glc\CurriculumDocument;
 use App\Models\Setting;
 use App\Models\User;
+use App\Services\Glc\Admin\TutorOperationalSettings;
 
 beforeEach(function (): void {
     $this->withoutVite();
 });
+
+function defaultTutorOperationalPayload(): array
+{
+    $defaults = app(TutorOperationalSettings::class)->defaults();
+
+    return [
+        'rotation_threshold_pairs' => $defaults['rotation_threshold_pairs'],
+        'rotation_summarize_pairs' => $defaults['rotation_summarize_pairs'],
+        'violation_notification_threshold' => $defaults['violation_notification_threshold'],
+        'violation_notification_window_days' => $defaults['violation_notification_window_days'],
+    ];
+}
 
 it('redirects guests and blocks non-admin roles', function (): void {
     $this->get(route('admin.settings.edit'))->assertRedirectToRoute('login');
@@ -45,13 +57,8 @@ it('summarizes AI Tutor material health by lifecycle state', function (): void {
 
     CurriculumDocument::factory()->count(2)->create();
     CurriculumDocument::factory()->published()->create();
-    CurriculumDocument::factory()->published()->create([
-        'index_status' => CurriculumIndexStatus::Indexing,
-    ]);
-    CurriculumDocument::factory()->published()->create([
-        'index_status' => CurriculumIndexStatus::Failed,
-        'index_error' => 'Upload failed.',
-    ]);
+    CurriculumDocument::factory()->publishing()->create();
+    CurriculumDocument::factory()->publishFailed()->create();
     CurriculumDocument::factory()->archived()->create();
 
     $this->actingAs($admin)
@@ -99,8 +106,18 @@ it('updates section time limits within bounds and audits the change', function (
         'speaking' => 300,
     ];
 
+    $tutorOperational = [
+        'rotation_threshold_pairs' => 35,
+        'rotation_summarize_pairs' => 15,
+        'violation_notification_threshold' => 4,
+        'violation_notification_window_days' => 10,
+    ];
+
     $this->actingAs($admin)
-        ->put(route('admin.settings.update'), ['section_time_limits' => $limits])
+        ->put(route('admin.settings.update'), [
+            'section_time_limits' => $limits,
+            'tutor_operational' => $tutorOperational,
+        ])
         ->assertRedirectToRoute('admin.settings.edit');
 
     $stored = json_decode((string) Setting::get(SettingKey::GlcSectionTimeLimits), true);
@@ -114,7 +131,8 @@ it('updates section time limits within bounds and audits the change', function (
     $log = AuditLog::query()->where('action', AuditAction::SettingsUpdated)->firstOrFail();
 
     expect($log->actor_id)->toBe($admin->id)
-        ->and($log->details['section_time_limits'])->toMatchArray($limits);
+        ->and($log->details['section_time_limits'])->toMatchArray($limits)
+        ->and($log->details['tutor_operational'])->toMatchArray($tutorOperational);
 });
 
 it('rejects limits outside the 60..7200 second bounds', function (int $reading): void {
@@ -129,6 +147,7 @@ it('rejects limits outside the 60..7200 second bounds', function (int $reading):
                 'writing' => 1800,
                 'speaking' => 300,
             ],
+            'tutor_operational' => defaultTutorOperationalPayload(),
         ])
         ->assertSessionHasErrors('section_time_limits.reading');
 
@@ -141,6 +160,7 @@ it('requires every section limit', function (): void {
     $this->actingAs($admin)
         ->put(route('admin.settings.update'), [
             'section_time_limits' => ['reading' => 600],
+            'tutor_operational' => defaultTutorOperationalPayload(),
         ])
         ->assertSessionHasErrors([
             'section_time_limits.grammar_vocabulary',
@@ -162,6 +182,7 @@ it('accepts the boundary values 60 and 7200', function (): void {
                 'writing' => 1500,
                 'speaking' => 480,
             ],
+            'tutor_operational' => defaultTutorOperationalPayload(),
         ])
         ->assertSessionHasNoErrors();
 

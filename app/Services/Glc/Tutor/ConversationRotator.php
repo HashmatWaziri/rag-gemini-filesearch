@@ -6,15 +6,23 @@ namespace App\Services\Glc\Tutor;
 
 use App\Models\Glc\TutorConversation;
 use App\Models\Glc\TutorMessage;
+use App\Services\Glc\Admin\TutorOperationalSettings;
+use App\Services\Glc\Ai\PlacementAiSettings;
+use Laravel\Ai\Responses\StructuredAgentResponse;
+use Throwable;
 
 final class ConversationRotator
 {
-    public function __construct(private readonly GeminiTutorClient $client) {}
+    public function __construct(
+        private readonly PlacementAiSettings $aiSettings,
+        private readonly TutorOperationalSettings $operationalSettings,
+    ) {}
 
     public function rotate(TutorConversation $conversation): void
     {
-        $threshold = config()->integer('glc.tutor.rotation_threshold_pairs', 40);
-        $summarizePairs = config()->integer('glc.tutor.rotation_summarize_pairs', 20);
+        $settings = $this->operationalSettings->effective();
+        $threshold = $settings['rotation_threshold_pairs'];
+        $summarizePairs = $settings['rotation_summarize_pairs'];
 
         $active = $conversation->messages()
             ->orderBy('id')
@@ -51,22 +59,29 @@ final class ConversationRotator
 
     private function summarize(string $transcript): ?string
     {
-        $response = $this->client->generateContent([
-            'system_instruction' => [
-                'parts' => [[
-                    'text' => 'You summarize English tutoring conversations. Produce a concise English summary (under 200 words) of the excerpt: topics covered, concepts the student struggled with, and any commitments or progress. Output plain text only.',
-                ]],
-            ],
-            'contents' => [[
-                'role' => 'user',
-                'parts' => [['text' => "Summarize this tutoring conversation excerpt:\n\n".$transcript]],
-            ]],
-        ]);
-
-        if ($response === null) {
+        if (! $this->aiSettings->taskIsConfigured(PlacementAiSettings::TASK_TUTOR_CHAT)) {
             return null;
         }
 
-        return $this->client->extractText($response);
+        try {
+            $this->aiSettings->hydrateProviderConfig();
+            $selection = $this->aiSettings->selection(PlacementAiSettings::TASK_TUTOR_CHAT);
+
+            $response = new TutorConversationSummarizerAgent()->prompt(
+                "Summarize this tutoring conversation excerpt:\n\n".$transcript,
+                provider: $selection['provider'],
+                model: $selection['model'],
+            );
+
+            if (! $response instanceof StructuredAgentResponse) {
+                return null;
+            }
+
+            $summary = $response['summary'] ?? null;
+
+            return is_string($summary) && $summary !== '' ? $summary : null;
+        } catch (Throwable) {
+            return null;
+        }
     }
 }

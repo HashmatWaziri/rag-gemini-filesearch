@@ -188,15 +188,9 @@ final readonly class DocumentController
     {
         return match ($state) {
             'draft' => $query->where('status', CurriculumDocumentStatus::Draft),
-            'publishing' => $query
-                ->where('status', CurriculumDocumentStatus::Published)
-                ->whereIn('index_status', [CurriculumIndexStatus::Pending, CurriculumIndexStatus::Indexing]),
-            'published' => $query
-                ->where('status', CurriculumDocumentStatus::Published)
-                ->where('index_status', CurriculumIndexStatus::Indexed),
-            'publish_failed' => $query
-                ->where('status', CurriculumDocumentStatus::Published)
-                ->where('index_status', CurriculumIndexStatus::Failed),
+            'publishing' => $query->where('status', CurriculumDocumentStatus::Publishing),
+            'published' => $query->where('status', CurriculumDocumentStatus::Published),
+            'publish_failed' => $query->where('status', CurriculumDocumentStatus::PublishFailed),
             'archived' => $query->where('status', CurriculumDocumentStatus::Archived),
             default => $query,
         };
@@ -204,12 +198,12 @@ final readonly class DocumentController
 
     private function documentState(CurriculumDocument $document): string
     {
-        return match (true) {
-            $document->status === CurriculumDocumentStatus::Archived => 'archived',
-            $document->status === CurriculumDocumentStatus::Draft => 'draft',
-            $document->index_status === CurriculumIndexStatus::Indexed => 'published',
-            $document->index_status === CurriculumIndexStatus::Failed => 'publish_failed',
-            default => 'publishing',
+        return match ($document->status) {
+            CurriculumDocumentStatus::Archived => 'archived',
+            CurriculumDocumentStatus::Draft => 'draft',
+            CurriculumDocumentStatus::Publishing => 'publishing',
+            CurriculumDocumentStatus::Published => 'published',
+            CurriculumDocumentStatus::PublishFailed => 'publish_failed',
         };
     }
 

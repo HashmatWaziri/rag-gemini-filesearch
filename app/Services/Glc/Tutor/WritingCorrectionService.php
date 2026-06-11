@@ -6,110 +6,71 @@ namespace App\Services\Glc\Tutor;
 
 use App\Enums\Glc\WritingDimension;
 use App\Models\Glc\WritingSubmission;
+use App\Services\Glc\Ai\PlacementAiSettings;
+use Laravel\Ai\Responses\StructuredAgentResponse;
+use Throwable;
 
 final class WritingCorrectionService
 {
     public const FAILURE_MESSAGE = 'We could not evaluate your writing right now. Please try submitting it again later.';
 
-    public function __construct(private readonly GeminiTutorClient $client) {}
+    public function __construct(private readonly PlacementAiSettings $aiSettings) {}
 
     public function evaluate(WritingSubmission $submission): void
     {
-        $response = $this->client->generateContent($this->buildPayload($submission));
-        $text = $response !== null ? $this->client->extractText($response) : null;
-        $decoded = is_string($text) ? json_decode($text, true) : null;
-        $dimensions = is_array($decoded) ? $this->normalizeDimensions($decoded) : null;
-
-        if (! is_array($decoded) || $dimensions === null) {
-            $submission->update([
-                'status' => 'failed',
-                'error' => self::FAILURE_MESSAGE,
-            ]);
+        if (! $this->aiSettings->taskIsConfigured(PlacementAiSettings::TASK_TUTOR_WRITING)) {
+            $this->markFailed($submission);
 
             return;
         }
 
-        $summary = data_get($decoded, 'summary');
+        try {
+            $this->aiSettings->hydrateProviderConfig();
+            $selection = $this->aiSettings->selection(PlacementAiSettings::TASK_TUTOR_WRITING);
 
-        $submission->update([
-            'feedback' => [
-                'dimensions' => $dimensions,
-                'summary' => is_string($summary) ? $summary : '',
-            ],
-            'highlights' => $this->normalizeHighlights($decoded, mb_strlen($submission->text)),
-            'status' => 'completed',
-            'error' => null,
-        ]);
+            $response = new TutorWritingCorrectionAgent()->prompt(
+                "Evaluate this student writing:\n\n".$submission->text,
+                provider: $selection['provider'],
+                model: $selection['model'],
+            );
+
+            if (! $response instanceof StructuredAgentResponse) {
+                $this->markFailed($submission);
+
+                return;
+            }
+
+            $decoded = $response->toArray();
+            $dimensions = $this->normalizeDimensions($decoded);
+
+            if ($dimensions === null) {
+                $this->markFailed($submission);
+
+                return;
+            }
+
+            $summary = data_get($decoded, 'summary');
+
+            $submission->update([
+                'feedback' => [
+                    'dimensions' => $dimensions,
+                    'summary' => is_string($summary) ? $summary : '',
+                ],
+                'highlights' => $this->normalizeHighlights($decoded, mb_strlen($submission->text)),
+                'status' => 'completed',
+                'error' => null,
+            ]);
+        } catch (Throwable) {
+            $this->markFailed($submission);
+        }
     }
 
-    /**
-     * @return array<string, mixed>
-     */
-    private function buildPayload(WritingSubmission $submission): array
+    private function markFailed(WritingSubmission $submission): void
     {
-        $dimensionList = implode(', ', array_map(
-            fn (WritingDimension $dimension): string => $dimension->value,
-            WritingDimension::cases(),
-        ));
-
-        $dimensionSchema = [];
-
-        foreach (WritingDimension::cases() as $dimension) {
-            $dimensionSchema[$dimension->value] = [
-                'type' => 'OBJECT',
-                'properties' => [
-                    'score' => ['type' => 'INTEGER'],
-                    'comment' => ['type' => 'STRING'],
-                ],
-                'required' => ['score', 'comment'],
-            ];
-        }
-
-        $systemText = <<<PROMPT
-You are an English writing evaluator for Greats Language Center students.
-Evaluate the submitted text on exactly these five dimensions: {$dimensionList}.
-For each dimension give an integer score from 1 (needs a lot of work) to 5 (excellent) and a short, encouraging, specific comment in English.
-Also produce a short overall summary in English and a list of inline highlights.
-Each highlight marks a specific issue in the submitted text using zero-based character offsets (start inclusive, end exclusive) into the EXACT submitted text, a type (one of the five dimensions), and a brief comment explaining the issue.
-Never output a single letter grade and never use IELTS 1-9 band scores.
-Respond with JSON only.
-PROMPT;
-
-        return [
-            'system_instruction' => ['parts' => [['text' => $systemText]]],
-            'contents' => [[
-                'role' => 'user',
-                'parts' => [['text' => "Evaluate this student writing:\n\n".$submission->text]],
-            ]],
-            'generationConfig' => [
-                'responseMimeType' => 'application/json',
-                'responseSchema' => [
-                    'type' => 'OBJECT',
-                    'properties' => [
-                        'dimensions' => [
-                            'type' => 'OBJECT',
-                            'properties' => $dimensionSchema,
-                            'required' => array_keys($dimensionSchema),
-                        ],
-                        'summary' => ['type' => 'STRING'],
-                        'highlights' => [
-                            'type' => 'ARRAY',
-                            'items' => [
-                                'type' => 'OBJECT',
-                                'properties' => [
-                                    'start' => ['type' => 'INTEGER'],
-                                    'end' => ['type' => 'INTEGER'],
-                                    'type' => ['type' => 'STRING', 'enum' => array_keys($dimensionSchema)],
-                                    'comment' => ['type' => 'STRING'],
-                                ],
-                                'required' => ['start', 'end', 'type', 'comment'],
-                            ],
-                        ],
-                    ],
-                    'required' => ['dimensions', 'summary'],
-                ],
-            ],
-        ];
+        $submission->update([
+            'status' => 'failed',
+            'error' => self::FAILURE_MESSAGE,
+        ]);
     }
 
     /**

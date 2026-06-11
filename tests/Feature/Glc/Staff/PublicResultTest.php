@@ -129,6 +129,7 @@ it('keeps candidate-facing routes free of staff data even for authenticated staf
         ->assertInertia(fn (Assert $page) => $page
             ->missing('score')
             ->missing('ai_drafts')
+            ->missing('ai_recommendation')
             ->missing('notes')
         );
 });

@@ -37,6 +37,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property-read \Illuminate\Support\Collection<int, PlacementIntegrityEvent> $integrityEvents
  * @property-read PlacementScore|null $score
  * @property-read \Illuminate\Support\Collection<int, PlacementAiDraft> $aiDrafts
+ * @property-read PlacementAiRecommendation|null $aiRecommendation
  * @property-read PlacementReview|null $review
  * @property-read \Illuminate\Support\Collection<int, PlacementResultLink> $resultLinks
  */
@@ -119,6 +120,14 @@ final class PlacementAttempt extends Model
     public function aiDrafts(): HasMany
     {
         return $this->hasMany(PlacementAiDraft::class);
+    }
+
+    /**
+     * @return HasOne<PlacementAiRecommendation, $this>
+     */
+    public function aiRecommendation(): HasOne
+    {
+        return $this->hasOne(PlacementAiRecommendation::class);
     }
 
     /**

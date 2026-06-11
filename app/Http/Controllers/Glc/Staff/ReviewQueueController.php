@@ -83,6 +83,7 @@ final readonly class ReviewQueueController
                     'flags' => $review->flags ?? [],
                     'has_integrity_events' => $review->attempt->integrityEvents()->exists(),
                     'suggested_level' => $review->attempt->score?->suggested_level?->label(),
+                    'section_scores' => $review->attempt->score?->section_scores,
                     'variance_flagged' => $review->attempt->score?->variance_flagged ?? false,
                     'assignee' => $review->assignee?->name,
                     'assigned_to' => $review->assigned_to,

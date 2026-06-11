@@ -65,7 +65,9 @@ export function Field({
                 {label}
             </span>
             {children}
-            {error && <span className="mt-1 block text-xs text-red-600">{error}</span>}
+            {error && (
+                <span className="mt-1 block text-xs text-red-600">{error}</span>
+            )}
         </label>
     );
 }
@@ -102,3 +104,152 @@ export const SECTION_ORDER = [
     'writing',
     'speaking',
 ] as const;
+
+/** Compact mini-bar chart of section scores (0-100) for queue rows. */
+export function ScoreBars({
+    scores,
+}: {
+    scores: Record<string, number | null> | null | undefined;
+}) {
+    if (!scores) {
+        return <span className="text-xs text-slate-300">Scores pending</span>;
+    }
+
+    return (
+        <div className="flex items-end gap-1" aria-hidden={false}>
+            {SECTION_ORDER.map((section) => {
+                const value = scores[section];
+                const pct = typeof value === 'number' ? value : null;
+                const height =
+                    pct === null
+                        ? 2
+                        : Math.max(3, Math.round((pct / 100) * 24));
+                const tone =
+                    pct === null
+                        ? 'bg-slate-200'
+                        : pct >= 70
+                          ? 'bg-emerald-500'
+                          : pct >= 40
+                            ? 'bg-amber-400'
+                            : 'bg-red-400';
+
+                return (
+                    <span
+                        key={section}
+                        className="flex flex-col items-center"
+                        title={`${SECTION_LABELS[section]}: ${pct === null ? 'not scored yet' : `${pct}%`}`}
+                        aria-label={`${SECTION_LABELS[section]}: ${pct === null ? 'not scored yet' : `${pct} percent`}`}
+                    >
+                        <span
+                            className={`block w-1.5 rounded-sm ${tone}`}
+                            style={{ height: `${height}px` }}
+                        />
+                    </span>
+                );
+            })}
+        </div>
+    );
+}
+
+/** Segmented 1-5 scale used for AI dimension scores. */
+export function DimensionScale({
+    value,
+    label,
+}: {
+    value: number;
+    label: string;
+}) {
+    return (
+        <div
+            className="flex items-center gap-0.5"
+            role="img"
+            aria-label={`${label}: ${value} out of 5`}
+        >
+            {[1, 2, 3, 4, 5].map((step) => (
+                <span
+                    key={step}
+                    className={`h-1.5 w-4 rounded-full ${
+                        step <= value
+                            ? value >= 4
+                                ? 'bg-emerald-500'
+                                : value >= 3
+                                  ? 'bg-sky-500'
+                                  : 'bg-amber-400'
+                            : 'bg-slate-200'
+                    }`}
+                />
+            ))}
+        </div>
+    );
+}
+
+/**
+ * Plain-language age of a submission, with a tone that escalates the longer
+ * the test has been waiting.
+ */
+export function submissionAge(submittedAt: string | null): {
+    label: string;
+    tone: 'slate' | 'amber' | 'red';
+} | null {
+    if (!submittedAt) {
+        return null;
+    }
+
+    const submitted = new Date(submittedAt.replace(' ', 'T'));
+
+    if (Number.isNaN(submitted.getTime())) {
+        return null;
+    }
+
+    const days = Math.floor(
+        (Date.now() - submitted.getTime()) / (1000 * 60 * 60 * 24),
+    );
+
+    if (days <= 0) {
+        return { label: 'Today', tone: 'slate' };
+    }
+
+    const label = days === 1 ? '1 day waiting' : `${days} days waiting`;
+
+    return {
+        label,
+        tone: days >= 7 ? 'red' : days >= 3 ? 'amber' : 'slate',
+    };
+}
+
+/** Checkmark glyph used in done states (SVG, no emoji). */
+export function CheckIcon({
+    className = 'h-3.5 w-3.5',
+}: {
+    className?: string;
+}) {
+    return (
+        <svg viewBox="0 0 16 16" fill="none" aria-hidden className={className}>
+            <path
+                d="M3 8.5 6.5 12 13 4.5"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+        </svg>
+    );
+}
+
+/** Sparkle glyph marking AI-generated, staff-only content. */
+export function SparkIcon({
+    className = 'h-3.5 w-3.5',
+}: {
+    className?: string;
+}) {
+    return (
+        <svg
+            viewBox="0 0 16 16"
+            fill="currentColor"
+            aria-hidden
+            className={className}
+        >
+            <path d="M8 1.5 9.6 6 14 7.5 9.6 9 8 13.5 6.4 9 2 7.5 6.4 6 8 1.5Z" />
+        </svg>
+    );
+}

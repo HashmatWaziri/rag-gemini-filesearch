@@ -16,22 +16,29 @@ final readonly class ReindexDocumentController
 {
     public function __invoke(Request $request, CurriculumDocument $document): RedirectResponse
     {
-        if ($document->status !== CurriculumDocumentStatus::Published) {
+        if (! in_array($document->status, [CurriculumDocumentStatus::Published, CurriculumDocumentStatus::PublishFailed], true)) {
             throw ValidationException::withMessages([
                 'status' => 'This document is not published, so there is nothing to retry.',
             ]);
         }
 
-        if ($document->index_status === CurriculumIndexStatus::Indexing) {
+        if ($document->index_status === CurriculumIndexStatus::Indexing
+            || $document->status === CurriculumDocumentStatus::Publishing) {
             throw ValidationException::withMessages([
                 'status' => 'This document is already being prepared for the AI Tutor.',
             ]);
         }
 
-        $document->update([
+        $updates = [
             'index_status' => CurriculumIndexStatus::Pending,
             'index_error' => null,
-        ]);
+        ];
+
+        if ($document->status === CurriculumDocumentStatus::PublishFailed) {
+            $updates['status'] = CurriculumDocumentStatus::Publishing;
+        }
+
+        $document->update($updates);
 
         IndexCurriculumDocumentJob::dispatch($document);
 

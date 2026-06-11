@@ -23,11 +23,23 @@ interface TutorMaterials {
     rebuild_available: boolean;
 }
 
+interface TutorOperationalBounds {
+    min: number;
+    max: number;
+}
+
+interface TutorOperationalSettings {
+    defaults: Record<string, number>;
+    effective: Record<string, number>;
+    bounds: Record<string, TutorOperationalBounds>;
+}
+
 interface SettingsEditProps {
     sections: Option[];
     defaults: Record<string, number>;
     effective: Record<string, number>;
     bounds: { min: number; max: number };
+    tutorOperational: TutorOperationalSettings;
     tutorMaterials: TutorMaterials;
     status?: string | null;
 }
@@ -158,11 +170,13 @@ export default function SettingsEdit({
     defaults,
     effective,
     bounds,
+    tutorOperational,
     tutorMaterials,
     status,
 }: SettingsEditProps) {
     const form = useForm<{
         section_time_limits: Record<string, string>;
+        tutor_operational: Record<string, string>;
     }>({
         section_time_limits: Object.fromEntries(
             sections.map((section) => [
@@ -170,6 +184,20 @@ export default function SettingsEdit({
                 String(effective[section.value] ?? ''),
             ]),
         ),
+        tutor_operational: {
+            rotation_threshold_pairs: String(
+                tutorOperational.effective.rotation_threshold_pairs,
+            ),
+            rotation_summarize_pairs: String(
+                tutorOperational.effective.rotation_summarize_pairs,
+            ),
+            violation_notification_threshold: String(
+                tutorOperational.effective.violation_notification_threshold,
+            ),
+            violation_notification_window_days: String(
+                tutorOperational.effective.violation_notification_window_days,
+            ),
+        },
     });
 
     const errors = form.errors as Record<string, string>;
@@ -234,6 +262,166 @@ export default function SettingsEdit({
                         </Field>
                     ))}
 
+                    <div className="border-t border-slate-100 pt-4">
+                        <h3 className="text-sm font-semibold text-slate-900">
+                            AI Tutor behaviour
+                        </h3>
+                        <p className="mt-1 text-sm text-slate-600">
+                            Conversation rotation and teacher alerts for
+                            repeated homework-answer requests.
+                        </p>
+                        <div className="mt-4 space-y-4">
+                            <Field
+                                label="Rotation threshold (message pairs)"
+                                htmlFor="rotation-threshold"
+                                error={
+                                    errors[
+                                        'tutor_operational.rotation_threshold_pairs'
+                                    ]
+                                }
+                                hint={`Summarize older messages after this many student/tutor pairs. Default: ${tutorOperational.defaults.rotation_threshold_pairs}.`}
+                            >
+                                <input
+                                    id="rotation-threshold"
+                                    type="number"
+                                    min={
+                                        tutorOperational.bounds
+                                            .rotation_threshold_pairs.min
+                                    }
+                                    max={
+                                        tutorOperational.bounds
+                                            .rotation_threshold_pairs.max
+                                    }
+                                    value={
+                                        form.data.tutor_operational
+                                            .rotation_threshold_pairs
+                                    }
+                                    onChange={(e) =>
+                                        form.setData('tutor_operational', {
+                                            ...form.data.tutor_operational,
+                                            rotation_threshold_pairs:
+                                                e.target.value,
+                                        })
+                                    }
+                                    className={inputClass}
+                                    required
+                                />
+                            </Field>
+                            <Field
+                                label="Pairs to summarize per rotation"
+                                htmlFor="rotation-summarize"
+                                error={
+                                    errors[
+                                        'tutor_operational.rotation_summarize_pairs'
+                                    ]
+                                }
+                                hint={`Default: ${tutorOperational.defaults.rotation_summarize_pairs}.`}
+                            >
+                                <input
+                                    id="rotation-summarize"
+                                    type="number"
+                                    min={
+                                        tutorOperational.bounds
+                                            .rotation_summarize_pairs.min
+                                    }
+                                    max={
+                                        tutorOperational.bounds
+                                            .rotation_summarize_pairs.max
+                                    }
+                                    value={
+                                        form.data.tutor_operational
+                                            .rotation_summarize_pairs
+                                    }
+                                    onChange={(e) =>
+                                        form.setData('tutor_operational', {
+                                            ...form.data.tutor_operational,
+                                            rotation_summarize_pairs:
+                                                e.target.value,
+                                        })
+                                    }
+                                    className={inputClass}
+                                    required
+                                />
+                            </Field>
+                            <Field
+                                label="Direct-answer alert threshold"
+                                htmlFor="violation-threshold"
+                                error={
+                                    errors[
+                                        'tutor_operational.violation_notification_threshold'
+                                    ]
+                                }
+                                hint={`Notify linked teachers after this many direct-answer requests within the window. Default: ${tutorOperational.defaults.violation_notification_threshold}.`}
+                            >
+                                <input
+                                    id="violation-threshold"
+                                    type="number"
+                                    min={
+                                        tutorOperational.bounds
+                                            .violation_notification_threshold
+                                            .min
+                                    }
+                                    max={
+                                        tutorOperational.bounds
+                                            .violation_notification_threshold
+                                            .max
+                                    }
+                                    value={
+                                        form.data.tutor_operational
+                                            .violation_notification_threshold
+                                    }
+                                    onChange={(e) =>
+                                        form.setData('tutor_operational', {
+                                            ...form.data.tutor_operational,
+                                            violation_notification_threshold:
+                                                e.target.value,
+                                        })
+                                    }
+                                    className={inputClass}
+                                    required
+                                />
+                            </Field>
+                            <Field
+                                label="Direct-answer alert window (days)"
+                                htmlFor="violation-window"
+                                error={
+                                    errors[
+                                        'tutor_operational.violation_notification_window_days'
+                                    ]
+                                }
+                                hint={`Default: ${tutorOperational.defaults.violation_notification_window_days} days.`}
+                            >
+                                <input
+                                    id="violation-window"
+                                    type="number"
+                                    min={
+                                        tutorOperational.bounds
+                                            .violation_notification_window_days
+                                            .min
+                                    }
+                                    max={
+                                        tutorOperational.bounds
+                                            .violation_notification_window_days
+                                            .max
+                                    }
+                                    value={
+                                        form.data.tutor_operational
+                                            .violation_notification_window_days
+                                    }
+                                    onChange={(e) =>
+                                        form.setData('tutor_operational', {
+                                            ...form.data.tutor_operational,
+                                            violation_notification_window_days:
+                                                e.target.value,
+                                        })
+                                    }
+                                    className={inputClass}
+                                    required
+                                />
+                            </Field>
+                        </div>
+                    </div>
+
                     <div className="flex justify-end">
                         <button
                             type="submit"
@@ -246,6 +434,38 @@ export default function SettingsEdit({
                 </form>
 
                 <TutorMaterialsCard tutorMaterials={tutorMaterials} />
+
+                <section className="max-w-xl space-y-2 rounded-lg border border-slate-200 bg-white p-5">
+                    <h2 className="text-base font-semibold text-slate-900">
+                        AI Models
+                    </h2>
+                    <p className="text-sm text-slate-600">
+                        Choose the AI provider and model for placement writing
+                        evaluation, speaking transcription and evaluation, AI
+                        Tutor chat and writing correction, compare pricing, and
+                        manage provider API keys.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                        <Link
+                            href="/admin/settings/ai"
+                            className={buttonSecondaryClass}
+                        >
+                            Open AI Models settings
+                        </Link>
+                        <Link
+                            href="/admin/settings/writing-guidelines"
+                            className={buttonSecondaryClass}
+                        >
+                            Writing guidelines
+                        </Link>
+                        <Link
+                            href="/admin/settings/speaking-guidelines"
+                            className={buttonSecondaryClass}
+                        >
+                            Speaking guidelines
+                        </Link>
+                    </div>
+                </section>
             </div>
         </GlcLayout>
     );

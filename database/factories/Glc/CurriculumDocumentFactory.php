@@ -67,6 +67,23 @@ final class CurriculumDocumentFactory extends Factory
         ]);
     }
 
+    public function publishing(): self
+    {
+        return $this->state(fn (): array => [
+            'status' => CurriculumDocumentStatus::Publishing,
+            'index_status' => CurriculumIndexStatus::Indexing,
+        ]);
+    }
+
+    public function publishFailed(): self
+    {
+        return $this->state(fn (): array => [
+            'status' => CurriculumDocumentStatus::PublishFailed,
+            'index_status' => CurriculumIndexStatus::Failed,
+            'index_error' => 'Upload failed.',
+        ]);
+    }
+
     public function archived(): self
     {
         return $this->state(fn (): array => [

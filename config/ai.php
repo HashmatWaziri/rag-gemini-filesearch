@@ -63,6 +63,11 @@ return [
             'key' => env('COHERE_API_KEY'),
         ],
 
+        'deepseek' => [
+            'driver' => 'deepseek',
+            'key' => env('DEEPSEEK_API_KEY'),
+        ],
+
         'eleven' => [
             'driver' => 'eleven',
             'key' => env('ELEVENLABS_API_KEY'),
@@ -79,9 +84,35 @@ return [
             'url' => env('GROQ_URL', 'https://api.groq.com/openai/v1'),
         ],
 
+        // Groq Whisper transcription via its OpenAI-compatible audio endpoint.
+        'groq-stt' => [
+            'driver' => 'openai',
+            'key' => env('GROQ_API_KEY'),
+            'url' => env('GROQ_URL', 'https://api.groq.com/openai/v1'),
+        ],
+
         'jina' => [
             'driver' => 'jina',
             'key' => env('JINA_API_KEY'),
+        ],
+
+        // Moonshot AI (Kimi) exposes an OpenAI-compatible endpoint.
+        'kimi' => [
+            'driver' => 'openai',
+            'key' => env('KIMI_API_KEY'),
+            'url' => env('KIMI_URL', 'https://api.moonshot.ai/v1'),
+        ],
+
+        // MiniMax exposes an OpenAI-compatible endpoint.
+        'minimax' => [
+            'driver' => 'openai',
+            'key' => env('MINIMAX_API_KEY'),
+            'url' => env('MINIMAX_URL', 'https://api.minimax.io/v1'),
+        ],
+
+        'mistral' => [
+            'driver' => 'mistral',
+            'key' => env('MISTRAL_API_KEY'),
         ],
 
         'openai' => [

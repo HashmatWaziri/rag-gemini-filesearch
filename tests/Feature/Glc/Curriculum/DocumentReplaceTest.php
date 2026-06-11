@@ -139,7 +139,8 @@ it('keeps the previous store entry when the replacement import fails', function 
 
     $document->refresh();
 
-    expect($document->index_status)->toBe(CurriculumIndexStatus::Failed)
+    expect($document->status)->toBe(CurriculumDocumentStatus::Publishing)
+        ->and($document->index_status)->toBe(CurriculumIndexStatus::Failed)
         ->and($document->gemini_document_name)->toBe('fileSearchStores/glc-store/documents/old-doc');
 
     Http::assertNotSent(fn (Request $request): bool => $request->method() === 'DELETE');

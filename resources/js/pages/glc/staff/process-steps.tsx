@@ -50,6 +50,7 @@ export interface PipelineInput {
     status: ReviewStatus;
     submittedAt: string | null;
     hasScore: boolean;
+    aiScoringDone: boolean;
     aiSuggestionsUnavailable: boolean;
     assigneeName: string | null;
     assignedToMe: boolean;
@@ -99,7 +100,7 @@ function reviewStepNote(
     }
 }
 
-/** Derives the six placement process steps with done/current/upcoming state. */
+/** Derives the seven placement process steps with done/current/upcoming state. */
 export function derivePipeline(input: PipelineInput): PipelineStep[] {
     const sent = input.status === 'sent';
     const finalApprovalDone = input.status === 'approved' || sent;
@@ -117,13 +118,23 @@ export function derivePipeline(input: PipelineInput): PipelineStep[] {
             caution: undefined as string | undefined,
         },
         {
-            key: 'automatic_checks',
-            title: 'Automatic checks',
+            key: 'question_bank_scoring',
+            title: 'Question-bank scoring',
             role: 'System',
             done: input.hasScore,
             note: input.hasScore
-                ? 'Reading, Grammar & Vocabulary and Listening scored automatically, with staff-only AI suggestions for Writing and Speaking'
-                : 'Checks are still running — no staff action needed',
+                ? 'Reading, Grammar & Vocabulary and Listening scored automatically against the question bank'
+                : 'Scoring is still running — no staff action needed',
+            caution: undefined as string | undefined,
+        },
+        {
+            key: 'ai_provisional_scoring',
+            title: 'AI provisional scoring',
+            role: 'AI assistant · staff-only',
+            done: input.aiScoringDone,
+            note: input.aiScoringDone
+                ? 'Writing and Speaking evaluated against the GLC guidelines — staff confirms every level'
+                : 'AI suggestions are being prepared — the review can continue without them',
             caution: input.aiSuggestionsUnavailable
                 ? 'Some AI suggestions are unavailable — review continues normally'
                 : undefined,

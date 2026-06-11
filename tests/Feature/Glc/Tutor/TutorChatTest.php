@@ -11,18 +11,42 @@ use App\Models\Glc\CurriculumDocument;
 use App\Models\Glc\TutorConversation;
 use App\Models\Glc\TutorMessage;
 use App\Models\Setting;
+use App\Services\Glc\Tutor\GlcTutorAgent;
 use App\Services\Glc\Tutor\TutorChatService;
-use Illuminate\Http\Client\Request;
-use Illuminate\Support\Facades\Http;
-use Tests\Fixtures\Glc\GeminiFake;
+use App\Services\Glc\Tutor\TutorCitationExtractor;
+use Laravel\Ai\Prompts\AgentPrompt;
+use Laravel\Ai\Providers\Tools\FileSearch;
+use Laravel\Ai\Responses\AgentResponse;
 use Tests\Fixtures\Glc\TutorScenario;
 
 use function Pest\Laravel\actingAs;
 
 beforeEach(function (): void {
     $this->withoutVite();
-    config(['gemini.api_key' => 'test-key']);
+    config([
+        'gemini.api_key' => 'test-key',
+        'ai.providers.gemini.key' => 'test-key',
+    ]);
 });
+
+function fakeTutorAgent(array $responses = [['reply' => 'Past simple describes finished actions.', 'violation' => null]]): void
+{
+    GlcTutorAgent::fake($responses)->preventStrayPrompts();
+}
+
+function fakeTutorCitations(array $titles): void
+{
+    app()->instance(TutorCitationExtractor::class, new class($titles) extends TutorCitationExtractor
+    {
+        /** @param list<string> $titles */
+        public function __construct(private array $titles) {}
+
+        public function titlesFromResponse(AgentResponse $response): array
+        {
+            return $this->titles;
+        }
+    });
+}
 
 it('creates a new conversation and redirects to the chat screen', function (): void {
     ['student' => $student] = TutorScenario::assignedStudent();
@@ -47,11 +71,8 @@ it('sends a message through the scoped retrieval pipeline and persists the reply
         'title' => 'Unit Worksheet',
     ]);
 
-    Http::fake([
-        'generativelanguage.googleapis.com/*' => Http::response(
-            GeminiFake::chat('Past simple describes finished actions.', null, ['Unit Worksheet']),
-        ),
-    ]);
+    fakeTutorCitations(['Unit Worksheet']);
+    fakeTutorAgent();
 
     $conversation = TutorConversation::factory()->create(['user_id' => $student->id, 'title' => null]);
 
@@ -75,23 +96,25 @@ it('sends a message through the scoped retrieval pipeline and persists the reply
     expect($conversation->title)->toBe('Explain the past simple tense please')
         ->and($conversation->last_activity_at?->toDateTimeString())->toBe(now()->toDateTimeString());
 
-    Http::assertSent(function (Request $request) use ($assignment): bool {
-        $data = $request->data();
+    GlcTutorAgent::assertPrompted(function (AgentPrompt $prompt) use ($assignment): bool {
+        $agent = $prompt->agent;
 
-        $expectedFilter = sprintf(
-            'course_id=%d AND course_level_id=%d AND course_unit_id=%d AND status="published"',
-            $assignment->course_id,
-            $assignment->course_level_id,
-            $assignment->course_unit_id,
-        );
+        if (! $agent instanceof GlcTutorAgent) {
+            return false;
+        }
 
-        return str_contains($request->url(), 'models/gemini-2.5-flash:generateContent')
-            && $request->hasHeader('x-goog-api-key', 'test-key')
-            && str_contains((string) data_get($data, 'system_instruction.parts.0.text'), 'English only')
-            && data_get($data, 'tools.0.file_search.file_search_store_names') === ['fileSearchStores/glc-test-store']
-            && data_get($data, 'tools.0.file_search.metadata_filter') === $expectedFilter
-            && data_get($data, 'generationConfig.responseMimeType') === 'application/json'
-            && data_get($data, 'contents.0.parts.0.text') === 'Explain the past simple tense please';
+        $tools = [...$agent->tools()];
+        $fileSearch = $tools[0] ?? null;
+
+        return $prompt->prompt === 'Explain the past simple tense please'
+            && str_contains($agent->instructions(), 'English only')
+            && $fileSearch instanceof FileSearch
+            && $fileSearch->filters === [
+                ['type' => 'eq', 'key' => 'course_id', 'value' => $assignment->course_id],
+                ['type' => 'eq', 'key' => 'course_level_id', 'value' => $assignment->course_level_id],
+                ['type' => 'eq', 'key' => 'course_unit_id', 'value' => $assignment->course_unit_id],
+                ['type' => 'eq', 'key' => 'status', 'value' => 'published'],
+            ];
     });
 });
 
@@ -100,7 +123,7 @@ it('blocks the exchange before any model call when no published documents are in
 
     Setting::set(SettingKey::GlcCurriculumStoreName, 'fileSearchStores/glc-test-store');
 
-    Http::fake();
+    GlcTutorAgent::fake()->preventStrayPrompts();
 
     $conversation = TutorConversation::factory()->create(['user_id' => $student->id]);
 
@@ -114,7 +137,7 @@ it('blocks the exchange before any model call when no published documents are in
         ->and($messages[1]->role)->toBe('assistant')
         ->and($messages[1]->content)->toBe(TutorChatService::MATERIALS_NOT_READY_MESSAGE);
 
-    Http::assertNothingSent();
+    GlcTutorAgent::assertNeverPrompted();
 });
 
 it('still blocks the exchange when only draft or archived documents are in scope', function (): void {
@@ -131,7 +154,7 @@ it('still blocks the exchange when only draft or archived documents are in scope
     CurriculumDocument::factory()->create($scope);
     CurriculumDocument::factory()->archived()->create($scope);
 
-    Http::fake();
+    GlcTutorAgent::fake()->preventStrayPrompts();
 
     $conversation = TutorConversation::factory()->create(['user_id' => $student->id]);
 
@@ -140,7 +163,30 @@ it('still blocks the exchange when only draft or archived documents are in scope
     expect($conversation->messages()->where('role', 'assistant')->sole()->content)
         ->toBe(TutorChatService::MATERIALS_NOT_READY_MESSAGE);
 
-    Http::assertNothingSent();
+    GlcTutorAgent::assertNeverPrompted();
+});
+
+it('blocks the exchange when publishing materials are not yet indexed', function (): void {
+    ['student' => $student, 'course' => $course, 'level' => $level, 'unit' => $unit] = TutorScenario::assignedStudent(withMaterials: false);
+
+    Setting::set(SettingKey::GlcCurriculumStoreName, 'fileSearchStores/glc-test-store');
+
+    CurriculumDocument::factory()->publishing()->create([
+        'course_id' => $course->id,
+        'course_level_id' => $level->id,
+        'course_unit_id' => $unit->id,
+    ]);
+
+    GlcTutorAgent::fake()->preventStrayPrompts();
+
+    $conversation = TutorConversation::factory()->create(['user_id' => $student->id]);
+
+    actingAs($student)->post(route('tutor.messages.store', $conversation), ['message' => 'Hello?']);
+
+    expect($conversation->messages()->where('role', 'assistant')->sole()->content)
+        ->toBe(TutorChatService::MATERIALS_NOT_READY_MESSAGE);
+
+    GlcTutorAgent::assertNeverPrompted();
 });
 
 it('formats grounded citations as title with course, unit, and lesson or Unit-wide', function (): void {
@@ -159,11 +205,8 @@ it('formats grounded citations as title with course, unit, and lesson or Unit-wi
 
     Setting::set(SettingKey::GlcCurriculumStoreName, 'fileSearchStores/glc-test-store');
 
-    Http::fake([
-        'generativelanguage.googleapis.com/*' => Http::response(
-            GeminiFake::chat('Grounded explanation.', null, ['Grammar Basics', 'Lesson 2 Worksheet']),
-        ),
-    ]);
+    fakeTutorCitations(['Grammar Basics', 'Lesson 2 Worksheet']);
+    fakeTutorAgent([['reply' => 'Grounded explanation.', 'violation' => null]]);
 
     $conversation = TutorConversation::factory()->create(['user_id' => $student->id]);
 
@@ -200,23 +243,19 @@ it('scopes the filter to the unit so unit-wide and lesson-specific documents are
 
     Setting::set(SettingKey::GlcCurriculumStoreName, 'fileSearchStores/glc-test-store');
 
-    Http::fake([
-        'generativelanguage.googleapis.com/*' => Http::response(GeminiFake::chat('Sure.')),
-    ]);
+    fakeTutorAgent([['reply' => 'Sure.', 'violation' => null]]);
 
     $conversation = TutorConversation::factory()->create(['user_id' => $student->id]);
 
     actingAs($student)->post(route('tutor.messages.store', $conversation), ['message' => 'Hi']);
 
-    Http::assertSent(function (Request $request) use ($assignment): bool {
-        $filter = (string) data_get($request->data(), 'tools.0.file_search.metadata_filter');
+    GlcTutorAgent::assertPrompted(function (AgentPrompt $prompt) use ($assignment): bool {
+        $tools = [...$prompt->agent->tools()];
+        $filters = $tools[0] instanceof FileSearch ? $tools[0]->filters : [];
 
-        return $filter === sprintf(
-            'course_id=%d AND course_level_id=%d AND course_unit_id=%d AND status="published"',
-            $assignment->course_id,
-            $assignment->course_level_id,
-            $assignment->course_unit_id,
-        ) && ! str_contains($filter, 'course_lesson_id');
+        return collect($filters)->contains(fn (array $filter): bool => $filter['key'] === 'course_unit_id'
+            && $filter['value'] === $assignment->course_unit_id)
+            && ! collect($filters)->contains(fn (array $filter): bool => $filter['key'] === 'course_lesson_id');
     });
 });
 
@@ -235,8 +274,9 @@ it('uses the latest teacher assignment for the next message in an existing conve
         'course_unit_id' => $newUnit->id,
     ]);
 
-    Http::fake([
-        'generativelanguage.googleapis.com/*' => Http::response(GeminiFake::chat('Here is a hint.')),
+    fakeTutorAgent([
+        ['reply' => 'First hint.', 'violation' => null],
+        ['reply' => 'Second hint.', 'violation' => null],
     ]);
 
     $conversation = TutorConversation::factory()->create(['user_id' => $student->id]);
@@ -253,25 +293,29 @@ it('uses the latest teacher assignment for the next message in an existing conve
 
     actingAs($student)->post(route('tutor.messages.store', $conversation), ['message' => 'Second question']);
 
-    $filters = collect(Http::recorded())
-        ->map(fn (array $pair): mixed => data_get($pair[0]->data(), 'tools.0.file_search.metadata_filter'))
-        ->filter()
-        ->values();
+    GlcTutorAgent::assertPrompted(function (AgentPrompt $prompt) use ($assignment): bool {
+        if ($prompt->prompt !== 'First question' || ! $prompt->agent instanceof GlcTutorAgent) {
+            return false;
+        }
 
-    expect($filters->all())->toBe([
-        sprintf(
-            'course_id=%d AND course_level_id=%d AND course_unit_id=%d AND status="published"',
-            $assignment->course_id,
-            $assignment->course_level_id,
-            $assignment->course_unit_id,
-        ),
-        sprintf(
-            'course_id=%d AND course_level_id=%d AND course_unit_id=%d AND status="published"',
-            $newCourse->id,
-            $newLevel->id,
-            $newUnit->id,
-        ),
-    ]);
+        $filters = ($prompt->agent->tools()[0] ?? null) instanceof FileSearch
+            ? $prompt->agent->tools()[0]->filters
+            : [];
+
+        return ($filters[0]['value'] ?? null) === $assignment->course_id;
+    });
+
+    GlcTutorAgent::assertPrompted(function (AgentPrompt $prompt) use ($newCourse): bool {
+        if ($prompt->prompt !== 'Second question' || ! $prompt->agent instanceof GlcTutorAgent) {
+            return false;
+        }
+
+        $filters = ($prompt->agent->tools()[0] ?? null) instanceof FileSearch
+            ? $prompt->agent->tools()[0]->filters
+            : [];
+
+        return ($filters[0]['value'] ?? null) === $newCourse->id;
+    });
 
     expect($conversation->messages()->count())->toBe(4);
 });
@@ -279,9 +323,9 @@ it('uses the latest teacher assignment for the next message in an existing conve
 it('resumes a thread with prior messages and the rotation summary as context', function (): void {
     ['student' => $student] = TutorScenario::assignedStudent();
 
-    Http::fake([
-        'generativelanguage.googleapis.com/*' => Http::response(GeminiFake::chat('Sure, continuing.')),
-    ]);
+    Setting::set(SettingKey::GlcCurriculumStoreName, 'fileSearchStores/glc-test-store');
+
+    fakeTutorAgent([['reply' => 'Sure, continuing.', 'violation' => null]]);
 
     $conversation = TutorConversation::factory()->create([
         'user_id' => $student->id,
@@ -306,15 +350,20 @@ it('resumes a thread with prior messages and the rotation summary as context', f
 
     actingAs($student)->post(route('tutor.messages.store', $conversation), ['message' => 'Give me another example']);
 
-    Http::assertSent(function (Request $request): bool {
-        $contents = data_get($request->data(), 'contents');
-        $texts = collect($contents)->map(fn (array $content): string => (string) data_get($content, 'parts.0.text'));
+    GlcTutorAgent::assertPrompted(function (AgentPrompt $prompt): bool {
+        if (! $prompt->agent instanceof GlcTutorAgent) {
+            return false;
+        }
 
-        return str_contains($texts->first(), 'Student practiced irregular verbs.')
-            && $texts->contains('What is an irregular verb?')
-            && $texts->contains('A verb that does not take -ed.')
-            && $texts->contains('Give me another example')
-            && ! $texts->contains('Old rotated question');
+        $messages = [...$prompt->agent->messages()];
+        $text = collect($messages)
+            ->map(fn ($message): string => $message->content ?? '')
+            ->implode("\n");
+
+        return str_contains($text, 'Student practiced irregular verbs.')
+            && str_contains($text, 'What is an irregular verb?')
+            && str_contains($text, 'A verb that does not take -ed.')
+            && ! str_contains($text, 'Old rotated question');
     });
 });
 
@@ -358,9 +407,13 @@ it('lists only the student\'s own conversations', function (): void {
 });
 
 it('replies with a friendly message when the API key is missing', function (): void {
-    config(['gemini.api_key' => null]);
+    config(['gemini.api_key' => null, 'ai.providers.gemini.key' => null]);
 
     ['student' => $student] = TutorScenario::assignedStudent();
+    Setting::set(SettingKey::GlcCurriculumStoreName, 'fileSearchStores/glc-test-store');
+
+    GlcTutorAgent::fake()->preventStrayPrompts();
+
     $conversation = TutorConversation::factory()->create(['user_id' => $student->id]);
 
     actingAs($student)
@@ -370,13 +423,16 @@ it('replies with a friendly message when the API key is missing', function (): v
     $assistant = $conversation->messages()->where('role', 'assistant')->sole();
 
     expect($assistant->content)->toBe(TutorChatService::UNAVAILABLE_MESSAGE);
-    Http::assertNothingSent();
+    GlcTutorAgent::assertNeverPrompted();
 });
 
 it('replies with a friendly message when the provider fails', function (): void {
     ['student' => $student] = TutorScenario::assignedStudent();
+    Setting::set(SettingKey::GlcCurriculumStoreName, 'fileSearchStores/glc-test-store');
 
-    Http::fake(['generativelanguage.googleapis.com/*' => Http::response(['error' => 'boom'], 500)]);
+    GlcTutorAgent::fake(function (): never {
+        throw new RuntimeException('boom');
+    })->preventStrayPrompts();
 
     $conversation = TutorConversation::factory()->create(['user_id' => $student->id]);
 
@@ -388,21 +444,18 @@ it('replies with a friendly message when the provider fails', function (): void 
         ->toBe(TutorChatService::UNAVAILABLE_MESSAGE);
 });
 
-it('treats non-JSON model output as a plain reply without violation', function (): void {
+it('replies with a friendly message when structured output is invalid', function (): void {
     ['student' => $student] = TutorScenario::assignedStudent();
+    Setting::set(SettingKey::GlcCurriculumStoreName, 'fileSearchStores/glc-test-store');
 
-    Http::fake([
-        'generativelanguage.googleapis.com/*' => Http::response(GeminiFake::text('Just plain prose, no JSON.')),
-    ]);
+    GlcTutorAgent::fake([['violation' => null]])->preventStrayPrompts();
 
     $conversation = TutorConversation::factory()->create(['user_id' => $student->id]);
 
     actingAs($student)->post(route('tutor.messages.store', $conversation), ['message' => 'Hello']);
 
-    $assistant = $conversation->messages()->where('role', 'assistant')->sole();
-
-    expect($assistant->content)->toBe('Just plain prose, no JSON.')
-        ->and(data_get($assistant->metadata, 'violation'))->toBeNull();
+    expect($conversation->messages()->where('role', 'assistant')->sole()->content)
+        ->toBe(TutorChatService::UNAVAILABLE_MESSAGE);
 });
 
 it('rejects an empty message', function (): void {

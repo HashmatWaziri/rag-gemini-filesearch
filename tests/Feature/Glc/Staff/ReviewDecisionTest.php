@@ -4,10 +4,15 @@ declare(strict_types=1);
 
 use App\Enums\Glc\AuditAction;
 use App\Enums\Glc\GlcLevel;
+use App\Enums\Glc\PlacementItemType;
 use App\Enums\Glc\PlacementReviewStatus;
+use App\Enums\Glc\PlacementSection;
 use App\Models\Glc\AuditLog;
 use App\Models\Glc\PlacementAiDraft;
+use App\Models\Glc\PlacementAiRecommendation;
+use App\Models\Glc\PlacementAnswer;
 use App\Models\Glc\PlacementIntegrityEvent;
+use App\Models\Glc\PlacementItem;
 use App\Models\Glc\PlacementReview;
 use App\Models\Glc\PlacementScore;
 use App\Models\User;
@@ -69,6 +74,120 @@ it('shows the review detail with drafts, integrity events, and scores to staff',
             ->where('suggested_skill_levels.reading', 'intermediate')
             ->where('review.is_assigned_to_me', false)
         );
+});
+
+it('exposes the AI provisional scoring panel props: objective counts, guideline titles, and model attribution', function (): void {
+    $review = PlacementReview::factory()->create();
+
+    $items = PlacementItem::factory()->count(2)->create([
+        'section' => PlacementSection::Reading,
+        'type' => PlacementItemType::Question,
+        'correct_option' => 0,
+    ]);
+
+    PlacementAnswer::factory()->create([
+        'placement_attempt_id' => $review->placement_attempt_id,
+        'placement_item_id' => $items[0]->id,
+        'response' => ['selected' => 0],
+    ]);
+
+    actingAs(User::factory()->academicSupervisor()->create())
+        ->get(route('staff.review.show', $review))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('objective_breakdown.reading.correct', 1)
+            ->where('objective_breakdown.reading.total', 2)
+            ->where('objective_breakdown.reading.percentage', 50)
+            ->where('writing_guidelines.customized', false)
+            ->where('writing_guidelines.titles.0', 'Grammar accuracy')
+            ->where('ai_models.writing.provider', 'Google Gemini')
+            ->where('ai_models.speaking.model', 'Gemini 2.5 Flash (audio)')
+        );
+});
+
+it('exposes the AI recommendation and prefers its levels for the suggested skill levels', function (): void {
+    $review = PlacementReview::factory()->create();
+    intermediateScore($review);
+
+    PlacementAiRecommendation::factory()->create([
+        'placement_attempt_id' => $review->placement_attempt_id,
+        'recommended_level' => GlcLevel::UpperIntermediate,
+        'skill_levels' => [
+            'reading' => 'upper_intermediate',
+            'grammar_vocabulary' => 'intermediate',
+            'listening' => 'intermediate',
+            'writing' => 'intermediate',
+            'speaking' => 'pre_intermediate',
+        ],
+    ]);
+
+    actingAs(User::factory()->academicSupervisor()->create())
+        ->get(route('staff.review.show', $review))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('ai_recommendation.status', 'completed')
+            ->where('ai_recommendation.recommended_level', 'upper_intermediate')
+            ->where('ai_recommendation.confidence', 'medium')
+            ->has('ai_recommendation.skill_summaries')
+            ->where('suggested_skill_levels.reading', 'upper_intermediate')
+            ->where('suggested_skill_levels.speaking', 'pre_intermediate')
+        );
+});
+
+it('falls back to formula-based suggested skill levels when the recommendation failed', function (): void {
+    $review = PlacementReview::factory()->create();
+    intermediateScore($review);
+
+    PlacementAiRecommendation::factory()->failed()->create([
+        'placement_attempt_id' => $review->placement_attempt_id,
+    ]);
+
+    actingAs(User::factory()->academicSupervisor()->create())
+        ->get(route('staff.review.show', $review))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('ai_recommendation.status', 'failed')
+            ->where('suggested_skill_levels.reading', 'intermediate')
+        );
+});
+
+it('accepts the AI-recommended levels without requiring an override reason', function (): void {
+    $review = PlacementReview::factory()->create(['status' => PlacementReviewStatus::InReview]);
+    intermediateScore($review);
+
+    PlacementAiRecommendation::factory()->create([
+        'placement_attempt_id' => $review->placement_attempt_id,
+        'recommended_level' => GlcLevel::UpperIntermediate,
+        'skill_levels' => [
+            'reading' => 'upper_intermediate',
+            'grammar_vocabulary' => 'intermediate',
+            'listening' => 'intermediate',
+            'writing' => 'intermediate',
+            'speaking' => 'intermediate',
+        ],
+    ]);
+
+    actingAs(User::factory()->academicSupervisor()->create())
+        ->put(route('staff.review.decision', $review), decisionPayload('upper_intermediate', ['reading' => 'upper_intermediate']))
+        ->assertRedirect()
+        ->assertSessionHasNoErrors();
+
+    expect($review->refresh()->final_level)->toBe(GlcLevel::UpperIntermediate)
+        ->and($review->override_reason)->toBeNull();
+});
+
+it('requires an override reason when deviating from the AI recommendation', function (): void {
+    $review = PlacementReview::factory()->create(['status' => PlacementReviewStatus::InReview]);
+    intermediateScore($review);
+
+    PlacementAiRecommendation::factory()->create([
+        'placement_attempt_id' => $review->placement_attempt_id,
+        'recommended_level' => GlcLevel::UpperIntermediate,
+    ]);
+
+    actingAs(User::factory()->academicSupervisor()->create())
+        ->put(route('staff.review.decision', $review), decisionPayload('intermediate'))
+        ->assertSessionHasErrors('override_reason');
 });
 
 it('tells the assigned reviewer the review is theirs via is_assigned_to_me', function (): void {

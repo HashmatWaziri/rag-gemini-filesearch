@@ -10,12 +10,15 @@ use App\Models\Glc\TutorMessage;
 use App\Models\Glc\TutorViolation;
 use App\Models\User;
 use App\Notifications\Glc\PersistentDirectAnswerSeekingNotification;
+use App\Services\Glc\Admin\TutorOperationalSettings;
 use Carbon\CarbonInterface;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Str;
 
 final class TutorViolationRecorder
 {
+    public function __construct(private readonly TutorOperationalSettings $operationalSettings) {}
+
     public function record(
         TutorConversation $conversation,
         TutorMessage $studentMessage,
@@ -39,8 +42,9 @@ final class TutorViolationRecorder
 
     private function notifyTeachersOfPersistentPattern(User $student): void
     {
-        $threshold = config()->integer('glc.tutor.violation_notification_threshold', 3);
-        $windowDays = config()->integer('glc.tutor.violation_notification_window_days', 7);
+        $settings = $this->operationalSettings->effective();
+        $threshold = $settings['violation_notification_threshold'];
+        $windowDays = $settings['violation_notification_window_days'];
         $windowStart = now()->subDays($windowDays);
 
         $count = TutorViolation::query()

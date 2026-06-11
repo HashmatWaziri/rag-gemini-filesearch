@@ -2,18 +2,23 @@
 
 declare(strict_types=1);
 
+use App\Enums\SettingKey;
 use App\Models\Glc\TutorConversation;
 use App\Models\Glc\TutorMessage;
-use Illuminate\Http\Client\Request;
-use Illuminate\Support\Facades\Http;
-use Tests\Fixtures\Glc\GeminiFake;
+use App\Models\Setting;
+use App\Services\Glc\Tutor\GlcTutorAgent;
+use App\Services\Glc\Tutor\TutorConversationSummarizerAgent;
+use Laravel\Ai\Prompts\AgentPrompt;
 use Tests\Fixtures\Glc\TutorScenario;
 
 use function Pest\Laravel\actingAs;
 
 beforeEach(function (): void {
     $this->withoutVite();
-    config(['gemini.api_key' => 'test-key']);
+    config([
+        'gemini.api_key' => 'test-key',
+        'ai.providers.gemini.key' => 'test-key',
+    ]);
 });
 
 function seedTutorPairs(TutorConversation $conversation, int $pairs): void
@@ -31,17 +36,20 @@ function seedTutorPairs(TutorConversation $conversation, int $pairs): void
     }
 }
 
+function prepareTutorRotationScenario(): void
+{
+    Setting::set(SettingKey::GlcCurriculumStoreName, 'fileSearchStores/glc-test-store');
+}
+
 it('summarizes and flags the oldest 20 pairs once the conversation exceeds 40 pairs', function (): void {
     ['student' => $student] = TutorScenario::assignedStudent();
+    prepareTutorRotationScenario();
 
     $conversation = TutorConversation::factory()->create(['user_id' => $student->id, 'summary' => null]);
     seedTutorPairs($conversation, 41);
 
-    Http::fake([
-        'generativelanguage.googleapis.com/*' => Http::sequence()
-            ->push(GeminiFake::chat('Here is more guidance.'))
-            ->push(GeminiFake::text('SUMMARY: the student practiced verb tenses.')),
-    ]);
+    GlcTutorAgent::fake([['reply' => 'Here is more guidance.', 'violation' => null]])->preventStrayPrompts();
+    TutorConversationSummarizerAgent::fake([['summary' => 'SUMMARY: the student practiced verb tenses.']])->preventStrayPrompts();
 
     actingAs($student)
         ->post(route('tutor.messages.store', $conversation), ['message' => 'One more question'])
@@ -61,45 +69,44 @@ it('summarizes and flags the oldest 20 pairs once the conversation exceeds 40 pa
 
 it('keeps the summary in context for subsequent messages', function (): void {
     ['student' => $student] = TutorScenario::assignedStudent();
+    prepareTutorRotationScenario();
 
     $conversation = TutorConversation::factory()->create(['user_id' => $student->id, 'summary' => null]);
     seedTutorPairs($conversation, 41);
 
-    Http::fake([
-        'generativelanguage.googleapis.com/*' => Http::sequence()
-            ->push(GeminiFake::chat('Guidance one.'))
-            ->push(GeminiFake::text('SUMMARY: tenses covered.'))
-            ->push(GeminiFake::chat('Guidance two.')),
-    ]);
+    GlcTutorAgent::fake([
+        ['reply' => 'Guidance one.', 'violation' => null],
+        ['reply' => 'Guidance two.', 'violation' => null],
+    ])->preventStrayPrompts();
+    TutorConversationSummarizerAgent::fake([['summary' => 'SUMMARY: tenses covered.']])->preventStrayPrompts();
 
     actingAs($student)->post(route('tutor.messages.store', $conversation), ['message' => 'First']);
+
+    $conversation->refresh();
+
+    expect($conversation->summary)->toContain('SUMMARY: tenses covered.');
+
     actingAs($student)->post(route('tutor.messages.store', $conversation), ['message' => 'Second']);
 
-    Http::assertSentCount(3);
-    Http::assertSent(function (Request $request): bool {
-        $firstText = (string) data_get($request->data(), 'contents.0.parts.0.text');
+    GlcTutorAgent::assertPrompted(fn (AgentPrompt $prompt): bool => $prompt->prompt === 'Second');
 
-        if (! str_contains($firstText, 'Summary of the earlier part of this conversation:')) {
-            return false;
-        }
-
-        return str_contains($firstText, 'SUMMARY: tenses covered.');
-    });
+    expect($conversation->messages()->where('role', 'assistant')->orderByDesc('id')->value('content'))
+        ->toBe('Guidance two.');
 });
 
 it('does not rotate below the threshold', function (): void {
     ['student' => $student] = TutorScenario::assignedStudent();
+    prepareTutorRotationScenario();
 
     $conversation = TutorConversation::factory()->create(['user_id' => $student->id, 'summary' => null]);
     seedTutorPairs($conversation, 10);
 
-    Http::fake([
-        'generativelanguage.googleapis.com/*' => Http::response(GeminiFake::chat('Some guidance.')),
-    ]);
+    GlcTutorAgent::fake([['reply' => 'Some guidance.', 'violation' => null]])->preventStrayPrompts();
+    TutorConversationSummarizerAgent::fake()->preventStrayPrompts();
 
     actingAs($student)->post(route('tutor.messages.store', $conversation), ['message' => 'Hello']);
 
-    Http::assertSentCount(1);
+    TutorConversationSummarizerAgent::assertNeverPrompted();
 
     expect($conversation->refresh()->summary)->toBeNull()
         ->and($conversation->messages()->get()
@@ -109,15 +116,15 @@ it('does not rotate below the threshold', function (): void {
 
 it('keeps messages in active context when the summarize call fails', function (): void {
     ['student' => $student] = TutorScenario::assignedStudent();
+    prepareTutorRotationScenario();
 
     $conversation = TutorConversation::factory()->create(['user_id' => $student->id, 'summary' => null]);
     seedTutorPairs($conversation, 41);
 
-    Http::fake([
-        'generativelanguage.googleapis.com/*' => Http::sequence()
-            ->push(GeminiFake::chat('Guidance.'))
-            ->push(['error' => 'unavailable'], 500),
-    ]);
+    GlcTutorAgent::fake([['reply' => 'Guidance.', 'violation' => null]])->preventStrayPrompts();
+    TutorConversationSummarizerAgent::fake(function (): never {
+        throw new RuntimeException('unavailable');
+    })->preventStrayPrompts();
 
     actingAs($student)->post(route('tutor.messages.store', $conversation), ['message' => 'Hello']);
 

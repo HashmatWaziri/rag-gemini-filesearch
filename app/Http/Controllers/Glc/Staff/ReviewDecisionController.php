@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Glc\Staff;
 
 use App\Enums\Glc\AuditAction;
 use App\Enums\Glc\GlcLevel;
+use App\Enums\Glc\PlacementAiDraftStatus;
 use App\Enums\Glc\PlacementReviewStatus;
 use App\Enums\Glc\PlacementSection;
 use App\Enums\Glc\UserRole;
@@ -40,7 +41,11 @@ final readonly class ReviewDecisionController
         $data = $request->validate($rules);
 
         $score = $review->attempt->score;
-        $suggestedFinal = $score?->suggested_level;
+        $recommendation = $review->attempt->aiRecommendation;
+        $recommendationCompleted = $recommendation?->status === PlacementAiDraftStatus::Completed;
+
+        $suggestedFinal = ($recommendationCompleted ? $recommendation->recommended_level : null)
+            ?? $score?->suggested_level;
 
         $finalLevel = GlcLevel::from($data['final_level']);
         $levelDeviation = $suggestedFinal !== null && $finalLevel !== $suggestedFinal;
@@ -48,8 +53,14 @@ final readonly class ReviewDecisionController
         $skillDeviations = [];
 
         foreach (PlacementSection::ordered() as $section) {
-            $pct = $score?->section_scores[$section->value] ?? null;
-            $suggested = is_numeric($pct) ? GlcLevel::fromComposite((float) $pct) : null;
+            $aiLevel = $recommendationCompleted ? ($recommendation->skill_levels[$section->value] ?? null) : null;
+            $suggested = is_string($aiLevel) ? GlcLevel::tryFrom($aiLevel) : null;
+
+            if ($suggested === null) {
+                $pct = $score?->section_scores[$section->value] ?? null;
+                $suggested = is_numeric($pct) ? GlcLevel::fromComposite((float) $pct) : null;
+            }
+
             $chosen = GlcLevel::from($data['skill_levels'][$section->value]);
 
             if ($suggested !== null && $chosen !== $suggested) {

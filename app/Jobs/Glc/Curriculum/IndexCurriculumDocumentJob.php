@@ -32,13 +32,44 @@ final class IndexCurriculumDocumentJob implements ShouldQueue
 
     public function handle(CurriculumIndexService $service): void
     {
-        if ($this->document->status !== CurriculumDocumentStatus::Published) {
+        if (! $this->shouldIndex($this->document)) {
             return;
         }
 
+        $wasLive = $this->document->status === CurriculumDocumentStatus::Published;
+
         $service->index($this->document);
 
-        if ($this->document->refresh()->index_status !== CurriculumIndexStatus::Failed || ! $service->isConfigured()) {
+        $document = $this->document->refresh();
+
+        if ($document->index_status === CurriculumIndexStatus::Indexed) {
+            if (! $wasLive) {
+                $document->update([
+                    'status' => CurriculumDocumentStatus::Published,
+                    'published_at' => $document->published_at ?? now(),
+                ]);
+            }
+
+            return;
+        }
+
+        if ($document->index_status !== CurriculumIndexStatus::Failed) {
+            return;
+        }
+
+        if (! $wasLive && (! $service->isConfigured() || $this->attempts() >= $this->tries)) {
+            $document->update(['status' => CurriculumDocumentStatus::PublishFailed]);
+
+            if ($service->isConfigured()) {
+                report(new RuntimeException(sprintf(
+                    'Curriculum document [%d] "%s" could not be imported into the File Search store after %d attempts: %s',
+                    $document->id,
+                    $document->title,
+                    $this->attempts(),
+                    (string) $document->index_error,
+                )));
+            }
+
             return;
         }
 
@@ -48,12 +79,30 @@ final class IndexCurriculumDocumentJob implements ShouldQueue
             return;
         }
 
+        if (! $wasLive) {
+            $document->update(['status' => CurriculumDocumentStatus::PublishFailed]);
+        }
+
         report(new RuntimeException(sprintf(
             'Curriculum document [%d] "%s" could not be imported into the File Search store after %d attempts: %s',
-            $this->document->id,
-            $this->document->title,
+            $document->id,
+            $document->title,
             $this->attempts(),
-            (string) $this->document->index_error,
+            (string) $document->index_error,
         )));
+    }
+
+    private function shouldIndex(CurriculumDocument $document): bool
+    {
+        return match ($document->status) {
+            CurriculumDocumentStatus::Publishing,
+            CurriculumDocumentStatus::PublishFailed => true,
+            CurriculumDocumentStatus::Published => in_array(
+                $document->index_status,
+                [CurriculumIndexStatus::Pending, CurriculumIndexStatus::Failed],
+                true,
+            ),
+            default => false,
+        };
     }
 }

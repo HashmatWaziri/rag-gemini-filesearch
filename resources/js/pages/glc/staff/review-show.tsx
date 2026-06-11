@@ -16,10 +16,13 @@ import {
     btnPrimary,
     btnSecondary,
     Card,
+    CheckIcon,
+    DimensionScale,
     Field,
     inputCls,
     SECTION_LABELS,
     SECTION_ORDER,
+    SparkIcon,
     xsrfToken,
 } from './ui';
 
@@ -47,6 +50,18 @@ interface Narrative {
     areas_to_improve?: string | null;
     recommendation?: string | null;
     next_steps?: string | null;
+}
+
+interface AiRecommendation {
+    status: string;
+    recommended_level: string | null;
+    recommended_level_label: string | null;
+    skill_levels: Record<string, string> | null;
+    skill_summaries: Record<string, string> | null;
+    confidence: string | null;
+    rationale: string | null;
+    error: string | null;
+    generated_at: string | null;
 }
 
 interface PageProps {
@@ -82,6 +97,7 @@ interface PageProps {
         variance_flagged: boolean;
     } | null;
     suggested_skill_levels: Record<string, string | null>;
+    ai_recommendation: AiRecommendation | null;
     sections: {
         reading: {
             id: number;
@@ -108,6 +124,13 @@ interface PageProps {
             recording_attempts: number | null;
         };
     };
+    objective_breakdown: Record<
+        string,
+        { correct: number; total: number; percentage: number }
+    >;
+    writing_guidelines: { titles: string[]; customized: boolean };
+    speaking_guidelines: { titles: string[]; customized: boolean };
+    ai_models: Record<string, { provider: string; model: string }>;
     ai_drafts: Record<string, AiDraft>;
     integrity_events: { type: string; label: string; occurred_at: string }[];
     notes: { id: number; author: string; note: string; created_at: string }[];
@@ -156,7 +179,7 @@ function QuestionRow({
                             }`}
                         >
                             {String.fromCharCode(65 + optionIndex)}. {option}
-                            {isCorrect && ' ✓'}
+                            {isCorrect && ' — correct answer'}
                             {isSelected && " — candidate's answer"}
                         </div>
                     );
@@ -178,87 +201,349 @@ const AI_SUGGESTION_BADGES: Record<
     pending: { label: 'Preparing…', tone: 'amber' },
 };
 
-function SuggestionCard({
-    section,
-    draft,
-}: {
-    section: string;
-    draft?: AiDraft;
-}) {
+const CONFIDENCE_TONES: Record<string, 'emerald' | 'blue' | 'amber'> = {
+    high: 'emerald',
+    medium: 'blue',
+    low: 'amber',
+};
+
+function DraftStatusBadge({ draft }: { draft?: AiDraft }) {
     const badge = draft ? AI_SUGGESTION_BADGES[draft.status] : undefined;
 
+    return badge ? (
+        <Badge tone={badge.tone}>{badge.label}</Badge>
+    ) : (
+        <Badge tone="slate">Not available yet</Badge>
+    );
+}
+
+function DraftFailureNotice({ draft }: { draft?: AiDraft }) {
+    if (draft?.status !== 'failed') {
+        return null;
+    }
+
     return (
-        <div className="rounded-md border border-slate-200 p-3">
-            <div className="mb-2 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-slate-700">
-                    {SECTION_LABELS[section]}
-                </h3>
-                {badge ? (
-                    <Badge tone={badge.tone}>{badge.label}</Badge>
-                ) : (
-                    <Badge tone="slate">Not available yet</Badge>
-                )}
-            </div>
-            {draft?.status === 'failed' && (
-                <div className="mb-2">
-                    <p className="text-xs text-amber-700">
-                        This AI suggestion is unavailable — you can review this
-                        section normally without it.
-                    </p>
-                    {draft.error && (
-                        <details className="mt-1 text-xs text-slate-400">
-                            <summary className="cursor-pointer">
-                                Technical details
-                            </summary>
-                            <p className="mt-1">{draft.error}</p>
-                        </details>
-                    )}
-                </div>
-            )}
-            {draft?.dimension_scores && (
-                <table className="mb-2 w-full text-xs">
-                    <tbody>
-                        {Object.entries(draft.dimension_scores).map(
-                            ([dimension, value]) => (
-                                <tr
-                                    key={dimension}
-                                    className="border-b border-slate-100"
-                                >
-                                    <td className="py-1 text-slate-600 capitalize">
-                                        {dimension.replace('_', ' ')}
-                                    </td>
-                                    <td className="py-1 text-right font-medium">
-                                        {value}/5
-                                    </td>
-                                </tr>
-                            ),
-                        )}
-                    </tbody>
-                </table>
-            )}
-            {draft?.confidence && (
-                <p className="text-xs text-slate-500">
-                    AI confidence:{' '}
-                    <span className="font-medium">{draft.confidence}</span>
-                </p>
-            )}
-            {draft?.feedback && (
-                <p className="mt-1 text-xs leading-relaxed text-slate-600">
-                    {draft.feedback}
-                </p>
-            )}
-            {draft?.transcript && (
-                <details className="mt-2 text-xs">
-                    <summary className="cursor-pointer font-medium text-slate-600">
-                        Transcript
+        <div className="mb-2 rounded-md border border-amber-200 bg-amber-50 p-2">
+            <p className="text-xs text-amber-800">
+                This AI suggestion is unavailable — you can review this section
+                normally without it.
+            </p>
+            {draft.error && (
+                <details className="mt-1 text-xs text-slate-400">
+                    <summary className="cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400">
+                        Technical details
                     </summary>
-                    <p className="mt-1 leading-relaxed whitespace-pre-wrap text-slate-600">
-                        {draft.transcript}
-                    </p>
+                    <p className="mt-1 break-words">{draft.error}</p>
                 </details>
             )}
         </div>
     );
+}
+
+function ObjectiveScoreTile({
+    section,
+    breakdown,
+}: {
+    section: string;
+    breakdown?: { correct: number; total: number; percentage: number };
+}) {
+    return (
+        <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-3">
+            <div className="mb-1.5 flex items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold text-slate-800">
+                    {SECTION_LABELS[section]}
+                </h3>
+                {breakdown ? (
+                    <Badge tone="emerald">
+                        {breakdown.correct}/{breakdown.total} correct
+                    </Badge>
+                ) : (
+                    <Badge tone="slate">Not scored yet</Badge>
+                )}
+            </div>
+            {breakdown && (
+                <p className="text-lg font-semibold text-slate-900 tabular-nums">
+                    {breakdown.percentage}%
+                </p>
+            )}
+            <p className="mt-1 text-xs text-slate-500">
+                Auto-scored from the question bank — supplied to the AI as
+                context.
+            </p>
+        </div>
+    );
+}
+
+function ProvisionalScoreCard({
+    sectionLabel,
+    skillName,
+    draft,
+    guidelines,
+    model,
+    showTranscript = false,
+}: {
+    sectionLabel: string;
+    skillName: string;
+    draft?: AiDraft;
+    guidelines: { titles: string[]; customized: boolean };
+    model?: { provider: string; model: string };
+    showTranscript?: boolean;
+}) {
+    return (
+        <div className="rounded-lg border border-sky-200 bg-gradient-to-b from-sky-50/70 to-white p-3">
+            <div className="mb-2 flex items-center justify-between gap-2">
+                <h3 className="flex items-center gap-1.5 text-sm font-semibold text-slate-800">
+                    <span className="text-sky-500">
+                        <SparkIcon />
+                    </span>
+                    {sectionLabel}
+                </h3>
+                <div className="flex items-center gap-1.5">
+                    {draft?.confidence && (
+                        <Badge
+                            tone={CONFIDENCE_TONES[draft.confidence] ?? 'amber'}
+                        >
+                            {draft.confidence} confidence
+                        </Badge>
+                    )}
+                    <DraftStatusBadge draft={draft} />
+                </div>
+            </div>
+            <p className="mb-2 text-[11px] font-medium tracking-wide text-sky-700/80 uppercase">
+                AI provisional score · staff-only
+            </p>
+            <DraftFailureNotice draft={draft} />
+            {draft?.dimension_scores && (
+                <dl className="mb-2 space-y-1.5">
+                    {Object.entries(draft.dimension_scores).map(
+                        ([dimension, value]) => {
+                            const label = dimension.replace(/_/g, ' ');
+
+                            return (
+                                <div
+                                    key={dimension}
+                                    className="flex items-center justify-between gap-2"
+                                >
+                                    <dt className="text-xs text-slate-600 capitalize">
+                                        {label}
+                                    </dt>
+                                    <dd className="flex items-center gap-2">
+                                        <DimensionScale
+                                            value={value}
+                                            label={label}
+                                        />
+                                        <span className="w-7 text-right text-xs font-medium text-slate-700 tabular-nums">
+                                            {value}/5
+                                        </span>
+                                    </dd>
+                                </div>
+                            );
+                        },
+                    )}
+                </dl>
+            )}
+            {draft?.feedback && (
+                <p className="mt-1 rounded-md bg-white/80 p-2 text-xs leading-relaxed text-slate-700">
+                    {draft.feedback}
+                </p>
+            )}
+            {showTranscript && draft?.transcript && (
+                <div className="mt-2 text-xs">
+                    <p className="font-medium text-slate-700">
+                        Transcript (AI-generated) — always listen to the
+                        recording too
+                    </p>
+                    <p className="mt-1 rounded-md bg-white/80 p-2 leading-relaxed whitespace-pre-wrap text-slate-600">
+                        {draft.transcript}
+                    </p>
+                </div>
+            )}
+            <div className="mt-2 rounded-md bg-white/70 p-2">
+                <p className="text-[11px] font-medium tracking-wide text-slate-500 uppercase">
+                    Evaluated against the{' '}
+                    {guidelines.customized ? 'school-configured' : 'default'}{' '}
+                    {skillName} guidelines
+                </p>
+                <div className="mt-1 flex flex-wrap gap-1">
+                    {guidelines.titles.map((title) => (
+                        <Badge key={title} tone="blue">
+                            {title}
+                        </Badge>
+                    ))}
+                </div>
+            </div>
+            <p className="mt-2 text-[11px] text-slate-400">
+                {draft?.generated_at && <>Generated {draft.generated_at}</>}
+                {draft?.generated_at && model && ' · '}
+                {model && (
+                    <>
+                        {model.provider} — {model.model}
+                    </>
+                )}
+            </p>
+        </div>
+    );
+}
+
+function RecommendationCard({
+    recommendation,
+    levels,
+    model,
+}: {
+    recommendation: AiRecommendation | null;
+    levels: { value: string; label: string }[];
+    model?: { provider: string; model: string };
+}) {
+    const levelLabel = (value: string | null | undefined) =>
+        levels.find((level) => level.value === value)?.label ?? '—';
+
+    return (
+        <div className="mt-3 rounded-lg border border-sky-200 bg-gradient-to-b from-sky-50/70 to-white p-3">
+            <div className="mb-2 flex items-center justify-between gap-2">
+                <h3 className="flex items-center gap-1.5 text-sm font-semibold text-slate-800">
+                    <span className="text-sky-500">
+                        <SparkIcon />
+                    </span>
+                    AI recommended GLC level & skill-by-skill summary
+                </h3>
+                <div className="flex items-center gap-1.5">
+                    {recommendation?.confidence && (
+                        <Badge
+                            tone={
+                                CONFIDENCE_TONES[recommendation.confidence] ??
+                                'amber'
+                            }
+                        >
+                            {recommendation.confidence} confidence
+                        </Badge>
+                    )}
+                    {recommendation ? (
+                        <Badge
+                            tone={
+                                AI_SUGGESTION_BADGES[recommendation.status]
+                                    ?.tone ?? 'amber'
+                            }
+                        >
+                            {AI_SUGGESTION_BADGES[recommendation.status]
+                                ?.label ?? recommendation.status}
+                        </Badge>
+                    ) : (
+                        <Badge tone="slate">Not available yet</Badge>
+                    )}
+                </div>
+            </div>
+            <p className="mb-2 text-[11px] font-medium tracking-wide text-sky-700/80 uppercase">
+                AI provisional recommendation · staff-only — you confirm or
+                override every level below
+            </p>
+            {recommendation?.status === 'failed' && (
+                <div className="mb-2 rounded-md border border-amber-200 bg-amber-50 p-2">
+                    <p className="text-xs text-amber-800">
+                        The AI recommendation is unavailable — the suggested
+                        levels fall back to the automatic score bands.
+                    </p>
+                    {recommendation.error && (
+                        <details className="mt-1 text-xs text-slate-400">
+                            <summary className="cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400">
+                                Technical details
+                            </summary>
+                            <p className="mt-1 break-words">
+                                {recommendation.error}
+                            </p>
+                        </details>
+                    )}
+                </div>
+            )}
+            {recommendation?.status === 'completed' && (
+                <>
+                    <p className="mb-2 text-sm font-semibold text-slate-900">
+                        Recommended overall level:{' '}
+                        {recommendation.recommended_level_label ??
+                            levelLabel(recommendation.recommended_level)}
+                    </p>
+                    {recommendation.rationale && (
+                        <p className="mb-2 rounded-md bg-white/80 p-2 text-xs leading-relaxed text-slate-700">
+                            {recommendation.rationale}
+                        </p>
+                    )}
+                    <dl className="space-y-1.5">
+                        {SECTION_ORDER.map((section) => (
+                            <div
+                                key={section}
+                                className="rounded-md bg-white/70 p-2"
+                            >
+                                <div className="flex items-center justify-between gap-2">
+                                    <dt className="text-xs font-semibold text-slate-700">
+                                        {SECTION_LABELS[section]}
+                                    </dt>
+                                    <dd>
+                                        <Badge tone="blue">
+                                            {levelLabel(
+                                                recommendation.skill_levels?.[
+                                                    section
+                                                ],
+                                            )}
+                                        </Badge>
+                                    </dd>
+                                </div>
+                                {recommendation.skill_summaries?.[section] && (
+                                    <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                                        {
+                                            recommendation.skill_summaries[
+                                                section
+                                            ]
+                                        }
+                                    </p>
+                                )}
+                            </div>
+                        ))}
+                    </dl>
+                </>
+            )}
+            {(!recommendation || recommendation.status === 'pending') && (
+                <p className="text-xs text-slate-500">
+                    The AI recommendation is prepared after the Writing and
+                    Speaking evaluations finish. You can review and confirm
+                    levels without it.
+                </p>
+            )}
+            <p className="mt-2 text-[11px] text-slate-400">
+                {recommendation?.generated_at && (
+                    <>Generated {recommendation.generated_at}</>
+                )}
+                {recommendation?.generated_at && model && ' · '}
+                {model && (
+                    <>
+                        {model.provider} — {model.model}
+                    </>
+                )}
+            </p>
+        </div>
+    );
+}
+
+function SaveState({ dirty, saved }: { dirty: boolean; saved: boolean }) {
+    if (dirty) {
+        return (
+            <span className="text-xs font-medium text-amber-600" role="status">
+                Unsaved changes
+            </span>
+        );
+    }
+
+    if (saved) {
+        return (
+            <span
+                className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700"
+                role="status"
+            >
+                <CheckIcon className="h-3 w-3" />
+                Saved
+            </span>
+        );
+    }
+
+    return null;
 }
 
 export default function ReviewShow() {
@@ -269,6 +554,11 @@ export default function ReviewShow() {
         attempt,
         score,
         suggested_skill_levels,
+        ai_recommendation,
+        objective_breakdown = {},
+        writing_guidelines = { titles: [], customized: false },
+        speaking_guidelines = { titles: [], customized: false },
+        ai_models = {},
         sections,
         ai_drafts,
         integrity_events,
@@ -295,6 +585,10 @@ export default function ReviewShow() {
         status: review.status,
         submittedAt: attempt.submitted_at,
         hasScore: score !== null,
+        aiScoringDone: ['writing', 'speaking'].every(
+            (section) =>
+                ai_drafts[section] && ai_drafts[section].status !== 'pending',
+        ),
         aiSuggestionsUnavailable: Object.values(ai_drafts).some(
             (draft) => draft.status === 'failed',
         ),
@@ -309,8 +603,21 @@ export default function ReviewShow() {
         ),
     };
 
+    const suggestedFinalLevel =
+        (ai_recommendation?.status === 'completed'
+            ? ai_recommendation.recommended_level
+            : null) ??
+        score?.suggested_level ??
+        null;
+    const suggestedFinalLevelLabel =
+        (ai_recommendation?.status === 'completed'
+            ? ai_recommendation.recommended_level_label
+            : null) ??
+        score?.suggested_level_label ??
+        null;
+
     const decisionForm = useForm({
-        final_level: review.final_level ?? score?.suggested_level ?? '',
+        final_level: review.final_level ?? suggestedFinalLevel ?? '',
         skill_levels: Object.fromEntries(
             SECTION_ORDER.map((section) => [
                 section,
@@ -323,8 +630,8 @@ export default function ReviewShow() {
     });
 
     const deviates =
-        (score?.suggested_level &&
-            decisionForm.data.final_level !== score.suggested_level) ||
+        (suggestedFinalLevel &&
+            decisionForm.data.final_level !== suggestedFinalLevel) ||
         SECTION_ORDER.some(
             (section) =>
                 suggested_skill_levels[section] &&
@@ -386,9 +693,10 @@ export default function ReviewShow() {
             <Head title={`Placement test — ${candidate.name}`} />
 
             <div className="space-y-4">
-                <Card>
+                {/* Sticky candidate context header */}
+                <div className="sticky top-14 z-30 -mx-4 border-b border-slate-200 bg-white/95 px-4 py-3 shadow-sm backdrop-blur sm:rounded-lg sm:border sm:shadow-sm">
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div>
+                        <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
                                 <span className="text-base font-semibold text-slate-900">
                                     {candidate.name}
@@ -427,7 +735,7 @@ export default function ReviewShow() {
                                 reviewer: {review.assignee ?? 'no reviewer yet'}
                             </p>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                             {!isSent && !review.is_assigned_to_me && (
                                 <button
                                     type="button"
@@ -450,6 +758,7 @@ export default function ReviewShow() {
                                     <select
                                         className={inputCls}
                                         value={assignTo}
+                                        aria-label="Hand over to another reviewer"
                                         onChange={(e) =>
                                             setAssignTo(e.target.value)
                                         }
@@ -484,7 +793,7 @@ export default function ReviewShow() {
                             )}
                         </div>
                     </div>
-                </Card>
+                </div>
 
                 <ProcessSteps input={pipelineInput} />
 
@@ -516,13 +825,22 @@ export default function ReviewShow() {
                             <table className="w-full text-sm">
                                 <thead className="text-xs text-slate-500 uppercase">
                                     <tr>
-                                        <th className="py-1 text-left">
+                                        <th
+                                            scope="col"
+                                            className="py-1 text-left"
+                                        >
                                             Section
                                         </th>
-                                        <th className="py-1 text-right">
+                                        <th
+                                            scope="col"
+                                            className="py-1 text-right"
+                                        >
                                             Score
                                         </th>
-                                        <th className="py-1 text-right">
+                                        <th
+                                            scope="col"
+                                            className="py-1 text-right"
+                                        >
                                             Suggested level
                                         </th>
                                     </tr>
@@ -545,10 +863,40 @@ export default function ReviewShow() {
                                                 <td className="py-1.5">
                                                     {SECTION_LABELS[section]}
                                                 </td>
-                                                <td className="py-1.5 text-right font-medium">
-                                                    {value != null
-                                                        ? `${value}%`
-                                                        : 'not ready yet'}
+                                                <td className="py-1.5 text-right">
+                                                    {value != null ? (
+                                                        <span className="inline-flex items-center justify-end gap-2">
+                                                            <span
+                                                                aria-hidden
+                                                                className="hidden h-1.5 w-20 overflow-hidden rounded-full bg-slate-100 sm:block"
+                                                            >
+                                                                <span
+                                                                    className={`block h-full rounded-full ${
+                                                                        value >=
+                                                                        70
+                                                                            ? 'bg-emerald-500'
+                                                                            : value >=
+                                                                                40
+                                                                              ? 'bg-amber-400'
+                                                                              : 'bg-red-400'
+                                                                    }`}
+                                                                    style={{
+                                                                        width: `${Math.min(100, Math.max(0, value))}%`,
+                                                                    }}
+                                                                />
+                                                            </span>
+                                                            <span className="font-medium tabular-nums">
+                                                                {value}%
+                                                            </span>
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-slate-400">
+                                                            {section ===
+                                                            'speaking'
+                                                                ? 'staff-assigned'
+                                                                : 'not ready yet'}
+                                                        </span>
+                                                    )}
                                                 </td>
                                                 <td className="py-1.5 text-right">
                                                     {level?.label ?? '—'}
@@ -577,23 +925,60 @@ export default function ReviewShow() {
                     )}
                 </Card>
 
-                <Card title="AI suggestions (staff-only — never shown to candidates or parents)">
+                <Card title="AI provisional scoring (staff-only — never shown to candidates or parents)">
+                    <p className="mb-3 text-xs text-slate-500">
+                        Reading, Grammar & Vocabulary and Listening are scored
+                        from the question bank and supplied to the AI as
+                        context. Writing and Speaking each get an AI
+                        provisional score against the GLC guidelines (Speaking
+                        is evaluated from the AI transcript — always listen to
+                        the recording). The AI then recommends an overall GLC
+                        level and a skill-by-skill summary for you to confirm
+                        or override.
+                    </p>
+                    <div className="mb-3 grid gap-3 sm:grid-cols-3">
+                        {(
+                            [
+                                'reading',
+                                'grammar_vocabulary',
+                                'listening',
+                            ] as const
+                        ).map((section) => (
+                            <ObjectiveScoreTile
+                                key={section}
+                                section={section}
+                                breakdown={objective_breakdown[section]}
+                            />
+                        ))}
+                    </div>
                     <div className="grid gap-3 sm:grid-cols-2">
-                        <SuggestionCard
-                            section="writing"
+                        <ProvisionalScoreCard
+                            sectionLabel={SECTION_LABELS.writing}
+                            skillName="writing"
                             draft={ai_drafts.writing}
+                            guidelines={writing_guidelines}
+                            model={ai_models.writing}
                         />
-                        <SuggestionCard
-                            section="speaking"
+                        <ProvisionalScoreCard
+                            sectionLabel={SECTION_LABELS.speaking}
+                            skillName="speaking"
                             draft={ai_drafts.speaking}
+                            guidelines={speaking_guidelines}
+                            model={ai_models.speaking_evaluation}
+                            showTranscript
                         />
                     </div>
+                    <RecommendationCard
+                        recommendation={ai_recommendation}
+                        levels={levels}
+                        model={ai_models.writing}
+                    />
                 </Card>
 
                 <Card title="Candidate answers">
                     <div className="space-y-3">
                         <details className="rounded-md border border-slate-200 p-3">
-                            <summary className="cursor-pointer text-sm font-semibold">
+                            <summary className="cursor-pointer text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400">
                                 Reading
                             </summary>
                             {sections.reading.map((passage) => (
@@ -620,7 +1005,7 @@ export default function ReviewShow() {
                         </details>
 
                         <details className="rounded-md border border-slate-200 p-3">
-                            <summary className="cursor-pointer text-sm font-semibold">
+                            <summary className="cursor-pointer text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400">
                                 Grammar & Vocabulary
                             </summary>
                             <div className="mt-2 space-y-2">
@@ -637,7 +1022,7 @@ export default function ReviewShow() {
                         </details>
 
                         <details className="rounded-md border border-slate-200 p-3">
-                            <summary className="cursor-pointer text-sm font-semibold">
+                            <summary className="cursor-pointer text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400">
                                 Listening
                             </summary>
                             {sections.listening.map((clip) => (
@@ -671,7 +1056,7 @@ export default function ReviewShow() {
                             className="rounded-md border border-slate-200 p-3"
                             open
                         >
-                            <summary className="cursor-pointer text-sm font-semibold">
+                            <summary className="cursor-pointer text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400">
                                 Writing — essay
                                 {sections.writing.word_count != null &&
                                     ` (${sections.writing.word_count} words)`}
@@ -689,7 +1074,7 @@ export default function ReviewShow() {
                             className="rounded-md border border-slate-200 p-3"
                             open
                         >
-                            <summary className="cursor-pointer text-sm font-semibold">
+                            <summary className="cursor-pointer text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400">
                                 Speaking — recording
                                 {sections.speaking.recording_attempts != null &&
                                     ` (attempt ${sections.speaking.recording_attempts})`}
@@ -712,10 +1097,18 @@ export default function ReviewShow() {
                     </div>
                 </Card>
 
-                <Card title="Confirm the level">
+                <Card
+                    title="Confirm the level"
+                    aside={
+                        <SaveState
+                            dirty={decisionForm.isDirty}
+                            saved={decisionForm.recentlySuccessful}
+                        />
+                    }
+                >
                     <div className="grid gap-2 sm:grid-cols-3">
                         <Field
-                            label={`Final GLC level (suggested: ${score?.suggested_level_label ?? '—'})`}
+                            label={`Final GLC level (suggested: ${suggestedFinalLevelLabel ?? '—'})`}
                             error={errors.final_level}
                         >
                             <select
@@ -814,30 +1207,48 @@ export default function ReviewShow() {
                                 })
                             }
                         >
-                            Save levels
+                            {decisionForm.processing
+                                ? 'Saving…'
+                                : 'Save levels'}
                         </button>
+                        {deviates && (
+                            <span className="text-xs text-amber-600">
+                                Your levels differ from the automatic
+                                suggestion.
+                            </span>
+                        )}
                     </div>
                 </Card>
 
                 <Card
                     title="Parent summary (appears on the result PDF)"
                     aside={
-                        review.narrative_approved_at ? (
-                            <Badge tone="emerald">
-                                Summary approved {review.narrative_approved_at}
-                            </Badge>
-                        ) : (
-                            <Badge tone="amber">Not approved yet</Badge>
-                        )
+                        <span className="flex items-center gap-2">
+                            <SaveState
+                                dirty={narrativeForm.isDirty}
+                                saved={narrativeForm.recentlySuccessful}
+                            />
+                            {review.narrative_approved_at ? (
+                                <Badge tone="emerald">
+                                    Summary approved{' '}
+                                    {review.narrative_approved_at}
+                                </Badge>
+                            ) : (
+                                <Badge tone="amber">Not approved yet</Badge>
+                            )}
+                        </span>
                     }
                 >
-                    <div className="mb-2 flex items-center gap-2">
+                    <div className="mb-2 flex flex-wrap items-center gap-2">
                         <button
                             type="button"
-                            className={btnSecondary}
+                            className={`${btnSecondary} gap-1.5`}
                             disabled={suggestionLoading || isSent}
                             onClick={() => void fetchSummarySuggestion()}
                         >
+                            <span className="text-sky-500">
+                                <SparkIcon />
+                            </span>
                             {suggestionLoading
                                 ? 'Preparing…'
                                 : 'Get AI suggestion (staff-only)'}
@@ -849,7 +1260,7 @@ export default function ReviewShow() {
                         </span>
                     </div>
                     {suggestionError && (
-                        <p className="mb-2 text-xs text-red-600">
+                        <p className="mb-2 text-xs text-red-600" role="alert">
                             {suggestionError}
                         </p>
                     )}
@@ -898,7 +1309,9 @@ export default function ReviewShow() {
                                 })
                             }
                         >
-                            Save summary
+                            {narrativeForm.processing
+                                ? 'Saving…'
+                                : 'Save summary'}
                         </button>
                         {!review.narrative_approved_at && !isSent && (
                             <button
@@ -935,23 +1348,38 @@ export default function ReviewShow() {
                     </p>
                     <ul className="mt-3 space-y-1 text-sm">
                         <li
-                            className={
+                            className={`flex items-center gap-1.5 ${
                                 levelConfirmed
                                     ? 'text-emerald-700'
                                     : 'text-slate-500'
-                            }
+                            }`}
                         >
-                            {levelConfirmed ? '✓' : '○'} Levels saved
+                            {levelConfirmed ? (
+                                <CheckIcon className="h-3.5 w-3.5" />
+                            ) : (
+                                <span
+                                    aria-hidden
+                                    className="inline-block h-3.5 w-3.5 rounded-full border-2 border-slate-300"
+                                />
+                            )}
+                            Levels saved
                         </li>
                         <li
-                            className={
+                            className={`flex items-center gap-1.5 ${
                                 summaryApproved
                                     ? 'text-emerald-700'
                                     : 'text-slate-500'
-                            }
+                            }`}
                         >
-                            {summaryApproved ? '✓' : '○'} Parent summary
-                            approved
+                            {summaryApproved ? (
+                                <CheckIcon className="h-3.5 w-3.5" />
+                            ) : (
+                                <span
+                                    aria-hidden
+                                    className="inline-block h-3.5 w-3.5 rounded-full border-2 border-slate-300"
+                                />
+                            )}
+                            Parent summary approved
                         </li>
                     </ul>
                     {canGiveFinalApproval && (
@@ -1109,10 +1537,23 @@ export default function ReviewShow() {
                         <input
                             className={inputCls}
                             placeholder="Add an internal note…"
+                            aria-label="Add an internal note"
                             value={noteForm.data.note}
                             onChange={(e) =>
                                 noteForm.setData('note', e.target.value)
                             }
+                            onKeyDown={(e) => {
+                                if (
+                                    e.key === 'Enter' &&
+                                    !noteForm.processing &&
+                                    noteForm.data.note.trim() !== ''
+                                ) {
+                                    noteForm.post(`${baseUrl}/notes`, {
+                                        preserveScroll: true,
+                                        onSuccess: () => noteForm.reset(),
+                                    });
+                                }
+                            }}
                         />
                         <button
                             type="button"

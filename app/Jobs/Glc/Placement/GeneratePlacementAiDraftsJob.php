@@ -7,6 +7,7 @@ namespace App\Jobs\Glc\Placement;
 use App\Enums\Glc\PlacementSection;
 use App\Models\Glc\PlacementAttempt;
 use App\Services\Glc\Review\AiDraftService;
+use App\Services\Glc\Review\PlacementRecommendationService;
 use App\Services\Glc\Review\ScoringService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -18,7 +19,7 @@ final class GeneratePlacementAiDraftsJob implements ShouldQueue
 
     public function __construct(private readonly int $attemptId) {}
 
-    public function handle(AiDraftService $drafts, ScoringService $scoring): void
+    public function handle(AiDraftService $drafts, ScoringService $scoring, PlacementRecommendationService $recommendation): void
     {
         $attempt = PlacementAttempt::query()->find($this->attemptId);
 
@@ -33,6 +34,12 @@ final class GeneratePlacementAiDraftsJob implements ShouldQueue
             } catch (Throwable $exception) {
                 report($exception);
             }
+        }
+
+        try {
+            $recommendation->recommend($attempt);
+        } catch (Throwable $exception) {
+            report($exception);
         }
     }
 }
