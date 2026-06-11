@@ -57,8 +57,5 @@ AGENTS.md
 .claude
 .agent
 .agents
-.cursor/*
-!.cursor/skills/
-!.cursor/skills/**
 /.github/skills
 /skills
