@@ -25,7 +25,7 @@ final readonly class GetHealthSyncSupport implements Tool
 
     public function description(): string
     {
-        return 'Retrieve authoritative Acara Health Sync product support details. Use for questions about automatic health data sync, Apple Health, HealthKit, the iPhone app, Android sync status, pairing, Mobile Sync, setup, App Store links, privacy, troubleshooting, or whether Acara Plate has a sync solution.';
+        return 'Retrieve authoritative GLC Health Sync product support details. Use for questions about automatic health data sync, Apple Health, HealthKit, the iPhone app, Android sync status, pairing, Mobile Sync, setup, App Store links, privacy, troubleshooting, or whether GLC AI Platform has a sync solution.';
     }
 
     public function handle(Request $request): string
@@ -48,7 +48,7 @@ final readonly class GetHealthSyncSupport implements Tool
         return [
             'topic' => $schema->string()
                 ->enum(['overview', 'setup', 'platform_support', 'troubleshooting', 'privacy', 'all'])
-                ->description('Which Health Sync support topic to retrieve. Use "all" for broad questions or when the user asks whether Acara has a solution.')
+                ->description('Which Health Sync support topic to retrieve. Use "all" for broad questions or when the user asks whether GLC has a solution.')
                 ->required()
                 ->nullable(),
         ];

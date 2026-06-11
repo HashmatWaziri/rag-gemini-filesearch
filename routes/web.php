@@ -3,58 +3,16 @@
 declare(strict_types=1);
 
 use App\Http\Controllers as Web;
+use App\Http\Controllers\Glc;
 use App\Http\Middleware\DisableResponseBuffering;
 use App\Http\Middleware\EnsureDisclaimerAccepted;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-Route::get('/', Web\HomeController::class)->name('home');
+Route::get('/', Glc\LandingController::class)->name('home');
 Route::view('/privacy-policy', 'privacy-policy')->name('privacy');
 Route::view('/terms-of-service', 'terms-of-service')->name('terms');
-Route::view('/about', 'about')->name('about');
-Route::view('/support', 'support')->name('support');
-Route::view('/install-app', 'install-app')->name('install-app');
-Route::view('/diabetes-log-book', 'diabetes-log-book')->name('diabetes-log-book');
-Route::view('/diabetes-log-book-info', 'diabetes-log-book-info')->name('diabetes-log-book-info');
-Route::view('/meal-planner', 'meal-planner')->name('meal-planner');
-Route::view('/10-day-meal-plan', '10-day-meal-plan')->name('10-day-meal-plan');
-
-Route::livewire('/tools', 'pages::tools-index')->name('tools.index');
-Route::livewire('/tools/spike-calculator', 'pages::spike-calculator')->name('spike-calculator');
-Route::livewire('/tools/snap-to-track', 'pages::snap-to-track')->name('snap-to-track');
-Route::livewire('/tools/usda-daily-servings-calculator', 'pages::usda-daily-servings-calculator')->name('usda-servings-calculator');
-Route::livewire('/tools/telegram-health-logging', 'pages::telegram-health-logging')->name('telegram-health-logging');
-
-Route::get('/tools/caffeine-calculator', [Web\CaffeineCalculatorController::class, 'create'])->name('caffeine-calculator');
-Route::get('/{locale}/tools/caffeine-calculator', [Web\CaffeineCalculatorController::class, 'create'])
-    ->whereIn('locale', ['mn'])
-    ->name('caffeine-calculator.locale');
-Route::post('/tools/caffeine-calculator/plan', [Web\CaffeineCalculatorController::class, 'plan'])
-    ->middleware('throttle:10,1')
-    ->name('caffeine-calculator.plan');
-
-Route::get('/tools/health-sync', [Web\HealthSyncPageController::class, 'index'])->name('health-sync');
-Route::get('/tools/health-sync/setup', [Web\HealthSyncPageController::class, 'setup'])->name('health-sync.setup');
-
-Route::redirect('/spike-calculator', '/tools/spike-calculator', 301);
-Route::redirect('/snap-to-track', '/tools/snap-to-track', 301);
-
-Route::get('/food', [Web\PublicFoodController::class, 'index'])->name('food.index');
-Route::get('/food/category/{category}', [Web\PublicFoodController::class, 'category'])->name('food.category');
-Route::get('/food/{slug}', [Web\PublicFoodController::class, 'show'])->name('food.show');
-
-Route::get('/food_sitemap.xml', [Web\FoodSitemapXmlController::class, 'food'])->name('food.sitemap');
-
-Route::get('/post', [Web\PublicPostController::class, 'index'])->name('post.index');
-Route::get('/post/category/{category}', [Web\PublicPostController::class, 'category'])->name('post.category');
-Route::get('/post/{slug}', [Web\PublicPostController::class, 'show'])->name('post.show');
-
-Route::get('/{locale}/post', [Web\PublicPostController::class, 'index'])->where('locale', 'mn')->name('post.locale.index');
-Route::get('/{locale}/post/{slug}', [Web\PublicPostController::class, 'show'])->where('locale', 'mn')->name('post.locale.show');
-Route::get('/{locale}/post/category/{category}', [Web\PublicPostController::class, 'category'])->where('locale', 'mn')->name('post.locale.category');
-
-Route::get('/post_sitemap.xml', [Web\PostSitemapXmlController::class, 'post'])->name('post.sitemap');
 
 Route::post('/profile/timezone', [Web\UserTimezoneController::class, 'update'])
     ->middleware('throttle:10,1')
@@ -63,12 +21,6 @@ Route::post('/profile/timezone', [Web\UserTimezoneController::class, 'update'])
 Route::get('/translations/{locale}', Web\TranslationController::class)
     ->whereAlpha('locale')
     ->name('translations.show');
-
-Route::view('/ai-nutritionist', 'ai-nutritionist')->name('ai-nutritionist');
-Route::view('/ai-health-coach', 'ai-health-coach')->name('ai-health-coach');
-Route::view('/ai-personal-trainer', 'ai-personal-trainer')->name('ai-personal-trainer');
-Route::view('/meet-altani', 'meet-altani')->name('meet-altani');
-Route::view('/for-dietitians', 'for-dietitians')->name('for-dietitians');
 
 Route::middleware(['auth'])->group(function (): void {
     Route::get('disclaimer', [Web\DisclaimerController::class, 'show'])->name('disclaimer.show');
@@ -184,11 +136,6 @@ Route::middleware('auth')->group(function (): void {
 });
 
 Route::middleware('guest')->group(function (): void {
-    Route::get('register', [Web\UserController::class, 'create'])
-        ->name('register');
-    Route::post('register', [Web\UserController::class, 'store'])
-        ->name('register.store');
-
     Route::get('reset-password/{token}', [Web\UserPasswordController::class, 'create'])
         ->name('password.reset');
     Route::post('reset-password', [Web\UserPasswordController::class, 'store'])
@@ -204,8 +151,6 @@ Route::middleware('guest')->group(function (): void {
     Route::post('login', [Web\Auth\SessionController::class, 'store'])
         ->name('login.store');
 
-    Route::get('/auth/google/redirect', [Web\Auth\SocialiteController::class, 'redirect'])->name('auth.google.redirect');
-    Route::get('/auth/google/callback', [Web\Auth\SocialiteController::class, 'callback'])->name('auth.google.callback');
 });
 
 Route::middleware('auth')->group(function (): void {

@@ -58,7 +58,7 @@ function EmptyState() {
         <div className="flex flex-1 flex-col items-center justify-center text-center">
             <div className="mb-4 overflow-hidden rounded-full ring-4 ring-emerald-100">
                 <img
-                    src="https://pub-plate-assets.acara.app/images/altani_with_hand_on_chin_considering_expression_thought-1024.webp"
+                    src="/favicons/favicon-48x48.png"
                     alt="Altani"
                     className="size-20 object-cover"
                 />
@@ -91,7 +91,7 @@ function MessageAvatar({ role }: { role: string }) {
                 <User className="size-4" />
             ) : (
                 <img
-                    src="https://pub-plate-assets.acara.app/images/altani-waving-hello-320.webp"
+                    src="/favicons/favicon-48x48.png"
                     alt="Altani"
                     className="h-full w-full object-cover"
                 />

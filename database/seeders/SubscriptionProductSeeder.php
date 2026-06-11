@@ -16,9 +16,9 @@ final class SubscriptionProductSeeder extends Seeder
         $products = [
             [
                 'name' => 'Free',
-                'description' => 'Use every open Acara Cloud feature with a limited included AI credit budget.',
+                'description' => 'Use every open GLC Cloud feature with a limited included AI credit budget.',
                 'features' => [
-                    'All open Acara Cloud features',
+                    'All open GLC Cloud features',
                     '1,400 weekly AI credits',
                     '400 rolling daily AI credits',
                     'No credit card required',
@@ -38,18 +38,18 @@ final class SubscriptionProductSeeder extends Seeder
                 'name' => 'Supporter',
                 'description' => 'More Cloud AI credits for regular use while supporting open-source Plate.',
                 'features' => [
-                    'All open Acara Cloud features',
+                    'All open GLC Cloud features',
                     '6,000 weekly AI credits',
                     '1,500 rolling daily AI credits',
                     'Higher weekly AI credit limit',
-                    'Supports open-source Acara Cloud',
+                    'Supports open-source GLC Cloud',
                 ],
                 'price' => 9.00,
                 'yearly_price' => 89.00,
                 'stripe_price_id' => null,
-                'stripe_lookup_key' => 'acara-plate-supporter-monthly-v1',
+                'stripe_lookup_key' => 'glc-supporter-monthly-v1',
                 'yearly_stripe_price_id' => null,
-                'yearly_stripe_lookup_key' => 'acara-plate-supporter-yearly-v1',
+                'yearly_stripe_lookup_key' => 'glc-supporter-yearly-v1',
                 'billing_interval' => 'monthly',
                 'product_group' => 'subscription',
                 'popular' => true,
@@ -59,7 +59,7 @@ final class SubscriptionProductSeeder extends Seeder
                 'name' => 'Pro',
                 'description' => 'Highest Cloud AI limits and premium model access for daily planning and analysis.',
                 'features' => [
-                    'All open Acara Cloud features',
+                    'All open GLC Cloud features',
                     '12,000 weekly AI credits',
                     '3,000 rolling daily AI credits',
                     'Highest weekly AI credit limit',

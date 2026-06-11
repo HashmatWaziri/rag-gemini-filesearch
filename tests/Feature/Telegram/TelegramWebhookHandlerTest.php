@@ -78,7 +78,7 @@ describe('/start command', function (): void {
     it('sends a welcome message', function (): void {
         sendWebhook($this, '/start');
 
-        Telegraph::assertSent('👋 Welcome to Acara Plate!', false);
+        Telegraph::assertSent('👋 Welcome to GLC AI Platform!', false);
     });
 
     it('includes all available commands in the message', function (): void {

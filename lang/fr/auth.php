@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'login' => [
-        'page_title' => 'Connexion à Acara Plate | Nutrition IA pour le diabète',
+        'page_title' => 'Connexion à GLC AI Platform | Nutrition IA pour le diabète',
         'title' => 'Se connecter',
         'description' => 'Entrez votre adresse e-mail et votre mot de passe',
         'email' => 'Adresse e-mail',
@@ -20,8 +20,8 @@ return [
     ],
 
     'register' => [
-        'page_title' => 'Créer votre compte Acara Plate | Commencez votre parcours',
-        'title' => 'Inscrivez-vous à Acara',
+        'page_title' => 'Créer votre compte GLC AI Platform | Commencez votre parcours',
+        'title' => 'Inscrivez-vous à GLC',
         'name' => 'Nom',
         'name_placeholder' => 'Nom complet',
         'email' => 'Adresse e-mail',
@@ -34,7 +34,7 @@ return [
         'log_in' => 'Se connecter',
         'or' => 'Ou',
         'terms_acceptance' => 'En m\'inscrivant, je confirme que j\'ai au moins 18 ans et j\'accepte les',
-        'disclaimer_acceptance' => 'J\'ai au moins 18 ans et je comprends qu\'Acara fournit des conseils de bien-être, et non un avis médical.',
+        'disclaimer_acceptance' => 'J\'ai au moins 18 ans et je comprends qu\'GLC fournit des conseils de bien-être, et non un avis médical.',
         'disclaimer_terms_prefix' => 'En créant un compte, vous acceptez nos',
         'terms_of_service' => 'Conditions d\'utilisation',
         'and' => 'et',
@@ -42,8 +42,8 @@ return [
     ],
 
     'password_reset' => [
-        'request_page_title' => 'Réinitialiser votre mot de passe | Aide Acara Plate',
-        'reset_page_title' => 'Créez un nouveau mot de passe | Acara Plate',
+        'request_page_title' => 'Réinitialiser votre mot de passe | Aide GLC AI Platform',
+        'reset_page_title' => 'Créez un nouveau mot de passe | GLC AI Platform',
         'request_title' => 'Réinitialiser le mot de passe',
         'request_description' => 'Entrez votre adresse e-mail pour recevoir un lien de réinitialisation',
         'email' => 'Adresse e-mail',
@@ -72,7 +72,7 @@ return [
     ],
 
     'email_verification' => [
-        'page_title' => 'Vérifiez votre e-mail | Sécurité Acara Plate',
+        'page_title' => 'Vérifiez votre e-mail | Sécurité GLC AI Platform',
         'title' => 'Vérifier votre adresse e-mail',
         'description' => 'Merci de vous être inscrit! Avant de commencer, pourriez-vous vérifier votre adresse e-mail en cliquant sur le lien que nous venons de vous envoyer? Si vous n\'avez pas reçu l\'e-mail, nous vous en enverrons un autre avec plaisir.',
         'resend' => 'Renvoyer l\'e-mail de vérification',

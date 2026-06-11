@@ -1,6 +1,6 @@
 {
-  "description": "Snapshot of every HealthKit type identifier the iOS client sends. Mirrors AcaraHealthSync/Models/HealthKitTypeIdentifier.swift. Bump this file whenever the iOS enum changes so HealthMetricRegistryTest detects coverage drift.",
-  "source_path": "AcaraHealthSync/Models/HealthKitTypeIdentifier.swift",
+  "description": "Snapshot of every HealthKit type identifier the iOS client sends. Mirrors GlcHealthSync/Models/HealthKitTypeIdentifier.swift. Bump this file whenever the iOS enum changes so HealthMetricRegistryTest detects coverage drift.",
+  "source_path": "GlcHealthSync/Models/HealthKitTypeIdentifier.swift",
   "type_count": 99,
   "categories": {
     "glucose": ["bloodGlucose"],

@@ -14,7 +14,7 @@ it('returns the absolute meal plans url using app url', function (): void {
 });
 
 it('returns the absolute checkout url from the configured app url, not the request host', function (): void {
-    config(['app.url' => 'https://acara.example']);
+    config(['app.url' => 'https://glc.example']);
 
-    expect(StaticUrl::checkoutUrl())->toBe('https://acara.example/checkout/subscription');
+    expect(StaticUrl::checkoutUrl())->toBe('https://glc.example/checkout/subscription');
 });

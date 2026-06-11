@@ -50,6 +50,7 @@
         </style>
 
         <title inertia>{{ config('app.name') }}</title>
+        <meta name="description" inertia content="GLC AI Platform - AI English placement testing and a 24/7 curriculum-based AI tutor by Greats Language Center.">
         @inertiaHead
 
         <link rel="icon" href="/favicon.ico" sizes="any">
@@ -64,9 +65,6 @@
         @viteReactRefresh
         @vite(['resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
 
-        @production
-            <script defer src="https://cloud.umami.is/script.js" data-website-id="00659ffa-f13b-411a-81a7-76d2bd81d2c6"></script>
-        @endproduction
     </head>
     <body class="font-sans antialiased">
         @inertia

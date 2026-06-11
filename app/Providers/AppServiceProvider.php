@@ -8,7 +8,6 @@ use App\Contracts\Billing\ResolvesUserTier;
 use App\Contracts\Memory\DispatchesMemoryExtraction;
 use App\Contracts\Memory\ManagesMemoryContext;
 use App\Contracts\Memory\PullsConversationHistory;
-use App\Contracts\Services\IndexNowServiceContract;
 use App\Contracts\Services\StripeServiceContract;
 use App\Contracts\Skills\LoadsSkills;
 use App\Events\AgentApprovalResolved;
@@ -16,7 +15,6 @@ use App\Listeners\NotifyTelegramOfApprovalOutcome;
 use App\Listeners\TrackAiUsage;
 use App\Models\User;
 use App\Services\Billing\SubscriptionTierResolver;
-use App\Services\IndexNowService;
 use App\Services\Memory\NullConversationHistoryPuller;
 use App\Services\Memory\NullMemoryExtractionDispatcher;
 use App\Services\Memory\NullMemoryPromptContext;
@@ -24,10 +22,13 @@ use App\Services\Skills\NullSkillLoader;
 use App\Services\StripeService;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Notifications\VerifyEmail;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -40,7 +41,6 @@ final class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(StripeServiceContract::class, StripeService::class);
-        $this->app->bind(IndexNowServiceContract::class, IndexNowService::class);
         $this->app->bind(ResolvesUserTier::class, SubscriptionTierResolver::class);
         $this->app->bindIf(ManagesMemoryContext::class, NullMemoryPromptContext::class);
         $this->app->bindIf(DispatchesMemoryExtraction::class, NullMemoryExtractionDispatcher::class);
@@ -55,6 +55,7 @@ final class AppServiceProvider extends ServiceProvider
         $this->bootVerificationDefaults();
         $this->bootCashierDefaults();
         $this->bootUrlDefaults();
+        $this->bootPlacementRateLimits();
         $this->configureDates();
         $this->registerEventListeners();
     }
@@ -94,6 +95,19 @@ final class AppServiceProvider extends ServiceProvider
         if (app()->isProduction()) {
             URL::forceScheme('https');
         }
+    }
+
+    private function bootPlacementRateLimits(): void
+    {
+        RateLimiter::for('placement-onboarding', fn (Request $request): Limit => Limit::perMinute(30)->by($request->ip()));
+
+        RateLimiter::for('placement-section', fn (Request $request): Limit => Limit::perMinute(30)->by($request->ip()));
+
+        RateLimiter::for('placement-autosave', fn (Request $request): Limit => Limit::perMinute(300)->by($request->ip()));
+
+        RateLimiter::for('placement-media', fn (Request $request): Limit => Limit::perMinute(30)->by($request->ip()));
+
+        RateLimiter::for('placement-integrity', fn (Request $request): Limit => Limit::perMinute(120)->by($request->ip()));
     }
 
     private function configureDates(): void

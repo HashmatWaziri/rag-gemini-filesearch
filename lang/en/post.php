@@ -7,10 +7,10 @@ return [
 
     'page_title' => 'Posts',
     'page_description' => 'Practical articles on nutrition, healthy eating, and living well — powered by the latest health research.',
-    'seo_title' => 'Posts | Acara Plate',
+    'seo_title' => 'Posts | GLC AI Platform',
     'seo_description' => 'Articles on nutrition, healthy eating, meal planning, and wellness tips to help you make smarter food choices.',
     'meta_keywords' => 'nutrition articles, healthy eating tips, diabetes management, meal planning, blood sugar control, wellness, health research',
-    'og_image_alt' => 'Acara Plate - Nutrition & Health Articles',
+    'og_image_alt' => 'GLC AI Platform - Nutrition & Health Articles',
 
     'read_article' => 'Read article',
     'min_read' => ':minutes min read',
@@ -44,7 +44,7 @@ return [
     'category_title_lifestyle' => 'Lifestyle & Wellness',
     'category_title_diabetes_management' => 'Diabetes Management & Blood Sugar Control',
 
-    'category_desc_product_updates' => 'News about Acara Plate — new features, product updates, and our journey to make health accessible for everyone.',
+    'category_desc_product_updates' => 'News about GLC AI Platform — new features, product updates, and our journey to make health accessible for everyone.',
     'category_desc_nutrition_tips' => 'Evidence-based nutrition advice — understanding macros, glycemic index, and making smarter food choices for your health goals.',
     'category_desc_recipes' => 'Delicious, health-conscious recipes designed to keep you nourished without sacrificing flavor.',
     'category_desc_research' => 'Summaries of the latest research in nutrition science, metabolic health, and wellness.',

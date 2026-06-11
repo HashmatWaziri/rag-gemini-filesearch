@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 return [
     'login' => [
-        'page_title' => 'Log in to Acara Plate | AI Nutrition for Diabetes Management',
-        'title' => 'Log in to your account',
-        'description' => 'Enter your email and password below to log in',
+        'page_title' => 'Log in | GLC AI Platform',
+        'title' => 'Log in to the GLC AI Platform',
+        'description' => 'Enter the email and password provided by Greats Language Center',
         'email' => 'Email address',
         'email_placeholder' => 'email@example.com',
         'password' => 'Password',
@@ -15,13 +15,14 @@ return [
         'submit' => 'Log in',
         'forgot_password' => 'Forgot password?',
         'no_account' => "Don't have an account?",
+        'no_account_glc' => 'Accounts are created by GLC staff. Contact your center for access.',
         'sign_up' => 'Sign up',
         'or' => 'Or',
     ],
 
     'register' => [
-        'page_title' => 'Create Your Acara Plate Account | Start Your Journey',
-        'title' => 'Sign up for Acara',
+        'page_title' => 'Create Account | GLC AI Platform',
+        'title' => 'Sign up',
         'name' => 'Name',
         'name_placeholder' => 'Full name',
         'email' => 'Email address',
@@ -34,7 +35,7 @@ return [
         'log_in' => 'Log in',
         'or' => 'Or',
         'terms_acceptance' => 'By signing up, I confirm that I am at least 18 years old and accept the',
-        'disclaimer_acceptance' => "I'm 18+ and I understand Acara provides wellness guidance, not medical advice.",
+        'disclaimer_acceptance' => 'I understand the GLC AI Platform provides AI-assisted learning support, not certified assessment, and that staff review all results.',
         'disclaimer_terms_prefix' => 'By creating an account, you agree to our',
         'terms_of_service' => 'Terms of Service',
         'and' => 'and',
@@ -42,8 +43,8 @@ return [
     ],
 
     'password_reset' => [
-        'request_page_title' => 'Reset Your Password | Acara Plate Help',
-        'reset_page_title' => 'Create New Password | Acara Plate',
+        'request_page_title' => 'Reset Your Password | GLC AI Platform',
+        'reset_page_title' => 'Create New Password | GLC AI Platform',
         'request_title' => 'Forgot password',
         'request_description' => 'Enter your email to receive a password reset link',
         'email' => 'Email address',
@@ -72,7 +73,7 @@ return [
     ],
 
     'email_verification' => [
-        'page_title' => 'Verify Your Email | Acara Plate Security',
+        'page_title' => 'Verify Your Email | GLC AI Platform',
         'title' => 'Verify email',
         'description' => 'Please verify your email address by clicking on the link we just emailed to you.',
         'resend' => 'Resend verification email',

@@ -1,8 +1,8 @@
-# Acara Design System
+# GLC Design System
 
 ## 1. Visual Theme & Atmosphere
 
-Acara is a modern, confident platform built on clarity and momentum. The design communicates precision and growth through a vibrant emerald-green identity set against clean, airy surfaces. Unlike traditional corporate green (muted, conservative) or neon green (aggressive, trendy), Acara's green feels organic and intentional—like fresh growth.
+GLC is a modern, confident platform built on clarity and momentum. The design communicates precision and growth through a vibrant emerald-green identity set against clean, airy surfaces. Unlike traditional corporate green (muted, conservative) or neon green (aggressive, trendy), GLC's green feels organic and intentional—like fresh growth.
 
 The visual language is **structured but warm**. We use generous whitespace, crisp edges, and purposeful scale to guide users without overwhelming them. The aesthetic is less "billboard protest" and more "architectural blueprint"—every element has a reason for being where it is.
 
@@ -22,11 +22,11 @@ The visual language is **structured but warm**. We use generous whitespace, cris
 
 | Token | Hex | Role |
 |-------|-----|------|
-| **Acara Emerald** | `#10b981` | Primary CTA, active states, brand moments |
-| **Acara Dark** | `#064e3b` | Button text on emerald, deep accents, hover states |
-| **Acara Night** | `#111827` | Primary text, headings, dark sections |
-| **Acara Mint** | `#d1fae5` | Soft surfaces, badge backgrounds, success tints |
-| **Acara Light** | `#ecfdf5` | Subtle green-tinted backgrounds, hover surfaces |
+| **GLC Emerald** | `#10b981` | Primary CTA, active states, brand moments |
+| **GLC Dark** | `#064e3b` | Button text on emerald, deep accents, hover states |
+| **GLC Night** | `#111827` | Primary text, headings, dark sections |
+| **GLC Mint** | `#d1fae5` | Soft surfaces, badge backgrounds, success tints |
+| **GLC Light** | `#ecfdf5` | Subtle green-tinted backgrounds, hover surfaces |
 
 ### Semantic Colors
 
@@ -78,7 +78,7 @@ The visual language is **structured but warm**. We use generous whitespace, cris
 <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700,800|jetbrains-mono:400,500" rel="stylesheet" />
 ```
 
-> Acara uses **Inter** for *everything*—display, headings, body, and UI. Hierarchy is created through **weight, size, and tracking**, not font mixing. This keeps the system fast, consistent, and unmistakably Acara.
+> GLC uses **Inter** for *everything*—display, headings, body, and UI. Hierarchy is created through **weight, size, and tracking**, not font mixing. This keeps the system fast, consistent, and unmistakably GLC.
 
 ### Hierarchy
 
@@ -102,7 +102,7 @@ The visual language is **structured but warm**. We use generous whitespace, cris
 - **Line-height 1.6 for body**: Comfortable for extended reading
 - **Negative letter-spacing on large text**: Keeps headlines compact and intentional
 - **`"calt"`, `"liga"`, `"kern"` enabled globally**: Refines text rendering
-- **Never use font-weight below 400**: Acara is confident, not fragile
+- **Never use font-weight below 400**: GLC is confident, not fragile
 
 ---
 
@@ -111,7 +111,7 @@ The visual language is **structured but warm**. We use generous whitespace, cris
 ### Buttons
 
 **Primary Button**
-- Background: `#10b981` (Acara Emerald)
+- Background: `#10b981` (GLC Emerald)
 - Text: `#ffffff` (white)
 - Padding: 12px 24px
 - Border-radius: 8px
@@ -235,7 +235,7 @@ Based on 4px grid:
 
 ## 6. Depth & Elevation
 
-Acara uses a restrained shadow system. Depth is earned, not default.
+GLC uses a restrained shadow system. Depth is earned, not default.
 
 | Level | Shadow | Usage |
 |-------|--------|-------|
@@ -315,7 +315,7 @@ Acara uses a restrained shadow system. Depth is earned, not default.
 ## 10. Do's and Don'ts
 
 ### Do
-- Use **Acara Emerald** for primary actions and brand moments
+- Use **GLC Emerald** for primary actions and brand moments
 - Use **weight 700** for headings—confident without being heavy
 - Apply `letter-spacing: -0.02em` on display text for tight, intentional headlines
 - Use `translateY(-1px)` or `translateY(-2px)` for hover lifts
@@ -325,7 +325,7 @@ Acara uses a restrained shadow system. Depth is earned, not default.
 - Use the 4px spacing scale consistently
 
 ### Don't
-- Don't use font-weight 900—Acara tops out at 800 for display
+- Don't use font-weight 900—GLC tops out at 800 for display
 - Don't use the emerald green for large background surfaces (hero sections should be neutral or dark, not green)
 - Don't use bounce or elastic animations for standard UI
 - Don't use colored shadows (green-tinted shadows are not part of the system)

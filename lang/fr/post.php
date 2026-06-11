@@ -7,10 +7,10 @@ return [
 
     'page_title' => 'Articles',
     'page_description' => 'Articles pratiques sur la nutrition, une alimentation saine et le bien-être — soutenus par les dernières recherches en santé.',
-    'seo_title' => 'Articles | Acara Plate',
+    'seo_title' => 'Articles | GLC AI Platform',
     'seo_description' => 'Articles sur la nutrition, l\'alimentation saine, la planification des repas et des conseils bien-être pour faire des choix alimentaires plus judicieux.',
     'meta_keywords' => 'articles nutrition, alimentation saine, gestion du diabète, planification des repas, contrôle glycémique, bien-être, recherche en santé',
-    'og_image_alt' => 'Acara Plate - Articles nutrition et santé',
+    'og_image_alt' => 'GLC AI Platform - Articles nutrition et santé',
 
     'read_article' => 'Lire l\'article',
     'min_read' => ':minutes min de lecture',
@@ -44,7 +44,7 @@ return [
     'category_title_lifestyle' => 'Mode de vie et bien-être',
     'category_title_diabetes_management' => 'Gestion du diabète et contrôle de la glycémie',
 
-    'category_desc_product_updates' => 'Nouvelles d\'Acara Plate — nouvelles fonctionnalités, mises à jour et notre mission de rendre la santé accessible à tous.',
+    'category_desc_product_updates' => 'Nouvelles d\'GLC AI Platform — nouvelles fonctionnalités, mises à jour et notre mission de rendre la santé accessible à tous.',
     'category_desc_nutrition_tips' => 'Conseils nutritionnels fondés sur des preuves — comprendre les macros, l\'indice glycémique et faire des choix alimentaires plus judicieux.',
     'category_desc_recipes' => 'Des recettes délicieuses et saines, conçues pour vous nourrir sans sacrifier la saveur.',
     'category_desc_research' => 'Résumés des dernières recherches en science de la nutrition, santé métabolique et bien-être.',

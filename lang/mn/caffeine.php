@@ -102,7 +102,7 @@ return [
     'footer_tagline_line1' => 'Эрүүл мэндийн боловсролд',
     'footer_tagline_line2' => 'зориулав.',
     'footer_powered_by_label' => 'powered by',
-    'footer_powered_by_brand' => 'Acara',
+    'footer_powered_by_brand' => 'GLC',
     'footer_terms' => 'Үйлчилгээний нөхцөл',
     'footer_privacy' => 'Нууцлал',
     'footer_more_tools_heading' => 'Хэрэгтэй холбоос',

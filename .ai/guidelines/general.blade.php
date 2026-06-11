@@ -18,7 +18,7 @@ php artisan wayfinder:generate --with-form
 ## Test Coverage Workflow
 
 WHAT MAKES A GREAT TEST:
-A great test covers behavior users depend on. It tests a feature that, if broken, would frustrate or block users. It validates real workflows, not implementation details, and it catches regressions before users do. Do NOT write tests just to increase coverage—use coverage as a guide to find untested user-facing behavior. If uncovered code is not worth testing (boilerplate, unreachable error branches, internal plumbing), add @codeCoverageIgnoreStart and @codeCoverageIgnoreEnd annotations instead of writing low-value tests.
+A great test covers behavior users depend on. It tests a feature that, if broken, would frustrate or block users. It validates real workflows, not implementation details, and it catches regressions before users do. Do NOT write tests just to increase coverage - use coverage as a guide to find untested user-facing behavior. If uncovered code is not worth testing (boilerplate, unreachable error branches, internal plumbing), add @codeCoverageIgnoreStart and @codeCoverageIgnoreEnd annotations instead of writing low-value tests.
 
 PROCESS:
 1. Run herd coverage ./vendor/bin/pest --coverage --parallel to see which files have low coverage.
@@ -78,9 +78,9 @@ return [
 ];
 ```
 
-## When you want to use local model `scope`, use the Scope Attribute in Laravel 12.
+## When you want to use local model `scope`, use the Scope Attribute (Laravel 12+; this app runs Laravel 13).
 
-<code-snippet name="Laravel 12 Local Model Scope Example" lang="php">
+<code-snippet name="Local Model Scope Attribute Example" lang="php">
 use Illuminate\Database\Eloquent\Attributes\Scope;
  
 #[Scope]

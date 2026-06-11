@@ -58,7 +58,7 @@ export default function Dashboard() {
                                 <div className="flex items-center gap-3">
                                     <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full ring-2 ring-emerald-100">
                                         <img
-                                            src="https://pub-plate-assets.acara.app/images/altani-waving-hello-320.webp"
+                                            src="/favicons/favicon-48x48.png"
                                             alt="Altani"
                                             className="h-full w-full object-cover"
                                         />

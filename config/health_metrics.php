@@ -20,7 +20,7 @@ use App\Enums\HealthAggregationFunction;
 |
 | Coverage:
 |   - All 99 type identifiers sent by the iOS client
-|     (see AcaraHealthSync/Models/HealthKitTypeIdentifier.swift)
+|     (see GLCHealthSync/Models/HealthKitTypeIdentifier.swift)
 |   - Backend-internal types (insulin, a1c, medicationDoseEvent,
 |     bloodPressure) that flow through other ingestion paths.
 |

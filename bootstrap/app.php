@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Http\Middleware\Glc\EnsureRole;
+use App\Http\Middleware\Glc\EnsureTutorAccess;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -12,6 +14,7 @@ use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Route;
 use Laravel\Sanctum\Http\Middleware\CheckAbilities;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -20,6 +23,14 @@ return Application::configure(basePath: dirname(__DIR__))
         api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         channels: __DIR__.'/../routes/channels.php',
+        then: function (): void {
+            Route::middleware('web')->group(__DIR__.'/../routes/glc/placement.php');
+            Route::middleware('web')->group(__DIR__.'/../routes/glc/results.php');
+            Route::middleware('web')->group(__DIR__.'/../routes/glc/admin.php');
+            Route::middleware('web')->group(__DIR__.'/../routes/glc/staff.php');
+            Route::middleware('web')->group(__DIR__.'/../routes/glc/curriculum.php');
+            Route::middleware('web')->group(__DIR__.'/../routes/glc/tutor.php');
+        },
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
@@ -30,6 +41,8 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'abilities' => CheckAbilities::class,
+            'glc.role' => EnsureRole::class,
+            'glc.tutor' => EnsureTutorAccess::class,
         ]);
 
         $middleware->web(append: [

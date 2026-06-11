@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Http;
 covers(AppleAuthController::class);
 
 beforeEach(function (): void {
-    config(['services.apple.client_id' => 'com.acaraplate.apple-health-sync']);
+    config(['services.apple.client_id' => 'com.glc.apple-health-sync']);
 });
 
 /**
@@ -43,7 +43,7 @@ function appleIdToken(string $rawNonce, array $claims = []): string
 
     return JWT::encode(array_merge([
         'iss' => 'https://appleid.apple.com',
-        'aud' => 'com.acaraplate.apple-health-sync',
+        'aud' => 'com.glc.apple-health-sync',
         'sub' => 'apple-sub-123',
         'email' => 'user@example.com',
         'email_verified' => 'true',

@@ -4,109 +4,14 @@ declare(strict_types=1);
 
 use App\Http\Controllers\UserController;
 use App\Models\User;
-use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 
 covers(UserController::class);
 
-it('renders registration page', function (): void {
-    $response = $this->fromRoute('home')
-        ->get(route('register'));
-
-    $response->assertOk()
-        ->assertInertia(fn ($page) => $page->component('user/create'));
-});
-
-it('may register a new user', function (): void {
-    Event::fake([Registered::class]);
-
-    $response = $this->fromRoute('register')
-        ->post(route('register.store'), [
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-            'password' => 'password1234',
-            'accepted_disclaimer' => '1',
-        ]);
-
-    $response->assertRedirectToRoute('dashboard');
-    $response->assertInertiaFlash('analytics', [
-        'name' => 'signup_completed',
-        'properties' => [
-            'method' => 'email',
-        ],
-    ]);
-
-    $user = User::query()->where('email', 'test@example.com')->first();
-
-    expect($user)->not->toBeNull()
-        ->and($user->name)->toBe('Test User')
-        ->and($user->email)->toBe('test@example.com')
-        ->and(Hash::check('password1234', $user->password))->toBeTrue();
-
-    $this->assertAuthenticatedAs($user);
-
-    Event::assertDispatched(Registered::class);
-});
-
-it('requires name', function (): void {
-    $response = $this->fromRoute('register')
-        ->post(route('register.store'), [
-            'email' => 'test@example.com',
-            'password' => 'password1234',
-        ]);
-
-    $response->assertRedirectToRoute('register')
-        ->assertSessionHasErrors('name');
-});
-
-it('requires email', function (): void {
-    $response = $this->fromRoute('register')
-        ->post(route('register.store'), [
-            'name' => 'Test User',
-            'password' => 'password1234',
-        ]);
-
-    $response->assertRedirectToRoute('register')
-        ->assertSessionHasErrors('email');
-});
-
-it('requires valid email', function (): void {
-    $response = $this->fromRoute('register')
-        ->post(route('register.store'), [
-            'name' => 'Test User',
-            'email' => 'not-an-email',
-            'password' => 'password1234',
-        ]);
-
-    $response->assertRedirectToRoute('register')
-        ->assertSessionHasErrors('email');
-});
-
-it('requires unique email', function (): void {
-    User::factory()->create(['email' => 'test@example.com']);
-
-    $response = $this->fromRoute('register')
-        ->post(route('register.store'), [
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-            'password' => 'password1234',
-        ]);
-
-    $response->assertRedirectToRoute('register')
-        ->assertSessionHasErrors('email');
-});
-
-it('requires password', function (): void {
-    $response = $this->fromRoute('register')
-        ->post(route('register.store'), [
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
-
-    $response->assertRedirectToRoute('register')
-        ->assertSessionHasErrors('password');
+it('has no public registration route', function (): void {
+    $this->get('/register')->assertNotFound();
+    $this->post('/register')->assertNotFound();
 });
 
 it('may delete user account', function (): void {
@@ -188,14 +93,4 @@ it('requires correct password to delete account', function (): void {
         ->assertSessionHasErrors('password');
 
     expect($user->fresh())->not->toBeNull();
-});
-
-it('redirects authenticated users away from registration', function (): void {
-    $user = User::factory()->create();
-
-    $response = $this->actingAs($user)
-        ->fromRoute('dashboard')
-        ->get(route('register'));
-
-    $response->assertRedirectToRoute('dashboard');
 });

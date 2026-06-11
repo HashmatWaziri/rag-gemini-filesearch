@@ -41,7 +41,7 @@ final class ContentFactory extends Factory
             'slug' => Str::slug($foodName),
             'title' => sprintf('Is %s Good for Diabetics?', $foodName),
             'meta_data' => [
-                'seo_title' => $foodName.' Glycemic Index & Diabetes Safety | Acara Plate',
+                'seo_title' => $foodName.' Glycemic Index & Diabetes Safety | GLC AI Platform',
                 'seo_description' => sprintf("Learn about %s's glycemic index, nutritional value, and whether it's safe for diabetics. Get personalized glucose spike predictions.", $foodName),
                 'manual_links' => [],
             ],
@@ -103,7 +103,7 @@ final class ContentFactory extends Factory
                 'title' => $postTitle,
                 'category' => $postCategory,
                 'meta_data' => [
-                    'seo_title' => $postTitle.' | Acara Plate',
+                    'seo_title' => $postTitle.' | GLC AI Platform',
                     'seo_description' => sprintf('Learn about %s and how it relates to diabetes management and nutrition.', $postTitle),
                     'manual_links' => [],
                 ],

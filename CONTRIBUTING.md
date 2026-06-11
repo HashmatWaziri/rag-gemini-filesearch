@@ -1,6 +1,6 @@
-# Contributing to Acara Plate
+# Contributing to GLC AI Platform
 
-Thank you for considering contributing to Acara Plate! The contribution guide helps you understand how to contribute to the project.
+Thank you for considering contributing to GLC AI Platform! The contribution guide helps you understand how to contribute to the project.
 
 ## Code of Conduct
 
@@ -35,4 +35,4 @@ If you find a bug, please open an issue on GitHub. Include as much detail as pos
 
 ## Security Vulnerabilities
 
-If you discover a security vulnerability within Acara Plate, please send an email to the maintainers instead of using the issue tracker.
+If you discover a security vulnerability within GLC AI Platform, please send an email to the maintainers instead of using the issue tracker.

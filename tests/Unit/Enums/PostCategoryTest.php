@@ -25,7 +25,7 @@ it('returns correct titles', function (): void {
 });
 
 it('returns correct descriptions', function (): void {
-    expect(PostCategory::ProductUpdates->description())->toContain('Acara Plate')
+    expect(PostCategory::ProductUpdates->description())->toContain('GLC AI Platform')
         ->and(PostCategory::NutritionTips->description())->toContain('nutrition')
         ->and(PostCategory::Recipes->description())->toContain('recipes')
         ->and(PostCategory::Research->description())->toContain('research')

@@ -1,13 +1,3 @@
+# GLC AI Platform - private, invitation-only platform. Not for indexing.
 User-agent: *
-Disallow: /cdn-cgi/
-Disallow: /profile/timezone
-Disallow: /auth/google/redirect
-
-# Prevent crawling of filtered/search food URLs (duplicate content)
-Disallow: /food?search=
-Disallow: /food?assessment=
-Disallow: /food?category=
-
-Sitemap: https://plate.acara.app/sitemap.xml
-Sitemap: https://plate.acara.app/food_sitemap.xml
-Sitemap: https://plate.acara.app/post_sitemap.xml
+Disallow: /

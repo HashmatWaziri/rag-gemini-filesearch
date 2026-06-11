@@ -28,7 +28,3 @@ arch('billing tier resolver does not consult is_verified')
 arch('paywall gating does not consult is_verified')
     ->expect('App\Actions\Billing')
     ->not->toUse('is_verified');
-
-arch('open-core boundary: main does not import the private package')
-    ->expect('App')
-    ->not->toUse('Acara\AcaraCore');

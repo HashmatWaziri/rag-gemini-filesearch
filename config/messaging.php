@@ -9,7 +9,7 @@ return [
     'platforms' => [
         ChatPlatform::Telegram->value => [
             'adapter' => TelegramPlatformAdapter::class,
-            'bot_username' => env('TELEGRAM_BOT_USERNAME', 'AcaraPlate_bot'),
+            'bot_username' => env('TELEGRAM_BOT_USERNAME', 'GlcAiPlatform_bot'),
             'deep_link_url' => 'https://t.me',
         ],
     ],

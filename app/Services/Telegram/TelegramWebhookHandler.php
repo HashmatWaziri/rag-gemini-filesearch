@@ -42,7 +42,7 @@ final class TelegramWebhookHandler extends WebhookHandler
 
     public function start(): void
     {
-        $text = "👋 Welcome to Acara Plate!\n\n"
+        $text = "👋 Welcome to GLC AI Platform!\n\n"
             ."I'm your AI wellness assistant. I can help you with:\n"
             ."• Log health data (glucose, food, insulin, weight, etc.)\n"
             ."• Nutrition advice and meal suggestions\n"

@@ -54,7 +54,7 @@ return [
     'openfoodfacts' => [
         'url' => env('OPENFOODFACTS_URL', 'https://world.openfoodfacts.org'),
         'cache_minutes' => env('OPENFOODFACTS_CACHE_MINUTES', 10080), // 7 days
-        'user_agent' => env('OPENFOODFACTS_USER_AGENT', 'AcaraPlate/1.0 (https://github.com/acara-app/plate)'),
+        'user_agent' => env('OPENFOODFACTS_USER_AGENT', 'GlcAiPlatform/1.0 (https://qwerty.itqanalquran.org)'),
     ],
 
     'usda' => [
@@ -66,12 +66,6 @@ return [
     'turnstile' => [
         'key' => env('TURNSTILE_SITE_KEY'),
         'secret' => env('TURNSTILE_SECRET_KEY'),
-    ],
-
-    'indexnow' => [
-        'key' => env('INDEXNOW_KEY'),
-        'host' => env('INDEXNOW_HOST'),
-        'key_location' => env('INDEXNOW_KEY_LOCATION'),
     ],
 
 ];

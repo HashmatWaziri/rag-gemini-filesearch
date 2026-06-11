@@ -101,7 +101,7 @@ return [
     'footer_tagline_line1' => 'De petits pas vers une meilleure santé.',
     'footer_tagline_line2' => 'Des outils gratuits pour le bien-être au quotidien.',
     'footer_powered_by_label' => 'propulsé par',
-    'footer_powered_by_brand' => 'Acara',
+    'footer_powered_by_brand' => 'GLC',
     'footer_terms' => 'Conditions d\'utilisation',
     'footer_privacy' => 'Confidentialité',
     'footer_more_tools_heading' => 'Autres outils utiles',

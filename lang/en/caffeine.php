@@ -102,7 +102,7 @@ return [
     'footer_tagline_line1' => 'Small steps to better health.',
     'footer_tagline_line2' => 'Free tools for everyday wellness.',
     'footer_powered_by_label' => 'powered by',
-    'footer_powered_by_brand' => 'Acara',
+    'footer_powered_by_brand' => 'GLC',
     'footer_terms' => 'Terms of Service',
     'footer_privacy' => 'Privacy',
     'footer_more_tools_heading' => 'More Useful Tools',

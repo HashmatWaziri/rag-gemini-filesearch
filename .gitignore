@@ -1,3 +1,4 @@
+/.firecrawl/
 /.phpunit.cache
 /bootstrap/ssr
 /node_modules
@@ -56,6 +57,8 @@ AGENTS.md
 .claude
 .agent
 .agents
-.cursor
+.cursor/*
+!.cursor/skills/
+!.cursor/skills/**
 /.github/skills
 /skills

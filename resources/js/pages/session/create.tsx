@@ -1,5 +1,4 @@
 import SessionController from '@/actions/App/Http/Controllers/Auth/SessionController';
-import GoogleOAuthButton from '@/components/google-oauth-button';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
 import TextLink from '@/components/text-link';
@@ -8,7 +7,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AuthLayout from '@/layouts/auth-layout';
-import { register } from '@/routes';
 import { request } from '@/routes/password';
 import { Form, Head } from '@inertiajs/react';
 import { LoaderCircle } from 'lucide-react';
@@ -36,19 +34,6 @@ export default function Login({ status, canResetPassword }: LoginProps) {
             >
                 {({ processing, errors }) => (
                     <>
-                        <GoogleOAuthButton />
-
-                        <div className="relative">
-                            <div className="absolute inset-0 flex items-center">
-                                <span className="w-full border-t" />
-                            </div>
-                            <div className="relative flex justify-center text-xs uppercase">
-                                <span className="bg-background px-2 text-muted-foreground">
-                                    {t('login.or')}
-                                </span>
-                            </div>
-                        </div>
-
                         <div className="grid gap-6">
                             <div className="grid gap-2">
                                 <Label htmlFor="email">
@@ -121,10 +106,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                         </div>
 
                         <div className="text-center text-sm text-muted-foreground">
-                            {t('login.no_account')}{' '}
-                            <TextLink href={register()} tabIndex={5}>
-                                {t('login.sign_up')}
-                            </TextLink>
+                            {t('login.no_account_glc')}
                         </div>
                     </>
                 )}

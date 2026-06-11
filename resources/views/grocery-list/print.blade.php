@@ -1,4 +1,4 @@
-@section('title', __('common.grocery_list_print.title') . ' - ' . ($mealPlan->name ?? 'Meal Plan') . ' | Acara Plate')
+@section('title', __('common.grocery_list_print.title') . ' - ' . ($mealPlan->name ?? 'Meal Plan') . ' | GLC AI Platform')
 @section('meta_description', __('common.grocery_list_print.meta_description'))
 
 <x-default-layout>
@@ -96,7 +96,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-xs font-medium uppercase tracking-wider text-slate-600 print:text-slate-600 print:dark:text-slate-600">
-                        Acara Plate
+                        GLC AI Platform
                     </p>
                     <h1 class="text-2xl font-bold print:text-xl">
                         🛒 {{ __('common.grocery_list_print.title') }}

@@ -40,10 +40,10 @@ export default defineConfig({
                 type: 'module',
             },
             manifest: {
-                name: 'Acara Plate',
-                short_name: 'Acara Plate',
+                name: 'GLC AI Platform',
+                short_name: 'GLC AI',
                 description:
-                    'Personalized nutrition and meal planning platform',
+                    'AI placement testing and 24/7 AI tutoring for Greats Language Center students',
                 theme_color: '#ffffff',
                 background_color: '#ffffff',
                 display: 'standalone',

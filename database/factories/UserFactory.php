@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Enums\Glc\UserRole;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -33,6 +34,12 @@ final class UserFactory extends Factory
             'is_verified' => false,
             'locale' => 'en',
             'accepted_disclaimer_at' => now(),
+            'role' => null,
+            'age' => null,
+            'guardian_name' => null,
+            'guardian_email' => null,
+            'guardian_consent_confirmed_at' => null,
+            'guardian_consent_confirmed_by' => null,
         ];
     }
 
@@ -63,6 +70,47 @@ final class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes): array => [
             'is_verified' => true,
+        ]);
+    }
+
+    public function admin(): self
+    {
+        return $this->state(fn (): array => ['role' => UserRole::Admin]);
+    }
+
+    public function academicSupervisor(): self
+    {
+        return $this->state(fn (): array => ['role' => UserRole::AcademicSupervisor]);
+    }
+
+    public function teacher(): self
+    {
+        return $this->state(fn (): array => ['role' => UserRole::Teacher]);
+    }
+
+    public function student(): self
+    {
+        return $this->state(fn (): array => [
+            'role' => UserRole::Student,
+            'age' => 20,
+        ]);
+    }
+
+    public function minorStudent(): self
+    {
+        return $this->state(fn (): array => [
+            'role' => UserRole::Student,
+            'age' => fake()->numberBetween(12, 17),
+            'guardian_name' => fake()->name(),
+            'guardian_email' => fake()->safeEmail(),
+            'guardian_consent_confirmed_at' => null,
+        ]);
+    }
+
+    public function withGuardianConsent(): self
+    {
+        return $this->state(fn (): array => [
+            'guardian_consent_confirmed_at' => now(),
         ]);
     }
 }

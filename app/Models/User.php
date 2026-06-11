@@ -6,6 +6,10 @@ namespace App\Models;
 
 use App\Data\UserSettingsData;
 use App\Enums\ChatPlatform;
+use App\Enums\Glc\UserRole;
+use App\Models\Glc\StudentAssignment;
+use App\Models\Glc\TutorConversation;
+use App\Models\Glc\WritingSubmission;
 use Carbon\CarbonInterface;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -14,6 +18,7 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Prunable;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -47,6 +52,17 @@ use Laravel\Sanctum\HasApiTokens;
  * @property-read Collection<int, MealPlan> $mealPlans
  * @property-read bool $is_onboarded
  * @property-read CarbonInterface|null $accepted_disclaimer_at
+ * @property-read UserRole|null $role
+ * @property-read int|null $age
+ * @property-read string|null $guardian_name
+ * @property-read string|null $guardian_email
+ * @property-read CarbonInterface|null $guardian_consent_confirmed_at
+ * @property-read int|null $guardian_consent_confirmed_by
+ * @property-read StudentAssignment|null $studentAssignment
+ * @property-read Collection<int, User> $assignedStudents
+ * @property-read Collection<int, User> $teachers
+ * @property-read Collection<int, TutorConversation> $tutorConversations
+ * @property-read Collection<int, WritingSubmission> $writingSubmissions
  * @property-read CarbonInterface|null $terms_accepted_at
  * @property-read CarbonInterface|null $privacy_accepted_at
  * @property-read string|null $consent_version
@@ -104,6 +120,9 @@ final class User extends Authenticatable implements MustVerifyEmail
             'two_factor_confirmed_at' => 'datetime',
             'is_verified' => 'boolean',
             'locale' => 'string',
+            'role' => UserRole::class,
+            'age' => 'integer',
+            'guardian_consent_confirmed_at' => 'datetime',
             'accepted_disclaimer_at' => 'datetime',
             'terms_accepted_at' => 'datetime',
             'privacy_accepted_at' => 'datetime',
@@ -241,6 +260,85 @@ final class User extends Authenticatable implements MustVerifyEmail
     public function requiresConsent(): bool
     {
         return $this->accepted_disclaimer_at === null;
+    }
+
+    public function isGlcUser(): bool
+    {
+        return $this->role instanceof UserRole;
+    }
+
+    public function isGlcStaff(): bool
+    {
+        return $this->role instanceof UserRole && $this->role->isStaff();
+    }
+
+    public function isGlcStudent(): bool
+    {
+        return $this->role === UserRole::Student;
+    }
+
+    public function requiresGuardianConsent(): bool
+    {
+        if ($this->age === null) {
+            return false;
+        }
+
+        return $this->age >= config()->integer('glc.guardian_consent.min_age', 12)
+            && $this->age <= config()->integer('glc.guardian_consent.max_age', 17);
+    }
+
+    public function hasGuardianConsent(): bool
+    {
+        return $this->guardian_consent_confirmed_at !== null;
+    }
+
+    public function canUseTutor(): bool
+    {
+        if (! $this->isGlcStudent()) {
+            return false;
+        }
+
+        return ! $this->requiresGuardianConsent() || $this->hasGuardianConsent();
+    }
+
+    /**
+     * @return HasOne<StudentAssignment, $this>
+     */
+    public function studentAssignment(): HasOne
+    {
+        return $this->hasOne(StudentAssignment::class, 'student_id');
+    }
+
+    /**
+     * @return BelongsToMany<User, $this>
+     */
+    public function assignedStudents(): BelongsToMany
+    {
+        return $this->belongsToMany(self::class, 'teacher_student', 'teacher_id', 'student_id')->withTimestamps();
+    }
+
+    /**
+     * @return BelongsToMany<User, $this>
+     */
+    public function teachers(): BelongsToMany
+    {
+        return $this->belongsToMany(self::class, 'teacher_student', 'student_id', 'teacher_id')->withTimestamps();
+    }
+
+    /**
+     * @return HasMany<TutorConversation, $this>
+     */
+    public function tutorConversations(): HasMany
+    {
+        return $this->hasMany(TutorConversation::class)->latest('last_activity_at');
+    }
+
+    /**
+     * @return HasMany<WritingSubmission, $this>
+     */
+    public function writingSubmissions(): HasMany
+    {
+        return $this->hasMany(WritingSubmission::class)->latest();
     }
 
     protected function getIsVerifiedAttribute(?bool $isVerified): bool

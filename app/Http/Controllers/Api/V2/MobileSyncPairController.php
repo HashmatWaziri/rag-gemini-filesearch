@@ -26,13 +26,13 @@ final readonly class MobileSyncPairController
 
         if (! $device instanceof MobileSyncDevice) {
             return response()->json([
-                'message' => 'Invalid pairing token. Please generate a new one in Settings → Mobile Sync on your Acara Plate dashboard.',
+                'message' => 'Invalid pairing token. Please generate a new one in Settings → Mobile Sync on your GLC AI Platform dashboard.',
             ], 422);
         }
 
         if (! $device->isTokenValid()) {
             return response()->json([
-                'message' => 'Pairing token has expired. Please generate a new one in Settings → Mobile Sync on your Acara Plate dashboard.',
+                'message' => 'Pairing token has expired. Please generate a new one in Settings → Mobile Sync on your GLC AI Platform dashboard.',
             ], 422);
         }
 

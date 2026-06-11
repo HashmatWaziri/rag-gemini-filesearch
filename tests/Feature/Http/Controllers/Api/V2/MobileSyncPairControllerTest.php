@@ -40,7 +40,7 @@ it('returns 422 for invalid token', function (): void {
         'token' => 'INVALID1',
         'device_name' => 'iPhone 15 Pro',
     ])->assertUnprocessable()
-        ->assertJson(['message' => 'Invalid pairing token. Please generate a new one in Settings → Mobile Sync on your Acara Plate dashboard.']);
+        ->assertJson(['message' => 'Invalid pairing token. Please generate a new one in Settings → Mobile Sync on your GLC AI Platform dashboard.']);
 });
 
 it('returns 422 for expired token', function (): void {
@@ -54,7 +54,7 @@ it('returns 422 for expired token', function (): void {
         'token' => 'EXPIRED1',
         'device_name' => 'iPhone 15 Pro',
     ])->assertUnprocessable()
-        ->assertJson(['message' => 'Pairing token has expired. Please generate a new one in Settings → Mobile Sync on your Acara Plate dashboard.']);
+        ->assertJson(['message' => 'Pairing token has expired. Please generate a new one in Settings → Mobile Sync on your GLC AI Platform dashboard.']);
 });
 
 it('returns 422 for already used token', function (): void {

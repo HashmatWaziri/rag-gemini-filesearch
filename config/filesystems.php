@@ -38,6 +38,13 @@ return [
             'serve' => true,
             'throw' => false,
             'report' => false,
+            // Group-accessible permissions: directories are implicitly created
+            // by both PHP-FPM (www-data) and artisan/queue CLI processes, so
+            // they must not default to Flysystem's owner-only 0700.
+            'permissions' => [
+                'file' => ['public' => 0664, 'private' => 0660],
+                'dir' => ['public' => 02775, 'private' => 02770],
+            ],
         ],
 
         'public' => [

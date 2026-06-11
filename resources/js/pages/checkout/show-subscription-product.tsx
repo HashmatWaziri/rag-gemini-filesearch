@@ -1,6 +1,5 @@
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
-import { support } from '@/routes';
 import billing from '@/routes/billing';
 import checkout from '@/routes/checkout';
 import { BreadcrumbItem } from '@/types';
@@ -403,7 +402,7 @@ export default function CashierSubscription({
                                                         variant="outline"
                                                         className="w-full"
                                                     >
-                                                        <a href={support().url}>
+                                                        <a href="/">
                                                             {t(
                                                                 'checkout_subscription.contact_sales',
                                                             )}

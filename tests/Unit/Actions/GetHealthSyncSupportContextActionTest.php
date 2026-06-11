@@ -11,7 +11,7 @@ it('returns full context when topic is all', function (): void {
     $result = $action->handle('all');
 
     expect($result)->toHaveKeys(['overview', 'setup', 'platform_support', 'privacy', 'troubleshooting', 'links'])
-        ->and($result['overview']['app_name'])->toBe('Acara Health Sync')
+        ->and($result['overview']['app_name'])->toBe('GLC Health Sync')
         ->and($result['links'])->toHaveKeys(['app_store_url', 'health_sync_url', 'setup_guide_url', 'mobile_sync_settings_url', 'install_app_url', 'support_email']);
 });
 

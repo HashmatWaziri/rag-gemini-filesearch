@@ -11,7 +11,7 @@ export default function PageHeader() {
                 className="flex items-center gap-2 text-xl font-bold text-slate-900"
             >
                 <AppLogoIcon className="size-7" />
-                <span>Acara</span>
+                <span>GLC</span>
             </a>
 
             <div className="flex items-center gap-4">
@@ -23,20 +23,12 @@ export default function PageHeader() {
                         Dashboard
                     </a>
                 ) : (
-                    <>
-                        <a
-                            href="/login"
-                            className="text-sm font-medium text-slate-600 transition hover:text-slate-900"
-                        >
-                            Log in
-                        </a>
-                        <a
-                            href="/register"
-                            className="rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white transition-all hover:bg-slate-800"
-                        >
-                            Get Started
-                        </a>
-                    </>
+                    <a
+                        href="/login"
+                        className="rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white transition-all hover:bg-slate-800"
+                    >
+                        Log in
+                    </a>
                 )}
             </div>
         </header>

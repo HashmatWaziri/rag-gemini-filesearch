@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'login' => [
-        'page_title' => 'Acara Plate-д нэвтрэх | Чихрийн шижингийн хиймэл оюуны хооллолт',
+        'page_title' => 'GLC AI Platform-д нэвтрэх | Чихрийн шижингийн хиймэл оюуны хооллолт',
         'title' => 'Нэвтрэх',
         'description' => 'Имэйл болон нууц үгээ оруулан нэвтэрнэ үү',
         'email' => 'Имэйл хаяг',
@@ -20,8 +20,8 @@ return [
     ],
 
     'register' => [
-        'page_title' => 'Acara Plate бүртгэл үүсгэх | Аяллаа эхлүүлээрэй',
-        'title' => 'Acara-д бүртгүүлэх',
+        'page_title' => 'GLC AI Platform бүртгэл үүсгэх | Аяллаа эхлүүлээрэй',
+        'title' => 'GLC-д бүртгүүлэх',
         'name' => 'Нэр',
         'name_placeholder' => 'Бүтэн нэр',
         'email' => 'Имэйл хаяг',
@@ -34,7 +34,7 @@ return [
         'log_in' => 'Нэвтрэх',
         'or' => 'Эсвэл',
         'terms_acceptance' => 'Бүртгүүлснээр би 18 нас хүрсэн гэдгээ баталж, дараах нөхцөлийг хүлээн зөвшөөрч байна:',
-        'disclaimer_acceptance' => 'Би 18 нас хүрсэн бөгөөд Acara нь эрүүл мэндийн зөвлөгөө өгдөг боловч эмнэлгийн зөвлөгөө биш гэдгийг ойлгож байна.',
+        'disclaimer_acceptance' => 'Би 18 нас хүрсэн бөгөөд GLC нь эрүүл мэндийн зөвлөгөө өгдөг боловч эмнэлгийн зөвлөгөө биш гэдгийг ойлгож байна.',
         'disclaimer_terms_prefix' => 'Бүртгэл үүсгэснээр та манай дараах зүйлсийг зөвшөөрч байна:',
         'terms_of_service' => 'Үйлчилгээний нөхцөл',
         'and' => 'ба',
@@ -42,8 +42,8 @@ return [
     ],
 
     'password_reset' => [
-        'request_page_title' => 'Нууц үг сэргээх | Acara Plate Тусламж',
-        'reset_page_title' => 'Шинэ нууц үг үүсгэх | Acara Plate',
+        'request_page_title' => 'Нууц үг сэргээх | GLC AI Platform Тусламж',
+        'reset_page_title' => 'Шинэ нууц үг үүсгэх | GLC AI Platform',
         'request_title' => 'Нууц үгээ мартсан',
         'request_description' => 'Имэйлээ оруулж нууц үг сэргээх холбоос хүлээн авна уу',
         'email' => 'Имэйл хаяг',
@@ -72,7 +72,7 @@ return [
     ],
 
     'email_verification' => [
-        'page_title' => 'Имэйл баталгаажуулах | Acara Plate',
+        'page_title' => 'Имэйл баталгаажуулах | GLC AI Platform',
         'title' => 'Имэйл баталгаажуулах',
         'description' => 'Таны имэйл рүү илгээсэн холбоос дээр дарж имэйлээ баталгаажуулна уу.',
         'resend' => 'Баталгаажуулах имэйл дахин илгээх',

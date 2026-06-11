@@ -57,7 +57,7 @@ it('renders printable meal plan for owner', function (): void {
     $response->assertOk()
         ->assertViewIs('meal-plans.print')
         ->assertSee('My Test Meal Plan')
-        ->assertSee('Acara Plate');
+        ->assertSee('GLC AI Platform');
 });
 
 it('displays all meals grouped by day', function (): void {
