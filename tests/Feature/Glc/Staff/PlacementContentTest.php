@@ -8,10 +8,10 @@ use App\Enums\Glc\PlacementSection;
 use App\Models\Glc\AuditLog;
 use App\Models\Glc\PlacementItem;
 use App\Models\User;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
+use Tests\Support\SamplePdf;
 
 use function Pest\Laravel\actingAs;
 
@@ -228,7 +228,7 @@ it('serves listening clip audio to staff including teachers', function (): void 
 });
 
 it('previews extracted PDF text before any content is created', function (): void {
-    $pdfBytes = Pdf::loadHTML('<p>The night market opens every Friday evening near the river.</p>')->output();
+    $pdfBytes = SamplePdf::withText('The night market opens every Friday evening near the river.');
 
     $response = actingAs(User::factory()->academicSupervisor()->create())
         ->post(route('staff.content.pdf.preview'), [

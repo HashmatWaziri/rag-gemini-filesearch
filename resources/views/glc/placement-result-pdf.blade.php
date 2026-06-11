@@ -5,7 +5,7 @@
     <title>Placement Test Result</title>
     <style>
         @page { margin: 48px 56px; }
-        body { font-family: DejaVu Sans, Helvetica, Arial, sans-serif; color: #1e293b; font-size: 12px; margin: 0; }
+        body { font-family: DejaVu Sans, Helvetica, Arial, sans-serif; color: #1e293b; font-size: 12px; margin: 0; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
         .logo-block { width: 64px; height: 64px; background-color: #059669; color: #ffffff; text-align: center; font-weight: bold; font-size: 22px; line-height: 64px; border-radius: 8px; }
         .header-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
         .header-table td { vertical-align: middle; border: none; padding: 0; }

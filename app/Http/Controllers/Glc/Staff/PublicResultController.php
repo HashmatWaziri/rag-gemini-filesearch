@@ -10,15 +10,14 @@ use App\Models\Glc\PlacementResultLink;
 use App\Models\Glc\PlacementReview;
 use App\Services\Glc\Review\ResultPdfRenderer;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Inertia\Inertia;
-use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 final readonly class PublicResultController
 {
     public function __construct(private ResultPdfRenderer $renderer) {}
 
-    public function show(Request $request, string $token): SymfonyResponse
+    public function show(Request $request, string $token): Response
     {
         $link = $this->resolveLink($token);
         $review = $link?->attempt->review;
@@ -69,7 +68,7 @@ final readonly class PublicResultController
 
         $link->update(['last_viewed_at' => now()]);
 
-        return $this->renderer->pdf($review)->download('placement-test-result.pdf');
+        return $this->renderer->download($review);
     }
 
     private function resolveLink(string $token): ?PlacementResultLink

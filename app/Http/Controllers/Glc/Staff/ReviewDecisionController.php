@@ -120,7 +120,11 @@ final readonly class ReviewDecisionController
             'final_level' => $review->final_level->value,
         ]);
 
-        return back()->with('success', 'Final approval given. You can now send the result once the parent summary is approved.');
+        $message = $review->isNarrativeApproved()
+            ? 'Final approval given. You can now preview the PDF and send the result.'
+            : 'Final approval given. Approve the parent summary before sending the result.';
+
+        return back()->with('success', $message);
     }
 
     private function authorizeAccess(PlacementReview $review, User $user): void

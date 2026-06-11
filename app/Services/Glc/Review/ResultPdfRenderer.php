@@ -7,8 +7,8 @@ namespace App\Services\Glc\Review;
 use App\Enums\Glc\GlcLevel;
 use App\Enums\Glc\PlacementSection;
 use App\Models\Glc\PlacementReview;
-use Barryvdh\DomPDF\Facade\Pdf;
-use Barryvdh\DomPDF\PDF as DompdfWrapper;
+use PdfStudio\Laravel\Facades\Pdf;
+use Symfony\Component\HttpFoundation\Response;
 
 final class ResultPdfRenderer
 {
@@ -46,8 +46,22 @@ final class ResultPdfRenderer
         ];
     }
 
-    public function pdf(PlacementReview $review): DompdfWrapper
+    public function stream(PlacementReview $review): Response
     {
-        return Pdf::loadView('glc.placement-result-pdf', $this->viewData($review));
+        return $this->builder($review)->stream('placement-test-result.pdf');
+    }
+
+    public function download(PlacementReview $review): Response
+    {
+        return $this->builder($review)->download('placement-test-result.pdf');
+    }
+
+    private function builder(PlacementReview $review): mixed
+    {
+        return Pdf::view('glc.placement-result-pdf')
+            ->data($this->viewData($review))
+            ->format('A4')
+            ->preferCssPageSize(true)
+            ->margins(0);
     }
 }

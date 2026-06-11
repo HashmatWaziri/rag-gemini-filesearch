@@ -181,7 +181,11 @@ it('approves an in-review decision and audits it', function (): void {
     actingAs($supervisor)
         ->post(route('staff.review.approve', $review))
         ->assertRedirect()
-        ->assertSessionHasNoErrors();
+        ->assertSessionHasNoErrors()
+        ->assertSessionHas(
+            'success',
+            'Final approval given. Approve the parent summary before sending the result.',
+        );
 
     $review->refresh();
 
@@ -189,6 +193,32 @@ it('approves an in-review decision and audits it', function (): void {
         ->and($review->approved_at)->not->toBeNull()
         ->and($review->approved_by)->toBe($supervisor->id)
         ->and(AuditLog::query()->where('action', AuditAction::ReviewApproved)->exists())->toBeTrue();
+});
+
+it('tells staff they can send immediately when the parent summary was already approved', function (): void {
+    $supervisor = User::factory()->academicSupervisor()->create();
+    $review = PlacementReview::factory()->create([
+        'status' => PlacementReviewStatus::InReview,
+        'narrative' => [
+            'strengths' => 'Strong reading.',
+            'areas_to_improve' => 'Listening accuracy.',
+            'recommendation' => 'Intermediate placement.',
+            'next_steps' => 'Enrol in Intermediate.',
+        ],
+        'narrative_approved_at' => now(),
+        'narrative_approved_by' => $supervisor->id,
+    ]);
+    intermediateScore($review);
+
+    actingAs($supervisor)->put(route('staff.review.decision', $review), decisionPayload());
+
+    actingAs($supervisor)
+        ->post(route('staff.review.approve', $review))
+        ->assertRedirect()
+        ->assertSessionHas(
+            'success',
+            'Final approval given. You can now preview the PDF and send the result.',
+        );
 });
 
 it('requires starting the review before approval, with a plain-language message', function (): void {

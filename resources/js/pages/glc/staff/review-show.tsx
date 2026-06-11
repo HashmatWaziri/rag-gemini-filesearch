@@ -6,6 +6,7 @@ import {
     ProcessSteps,
     REVIEW_STATUS_LABELS,
     REVIEW_STATUS_TONES,
+    sendUnlockMessage,
     TEST_TAKING_EVENT_LABELS,
     type PipelineInput,
     type ReviewStatus,
@@ -282,6 +283,14 @@ export default function ReviewShow() {
     const baseUrl = `/staff/review/${review.id}`;
     const isSent = review.status === 'sent';
 
+    const levelConfirmed = review.final_level !== null;
+    const summaryApproved = review.narrative_approved_at !== null;
+    const canGiveFinalApproval =
+        review.status === 'in_review' &&
+        levelConfirmed &&
+        summaryApproved &&
+        !isSent;
+
     const pipelineInput: PipelineInput = {
         status: review.status,
         submittedAt: attempt.submitted_at,
@@ -291,7 +300,7 @@ export default function ReviewShow() {
         ),
         assigneeName: review.assignee,
         assignedToMe: review.is_assigned_to_me,
-        levelConfirmed: review.final_level !== null,
+        levelConfirmed,
         summaryApprovedAt: review.narrative_approved_at,
         finalApprovalAt: review.approved_at,
         isMinor: candidate.is_minor,
@@ -807,32 +816,6 @@ export default function ReviewShow() {
                         >
                             Save levels
                         </button>
-                        {review.status === 'in_review' && (
-                            <button
-                                type="button"
-                                className={btnSecondary}
-                                onClick={() =>
-                                    router.post(
-                                        `${baseUrl}/approve`,
-                                        {},
-                                        { preserveScroll: true },
-                                    )
-                                }
-                            >
-                                Give final approval
-                            </button>
-                        )}
-                        {review.approved_at && (
-                            <span className="text-xs text-slate-500">
-                                Final approval given {review.approved_at} by{' '}
-                                {review.approved_by}
-                            </span>
-                        )}
-                        {errors.status && (
-                            <span className="text-xs text-red-600">
-                                {errors.status}
-                            </span>
-                        )}
                     </div>
                 </Card>
 
@@ -935,6 +918,80 @@ export default function ReviewShow() {
                     </div>
                 </Card>
 
+                <Card
+                    title="Final approval"
+                    aside={
+                        review.approved_at ? (
+                            <Badge tone="emerald">Approved</Badge>
+                        ) : (
+                            <Badge tone="amber">Not yet</Badge>
+                        )
+                    }
+                >
+                    <p className="text-sm text-slate-600">
+                        Confirm you have reviewed the answers, confirmed levels,
+                        and approved the parent summary. Preview and send unlock
+                        after this step.
+                    </p>
+                    <ul className="mt-3 space-y-1 text-sm">
+                        <li
+                            className={
+                                levelConfirmed
+                                    ? 'text-emerald-700'
+                                    : 'text-slate-500'
+                            }
+                        >
+                            {levelConfirmed ? '✓' : '○'} Levels saved
+                        </li>
+                        <li
+                            className={
+                                summaryApproved
+                                    ? 'text-emerald-700'
+                                    : 'text-slate-500'
+                            }
+                        >
+                            {summaryApproved ? '✓' : '○'} Parent summary
+                            approved
+                        </li>
+                    </ul>
+                    {canGiveFinalApproval && (
+                        <div className="mt-3">
+                            <button
+                                type="button"
+                                className={btnPrimary}
+                                onClick={() =>
+                                    router.post(
+                                        `${baseUrl}/approve`,
+                                        {},
+                                        { preserveScroll: true },
+                                    )
+                                }
+                            >
+                                Give final approval
+                            </button>
+                        </div>
+                    )}
+                    {review.status === 'in_review' &&
+                        !canGiveFinalApproval &&
+                        !isSent && (
+                            <p className="mt-3 text-sm text-slate-500">
+                                Complete the checklist above before giving final
+                                approval.
+                            </p>
+                        )}
+                    {review.approved_at && (
+                        <p className="mt-3 text-xs text-slate-500">
+                            Final approval given {review.approved_at} by{' '}
+                            {review.approved_by}
+                        </p>
+                    )}
+                    {errors.status && (
+                        <p className="mt-2 text-xs text-red-600">
+                            {errors.status}
+                        </p>
+                    )}
+                </Card>
+
                 <Card title="Send the result">
                     {review.can_generate_pdf ? (
                         <div className="space-y-3">
@@ -999,9 +1056,11 @@ export default function ReviewShow() {
                         </div>
                     ) : (
                         <p className="text-sm text-slate-500">
-                            You can preview the PDF and send the result once the
-                            levels have final approval and the parent summary is
-                            approved.
+                            {sendUnlockMessage({
+                                status: review.status,
+                                levelConfirmed,
+                                summaryApproved,
+                            })}
                         </p>
                     )}
 

@@ -18,6 +18,8 @@ use App\Services\Billing\SubscriptionTierResolver;
 use App\Services\Memory\NullConversationHistoryPuller;
 use App\Services\Memory\NullMemoryExtractionDispatcher;
 use App\Services\Memory\NullMemoryPromptContext;
+use App\Services\PdfStudio\ChromiumExecutableResolver;
+use App\Services\PdfStudio\CustomDriverManager;
 use App\Services\Skills\NullSkillLoader;
 use App\Services\StripeService;
 use Carbon\CarbonImmutable;
@@ -35,6 +37,7 @@ use Illuminate\Validation\Rules\Password;
 use Laravel\Ai\Events\AgentPrompted;
 use Laravel\Ai\Events\AgentStreamed;
 use Laravel\Cashier\Cashier;
+use PdfStudio\Laravel\Drivers\DriverManager;
 
 final class AppServiceProvider extends ServiceProvider
 {
@@ -46,6 +49,8 @@ final class AppServiceProvider extends ServiceProvider
         $this->app->bindIf(DispatchesMemoryExtraction::class, NullMemoryExtractionDispatcher::class);
         $this->app->bindIf(PullsConversationHistory::class, NullConversationHistoryPuller::class);
         $this->app->bindIf(LoadsSkills::class, NullSkillLoader::class);
+
+        $this->app->singleton(DriverManager::class, fn ($app): DriverManager => new CustomDriverManager($app));
     }
 
     public function boot(): void
@@ -58,6 +63,7 @@ final class AppServiceProvider extends ServiceProvider
         $this->bootPlacementRateLimits();
         $this->configureDates();
         $this->registerEventListeners();
+        $this->registerPdfStudioChromiumBinaryResolver();
     }
 
     private function bootModelsDefaults(): void
@@ -120,5 +126,18 @@ final class AppServiceProvider extends ServiceProvider
         Event::listen(AgentPrompted::class, TrackAiUsage::class);
         Event::listen(AgentStreamed::class, TrackAiUsage::class);
         Event::listen(AgentApprovalResolved::class, NotifyTelegramOfApprovalOutcome::class);
+    }
+
+    private function registerPdfStudioChromiumBinaryResolver(): void
+    {
+        $this->app->booted(static function (): void {
+            $resolved = ChromiumExecutableResolver::resolve(
+                config('pdf-studio.drivers.chromium.binary'),
+            );
+
+            if ($resolved !== null) {
+                config(['pdf-studio.drivers.chromium.binary' => $resolved]);
+            }
+        });
     }
 }

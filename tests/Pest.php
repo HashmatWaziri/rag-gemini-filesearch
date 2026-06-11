@@ -13,6 +13,8 @@ pest()->extend(TestCase::class)
         Http::preventStrayRequests();
         Sleep::fake();
 
+        config(['pdf-studio.default_driver' => 'fake']);
+
         $this->freezeTime();
     })
     ->in('Browser', 'Feature', 'Unit');

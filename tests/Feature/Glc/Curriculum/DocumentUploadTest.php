@@ -10,12 +10,12 @@ use App\Models\Glc\CourseLevel;
 use App\Models\Glc\CourseUnit;
 use App\Models\Glc\CurriculumDocument;
 use App\Models\User;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use PhpOffice\PhpWord\IOFactory;
 use PhpOffice\PhpWord\PhpWord;
+use Tests\Support\SamplePdf;
 
 beforeEach(function (): void {
     Storage::fake('local');
@@ -67,7 +67,7 @@ it('uploads a TXT file as a draft with extracted text', function (): void {
 });
 
 it('uploads a PDF file and extracts its text', function (): void {
-    $pdfContent = Pdf::loadHTML('<h1>Reading passage</h1><p>The market opens early every Saturday.</p>')->output();
+    $pdfContent = SamplePdf::withText('The market opens early every Saturday.');
 
     $this->actingAs($this->supervisor)->post(route('curriculum.documents.store'), [
         ...$this->tags,

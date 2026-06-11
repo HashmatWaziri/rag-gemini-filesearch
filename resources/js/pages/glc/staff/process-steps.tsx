@@ -195,6 +195,49 @@ export interface NextStepInput {
     summaryApproved: boolean;
 }
 
+export interface SendUnlockInput {
+    status: ReviewStatus;
+    levelConfirmed: boolean;
+    summaryApproved: boolean;
+}
+
+/** Plain-language hint for why preview/send is still locked. */
+export function sendUnlockMessage(input: SendUnlockInput): string {
+    const missing: string[] = [];
+
+    if (input.status === 'pending') {
+        missing.push('start the review');
+    }
+
+    if (!input.levelConfirmed) {
+        missing.push('save the confirmed levels');
+    }
+
+    if (!input.summaryApproved) {
+        missing.push('approve the parent summary');
+    }
+
+    if (input.status === 'in_review') {
+        missing.push('give final approval');
+    }
+
+    if (missing.length === 0) {
+        return 'Preview and send are not available for this review yet.';
+    }
+
+    if (missing.length === 1) {
+        return `You can preview the PDF and send the result once you ${missing[0]}.`;
+    }
+
+    if (missing.length === 2) {
+        return `You can preview the PDF and send the result once you ${missing[0]} and ${missing[1]}.`;
+    }
+
+    const last = missing.pop();
+
+    return `You can preview the PDF and send the result once you ${missing.join(', ')}, and ${last}.`;
+}
+
 /** Compact "what happens next" hint for list rows, from the same pipeline logic. */
 export function nextStepHint(input: NextStepInput): {
     label: string;
