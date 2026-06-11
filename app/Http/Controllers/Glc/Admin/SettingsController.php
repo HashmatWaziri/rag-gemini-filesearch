@@ -7,7 +7,9 @@ namespace App\Http\Controllers\Glc\Admin;
 use App\Enums\Glc\AuditAction;
 use App\Enums\Glc\PlacementSection;
 use App\Services\Glc\Admin\SectionTimeLimits;
+use App\Services\Glc\Admin\TutorMaterialsHealth;
 use App\Services\Glc\AuditLogger;
+use App\Services\Glc\Curriculum\GeminiFileSearchService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -17,6 +19,7 @@ final readonly class SettingsController
 {
     public function __construct(
         private SectionTimeLimits $timeLimits,
+        private TutorMaterialsHealth $tutorMaterialsHealth,
         private AuditLogger $auditLogger,
     ) {}
 
@@ -32,6 +35,10 @@ final readonly class SettingsController
             'bounds' => [
                 'min' => SectionTimeLimits::MIN_SECONDS,
                 'max' => SectionTimeLimits::MAX_SECONDS,
+            ],
+            'tutorMaterials' => [
+                'counts' => $this->tutorMaterialsHealth->counts(),
+                'rebuild_available' => class_exists(GeminiFileSearchService::class),
             ],
             'status' => $request->session()->get('glc_status'),
         ]);
@@ -59,6 +66,6 @@ final readonly class SettingsController
             'section_time_limits' => $limits,
         ]);
 
-        return to_route('admin.settings.edit')->with('glc_status', 'Settings updated.');
+        return to_route('admin.settings.edit')->with('glc_status', 'Settings saved.');
     }
 }

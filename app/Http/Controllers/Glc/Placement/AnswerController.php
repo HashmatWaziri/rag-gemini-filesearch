@@ -48,7 +48,7 @@ final readonly class AnswerController
         }
 
         if ($validated['selected'] >= count($item->options ?? [])) {
-            return response()->json(['message' => 'Invalid option for this question.'], 422);
+            return response()->json(['message' => 'That choice does not look right - please pick one of the options shown.'], 422);
         }
 
         $attempt->answers()->updateOrCreate(

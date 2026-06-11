@@ -3,6 +3,10 @@
 declare(strict_types=1);
 
 use App\Enums\SettingKey;
+use App\Models\Glc\Course;
+use App\Models\Glc\CourseLesson;
+use App\Models\Glc\CourseLevel;
+use App\Models\Glc\CourseUnit;
 use App\Models\Glc\CurriculumDocument;
 use App\Models\Glc\TutorConversation;
 use App\Models\Glc\TutorMessage;
@@ -40,6 +44,7 @@ it('sends a message through the scoped retrieval pipeline and persists the reply
         'course_id' => $course->id,
         'course_level_id' => $level->id,
         'course_unit_id' => $unit->id,
+        'title' => 'Unit Worksheet',
     ]);
 
     Http::fake([
@@ -61,7 +66,9 @@ it('sends a message through the scoped retrieval pipeline and persists the reply
         ->and($messages[0]->content)->toBe('Explain the past simple tense please')
         ->and($messages[1]->role)->toBe('assistant')
         ->and($messages[1]->content)->toBe('Past simple describes finished actions.')
-        ->and($messages[1]->metadata)->toMatchArray(['citations' => ['Unit Worksheet']]);
+        ->and($messages[1]->metadata)->toMatchArray([
+            'citations' => [sprintf('Unit Worksheet (%s / %s / Unit-wide)', $course->name, $unit->name)],
+        ]);
 
     $conversation->refresh();
 
@@ -88,20 +95,185 @@ it('sends a message through the scoped retrieval pipeline and persists the reply
     });
 });
 
-it('omits the file search tool when no published documents are in scope', function (): void {
-    ['student' => $student] = TutorScenario::assignedStudent();
+it('blocks the exchange before any model call when no published documents are in scope', function (): void {
+    ['student' => $student] = TutorScenario::assignedStudent(withMaterials: false);
+
+    Setting::set(SettingKey::GlcCurriculumStoreName, 'fileSearchStores/glc-test-store');
+
+    Http::fake();
+
+    $conversation = TutorConversation::factory()->create(['user_id' => $student->id]);
+
+    actingAs($student)
+        ->post(route('tutor.messages.store', $conversation), ['message' => 'Can you teach me something?'])
+        ->assertRedirect(route('tutor.conversations.show', $conversation));
+
+    $messages = $conversation->messages()->orderBy('id')->get();
+
+    expect($messages)->toHaveCount(2)
+        ->and($messages[1]->role)->toBe('assistant')
+        ->and($messages[1]->content)->toBe(TutorChatService::MATERIALS_NOT_READY_MESSAGE);
+
+    Http::assertNothingSent();
+});
+
+it('still blocks the exchange when only draft or archived documents are in scope', function (): void {
+    ['student' => $student, 'course' => $course, 'level' => $level, 'unit' => $unit] = TutorScenario::assignedStudent(withMaterials: false);
+
+    Setting::set(SettingKey::GlcCurriculumStoreName, 'fileSearchStores/glc-test-store');
+
+    $scope = [
+        'course_id' => $course->id,
+        'course_level_id' => $level->id,
+        'course_unit_id' => $unit->id,
+    ];
+
+    CurriculumDocument::factory()->create($scope);
+    CurriculumDocument::factory()->archived()->create($scope);
+
+    Http::fake();
+
+    $conversation = TutorConversation::factory()->create(['user_id' => $student->id]);
+
+    actingAs($student)->post(route('tutor.messages.store', $conversation), ['message' => 'Hello?']);
+
+    expect($conversation->messages()->where('role', 'assistant')->sole()->content)
+        ->toBe(TutorChatService::MATERIALS_NOT_READY_MESSAGE);
+
+    Http::assertNothingSent();
+});
+
+it('formats grounded citations as title with course, unit, and lesson or Unit-wide', function (): void {
+    ['student' => $student, 'course' => $course, 'level' => $level, 'unit' => $unit] = TutorScenario::assignedStudent(withMaterials: false);
+
+    $lesson = CourseLesson::factory()->for($unit, 'unit')->create(['name' => 'Past Simple']);
+
+    $scope = [
+        'course_id' => $course->id,
+        'course_level_id' => $level->id,
+        'course_unit_id' => $unit->id,
+    ];
+
+    CurriculumDocument::factory()->published()->create([...$scope, 'course_lesson_id' => null, 'title' => 'Grammar Basics']);
+    CurriculumDocument::factory()->published()->create([...$scope, 'course_lesson_id' => $lesson->id, 'title' => 'Lesson 2 Worksheet']);
 
     Setting::set(SettingKey::GlcCurriculumStoreName, 'fileSearchStores/glc-test-store');
 
     Http::fake([
-        'generativelanguage.googleapis.com/*' => Http::response(GeminiFake::chat('Hello!')),
+        'generativelanguage.googleapis.com/*' => Http::response(
+            GeminiFake::chat('Grounded explanation.', null, ['Grammar Basics', 'Lesson 2 Worksheet']),
+        ),
+    ]);
+
+    $conversation = TutorConversation::factory()->create(['user_id' => $student->id]);
+
+    actingAs($student)->post(route('tutor.messages.store', $conversation), ['message' => 'Explain please']);
+
+    $expected = [
+        sprintf('Grammar Basics (%s / %s / Unit-wide)', $course->name, $unit->name),
+        sprintf('Lesson 2 Worksheet (%s / %s / Past Simple)', $course->name, $unit->name),
+    ];
+
+    expect(data_get($conversation->messages()->where('role', 'assistant')->sole()->metadata, 'citations'))
+        ->toBe($expected);
+
+    actingAs($student)
+        ->get(route('tutor.conversations.show', $conversation))
+        ->assertInertia(fn ($page) => $page
+            ->where('messages.1.citations.0', $expected[0])
+            ->where('messages.1.citations.1', $expected[1]));
+});
+
+it('scopes the filter to the unit so unit-wide and lesson-specific documents are both retrievable', function (): void {
+    ['student' => $student, 'assignment' => $assignment, 'course' => $course, 'level' => $level, 'unit' => $unit] = TutorScenario::assignedStudent(withMaterials: false);
+
+    $lesson = CourseLesson::factory()->for($unit, 'unit')->create();
+
+    $scope = [
+        'course_id' => $course->id,
+        'course_level_id' => $level->id,
+        'course_unit_id' => $unit->id,
+    ];
+
+    CurriculumDocument::factory()->published()->create([...$scope, 'course_lesson_id' => null]);
+    CurriculumDocument::factory()->published()->create([...$scope, 'course_lesson_id' => $lesson->id]);
+
+    Setting::set(SettingKey::GlcCurriculumStoreName, 'fileSearchStores/glc-test-store');
+
+    Http::fake([
+        'generativelanguage.googleapis.com/*' => Http::response(GeminiFake::chat('Sure.')),
     ]);
 
     $conversation = TutorConversation::factory()->create(['user_id' => $student->id]);
 
     actingAs($student)->post(route('tutor.messages.store', $conversation), ['message' => 'Hi']);
 
-    Http::assertSent(fn (Request $request): bool => data_get($request->data(), 'tools') === null);
+    Http::assertSent(function (Request $request) use ($assignment): bool {
+        $filter = (string) data_get($request->data(), 'tools.0.file_search.metadata_filter');
+
+        return $filter === sprintf(
+            'course_id=%d AND course_level_id=%d AND course_unit_id=%d AND status="published"',
+            $assignment->course_id,
+            $assignment->course_level_id,
+            $assignment->course_unit_id,
+        ) && ! str_contains($filter, 'course_lesson_id');
+    });
+});
+
+it('uses the latest teacher assignment for the next message in an existing conversation', function (): void {
+    ['student' => $student, 'teacher' => $teacher, 'assignment' => $assignment] = TutorScenario::assignedStudent();
+
+    Setting::set(SettingKey::GlcCurriculumStoreName, 'fileSearchStores/glc-test-store');
+
+    $newCourse = Course::factory()->create();
+    $newLevel = CourseLevel::factory()->for($newCourse)->create();
+    $newUnit = CourseUnit::factory()->for($newLevel, 'level')->create();
+
+    CurriculumDocument::factory()->published()->create([
+        'course_id' => $newCourse->id,
+        'course_level_id' => $newLevel->id,
+        'course_unit_id' => $newUnit->id,
+    ]);
+
+    Http::fake([
+        'generativelanguage.googleapis.com/*' => Http::response(GeminiFake::chat('Here is a hint.')),
+    ]);
+
+    $conversation = TutorConversation::factory()->create(['user_id' => $student->id]);
+
+    actingAs($student)->post(route('tutor.messages.store', $conversation), ['message' => 'First question']);
+
+    actingAs($teacher)
+        ->put(route('staff.students.assignment.update', $student), [
+            'course_id' => $newCourse->id,
+            'course_level_id' => $newLevel->id,
+            'course_unit_id' => $newUnit->id,
+        ])
+        ->assertRedirect();
+
+    actingAs($student)->post(route('tutor.messages.store', $conversation), ['message' => 'Second question']);
+
+    $filters = collect(Http::recorded())
+        ->map(fn (array $pair): mixed => data_get($pair[0]->data(), 'tools.0.file_search.metadata_filter'))
+        ->filter()
+        ->values();
+
+    expect($filters->all())->toBe([
+        sprintf(
+            'course_id=%d AND course_level_id=%d AND course_unit_id=%d AND status="published"',
+            $assignment->course_id,
+            $assignment->course_level_id,
+            $assignment->course_unit_id,
+        ),
+        sprintf(
+            'course_id=%d AND course_level_id=%d AND course_unit_id=%d AND status="published"',
+            $newCourse->id,
+            $newLevel->id,
+            $newUnit->id,
+        ),
+    ]);
+
+    expect($conversation->messages()->count())->toBe(4);
 });
 
 it('resumes a thread with prior messages and the rotation summary as context', function (): void {

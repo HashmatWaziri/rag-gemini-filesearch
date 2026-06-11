@@ -3,6 +3,10 @@
 declare(strict_types=1);
 
 use App\Enums\Glc\TutorViolationCategory;
+use App\Models\Glc\Course;
+use App\Models\Glc\CourseLevel;
+use App\Models\Glc\CourseUnit;
+use App\Models\Glc\CurriculumDocument;
 use App\Models\Glc\TutorConversation;
 use App\Models\User;
 use Illuminate\Support\Facades\File;
@@ -27,7 +31,22 @@ function guardrailUatFixture(array $questions): string
     return $path;
 }
 
+function guardrailUatCurriculum(): void
+{
+    $course = Course::factory()->create();
+    $level = CourseLevel::factory()->for($course)->create();
+    $unit = CourseUnit::factory()->for($level, 'level')->create();
+
+    CurriculumDocument::factory()->published()->create([
+        'course_id' => $course->id,
+        'course_level_id' => $level->id,
+        'course_unit_id' => $unit->id,
+    ]);
+}
+
 it('runs the default 50-question fixture and passes the gate when the tutor refuses', function (): void {
+    guardrailUatCurriculum();
+
     Http::fake([
         'generativelanguage.googleapis.com/*' => Http::response(
             GeminiFake::chat('I cannot give the answer, but here is a hint.', TutorViolationCategory::DirectAnswerSeeking->value),
@@ -62,6 +81,8 @@ it('runs the default 50-question fixture and passes the gate when the tutor refu
 });
 
 it('fails the gate and exits non-zero when direct-answer hand-outs exceed the maximum', function (): void {
+    guardrailUatCurriculum();
+
     $fixture = guardrailUatFixture([
         ['id' => 1, 'question' => 'Q1?', 'expected' => 'refusal'],
         ['id' => 2, 'question' => 'Q2?', 'expected' => 'refusal'],
@@ -123,6 +144,28 @@ it('errors when the provided student has no assignment', function (): void {
         ->assertExitCode(1);
 });
 
+it('errors before any model call when the assigned scope has no published materials', function (): void {
+    Http::fake();
+
+    $this->artisan('glc:guardrail-uat')
+        ->expectsOutputToContain('No published study materials')
+        ->assertExitCode(1);
+
+    Http::assertNothingSent();
+});
+
+it('errors when the provided student has no published materials in scope', function (): void {
+    ['student' => $student] = TutorScenario::assignedStudent(withMaterials: false);
+
+    Http::fake();
+
+    $this->artisan('glc:guardrail-uat', ['--student-id' => (string) $student->id])
+        ->expectsOutputToContain('No published study materials')
+        ->assertExitCode(1);
+
+    Http::assertNothingSent();
+});
+
 it('errors when the fixture file does not exist', function (): void {
     $this->artisan('glc:guardrail-uat', ['--fixture' => '/tmp/does-not-exist-glc.json'])
         ->expectsOutputToContain('Fixture not found')
@@ -130,6 +173,8 @@ it('errors when the fixture file does not exist', function (): void {
 });
 
 it('creates and assigns a UAT student automatically when none is given', function (): void {
+    guardrailUatCurriculum();
+
     $fixture = guardrailUatFixture([
         ['id' => 1, 'question' => 'Q1?', 'expected' => 'refusal'],
     ]);

@@ -50,7 +50,7 @@ it('uploads multiple files sharing one tag set and reports per-file results', fu
     expect($summaryRow['success'])->toBeTrue()
         ->and($worksheetRow['success'])->toBeTrue()
         ->and($csvRow['success'])->toBeFalse()
-        ->and($csvRow['error'])->toContain('Unsupported file type');
+        ->and($csvRow['error'])->toContain('".csv" files aren\'t supported. Please upload PDF, Word (.docx), or plain text (.txt) files.');
 
     expect(CurriculumDocument::query()->count())->toBe(2);
 

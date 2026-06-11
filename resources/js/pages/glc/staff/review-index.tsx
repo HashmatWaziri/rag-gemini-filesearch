@@ -1,6 +1,13 @@
 import GlcLayout from '@/layouts/glc-layout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
+import {
+    ATTENTION_LABELS,
+    nextStepHint,
+    REVIEW_STATUS_LABELS,
+    REVIEW_STATUS_TONES,
+    type ReviewStatus,
+} from './process-steps';
 import { Badge, btnPrimary, btnSecondary, inputCls } from './ui';
 
 interface ReviewRow {
@@ -10,7 +17,7 @@ interface ReviewRow {
     candidate_age: number;
     is_minor: boolean;
     submitted_at: string | null;
-    status: string;
+    status: ReviewStatus;
     status_label: string;
     flags: string[];
     has_integrity_events: boolean;
@@ -19,6 +26,8 @@ interface ReviewRow {
     assignee: string | null;
     assigned_to: number | null;
     can_claim: boolean;
+    has_decision: boolean;
+    narrative_approved: boolean;
 }
 
 interface PageProps {
@@ -32,13 +41,6 @@ interface PageProps {
     supervises: boolean;
     [key: string]: unknown;
 }
-
-const STATUS_TONES: Record<string, 'amber' | 'blue' | 'emerald' | 'slate'> = {
-    pending: 'amber',
-    in_review: 'blue',
-    approved: 'emerald',
-    sent: 'slate',
-};
 
 export default function ReviewIndex() {
     const { reviews, filters, staff, supervises } = usePage<PageProps>().props;
@@ -61,9 +63,24 @@ export default function ReviewIndex() {
         });
     };
 
+    const startReview = (id: number) => {
+        router.post(
+            `/staff/review/${id}/claim`,
+            {},
+            {
+                preserveScroll: true,
+                onSuccess: () => router.visit(`/staff/review/${id}`),
+            },
+        );
+    };
+
     return (
-        <GlcLayout title="Review Queue">
-            <Head title="Review Queue" />
+        <GlcLayout title="Placement Tests">
+            <Head title="Placement Tests" />
+
+            <p className="-mt-3 mb-4 text-sm text-slate-500">
+                Placement tests waiting for GLC review and result delivery.
+            </p>
 
             <div className="mb-4 grid grid-cols-2 gap-2 rounded-lg border border-slate-200 bg-white p-3 sm:grid-cols-3 lg:grid-cols-7">
                 <select
@@ -74,10 +91,16 @@ export default function ReviewIndex() {
                     }
                 >
                     <option value="">All statuses</option>
-                    <option value="pending">Pending</option>
-                    <option value="in_review">In review</option>
-                    <option value="approved">Approved</option>
-                    <option value="sent">Sent</option>
+                    <option value="pending">
+                        {REVIEW_STATUS_LABELS.pending}
+                    </option>
+                    <option value="in_review">
+                        {REVIEW_STATUS_LABELS.in_review}
+                    </option>
+                    <option value="approved">
+                        {REVIEW_STATUS_LABELS.approved}
+                    </option>
+                    <option value="sent">{REVIEW_STATUS_LABELS.sent}</option>
                 </select>
                 <select
                     className={inputCls}
@@ -86,9 +109,9 @@ export default function ReviewIndex() {
                         setForm({ ...form, assignee: e.target.value })
                     }
                 >
-                    <option value="">Any assignee</option>
+                    <option value="">All reviewers</option>
                     <option value="me">Assigned to me</option>
-                    <option value="unassigned">Unassigned</option>
+                    <option value="unassigned">No reviewer yet</option>
                     {supervises &&
                         staff.map((member) => (
                             <option key={member.id} value={String(member.id)}>
@@ -101,9 +124,15 @@ export default function ReviewIndex() {
                     value={form.flag}
                     onChange={(e) => setForm({ ...form, flag: e.target.value })}
                 >
-                    <option value="">Any flags</option>
-                    <option value="variance">Variance</option>
-                    <option value="integrity">Integrity</option>
+                    <option value="">All tests</option>
+                    <option value="variance">
+                        Needs attention:{' '}
+                        {ATTENTION_LABELS.variance.toLowerCase()}
+                    </option>
+                    <option value="integrity">
+                        Needs attention:{' '}
+                        {ATTENTION_LABELS.integrity.toLowerCase()}
+                    </option>
                 </select>
                 <input
                     type="date"
@@ -131,7 +160,7 @@ export default function ReviewIndex() {
                     className={btnPrimary}
                     onClick={applyFilters}
                 >
-                    Filter
+                    Apply filters
                 </button>
             </div>
 
@@ -142,9 +171,9 @@ export default function ReviewIndex() {
                             <th className="px-3 py-2">Candidate</th>
                             <th className="px-3 py-2">Submitted</th>
                             <th className="px-3 py-2">Status</th>
-                            <th className="px-3 py-2">Flags</th>
-                            <th className="px-3 py-2">Suggested</th>
-                            <th className="px-3 py-2">Assignee</th>
+                            <th className="px-3 py-2">Needs attention</th>
+                            <th className="px-3 py-2">Suggested level</th>
+                            <th className="px-3 py-2">Reviewer</th>
                             <th className="px-3 py-2"></th>
                         </tr>
                     </thead>
@@ -155,90 +184,122 @@ export default function ReviewIndex() {
                                     colSpan={7}
                                     className="px-3 py-8 text-center text-slate-400"
                                 >
-                                    No submissions match these filters.
+                                    No placement tests match these filters.
                                 </td>
                             </tr>
                         )}
-                        {reviews.data.map((review) => (
-                            <tr
-                                key={review.id}
-                                className="border-b border-slate-100 hover:bg-slate-50"
-                            >
-                                <td className="px-3 py-2">
-                                    <div className="font-medium text-slate-800">
-                                        {review.candidate_name}
-                                        {review.is_minor && (
-                                            <span className="ml-1.5">
-                                                <Badge tone="amber">
-                                                    Minor
-                                                </Badge>
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div className="text-xs text-slate-500">
-                                        {review.candidate_email} · age{' '}
-                                        {review.candidate_age}
-                                    </div>
-                                </td>
-                                <td className="px-3 py-2 text-xs whitespace-nowrap text-slate-600">
-                                    {review.submitted_at ?? '—'}
-                                </td>
-                                <td className="px-3 py-2">
-                                    <Badge
-                                        tone={
-                                            STATUS_TONES[review.status] ??
-                                            'slate'
-                                        }
-                                    >
-                                        {review.status_label}
-                                    </Badge>
-                                </td>
-                                <td className="px-3 py-2">
-                                    <div className="flex flex-wrap gap-1">
-                                        {review.flags.includes('variance') && (
-                                            <Badge tone="red">Variance</Badge>
-                                        )}
-                                        {(review.flags.includes('integrity') ||
-                                            review.has_integrity_events) && (
-                                            <Badge tone="red">Integrity</Badge>
-                                        )}
-                                    </div>
-                                </td>
-                                <td className="px-3 py-2 text-slate-700">
-                                    {review.suggested_level ?? '—'}
-                                </td>
-                                <td className="px-3 py-2 text-xs text-slate-600">
-                                    {review.assignee ?? 'Unassigned'}
-                                </td>
-                                <td className="px-3 py-2">
-                                    <div className="flex justify-end gap-2">
-                                        {review.can_claim && (
-                                            <button
-                                                type="button"
-                                                className={btnSecondary}
-                                                onClick={() =>
-                                                    router.post(
-                                                        `/staff/review/${review.id}/claim`,
-                                                        {},
-                                                        {
-                                                            preserveScroll: true,
-                                                        },
-                                                    )
-                                                }
-                                            >
-                                                Claim
-                                            </button>
-                                        )}
-                                        <Link
-                                            href={`/staff/review/${review.id}`}
-                                            className={btnPrimary}
+                        {reviews.data.map((review) => {
+                            const hint = nextStepHint({
+                                status: review.status,
+                                levelConfirmed: review.has_decision,
+                                summaryApproved: review.narrative_approved,
+                            });
+
+                            return (
+                                <tr
+                                    key={review.id}
+                                    className="border-b border-slate-100 hover:bg-slate-50"
+                                >
+                                    <td className="px-3 py-2">
+                                        <div className="font-medium text-slate-800">
+                                            {review.candidate_name}
+                                            {review.is_minor && (
+                                                <span className="ml-1.5">
+                                                    <Badge tone="amber">
+                                                        Under 18
+                                                    </Badge>
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="text-xs text-slate-500">
+                                            {review.candidate_email} · age{' '}
+                                            {review.candidate_age}
+                                        </div>
+                                    </td>
+                                    <td className="px-3 py-2 text-xs whitespace-nowrap text-slate-600">
+                                        {review.submitted_at ?? '—'}
+                                    </td>
+                                    <td className="px-3 py-2">
+                                        <Badge
+                                            tone={
+                                                REVIEW_STATUS_TONES[
+                                                    review.status
+                                                ] ?? 'slate'
+                                            }
                                         >
-                                            Open
-                                        </Link>
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
+                                            {REVIEW_STATUS_LABELS[
+                                                review.status
+                                            ] ?? review.status_label}
+                                        </Badge>
+                                        <p
+                                            className={`mt-1 text-xs ${
+                                                hint.done
+                                                    ? 'font-medium text-emerald-700'
+                                                    : 'text-slate-500'
+                                            }`}
+                                        >
+                                            {hint.done && (
+                                                <span aria-hidden>✓ </span>
+                                            )}
+                                            {hint.label}
+                                        </p>
+                                    </td>
+                                    <td className="px-3 py-2">
+                                        <div className="flex flex-wrap gap-1">
+                                            {review.flags.includes(
+                                                'variance',
+                                            ) && (
+                                                <Badge tone="red">
+                                                    {ATTENTION_LABELS.variance}
+                                                </Badge>
+                                            )}
+                                            {(review.flags.includes(
+                                                'integrity',
+                                            ) ||
+                                                review.has_integrity_events) && (
+                                                <Badge tone="red">
+                                                    {ATTENTION_LABELS.integrity}
+                                                </Badge>
+                                            )}
+                                        </div>
+                                    </td>
+                                    <td className="px-3 py-2 text-slate-700">
+                                        {review.suggested_level ?? '—'}
+                                    </td>
+                                    <td className="px-3 py-2 text-xs text-slate-600">
+                                        {review.assignee ?? 'No reviewer yet'}
+                                    </td>
+                                    <td className="px-3 py-2">
+                                        <div className="flex items-start justify-end gap-2">
+                                            {review.can_claim && (
+                                                <div className="flex flex-col items-center">
+                                                    <button
+                                                        type="button"
+                                                        className={btnSecondary}
+                                                        onClick={() =>
+                                                            startReview(
+                                                                review.id,
+                                                            )
+                                                        }
+                                                    >
+                                                        Start review
+                                                    </button>
+                                                    <span className="mt-0.5 text-[11px] text-slate-400">
+                                                        assigns it to you
+                                                    </span>
+                                                </div>
+                                            )}
+                                            <Link
+                                                href={`/staff/review/${review.id}`}
+                                                className={btnPrimary}
+                                            >
+                                                Open
+                                            </Link>
+                                        </div>
+                                    </td>
+                                </tr>
+                            );
+                        })}
                     </tbody>
                 </table>
             </div>

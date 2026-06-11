@@ -31,6 +31,9 @@ final readonly class UserAnonymizeController
             'fields' => self::REDACTED_FIELDS,
         ]);
 
-        return to_route('admin.users.edit', $user)->with('glc_status', 'Student record anonymized.');
+        return to_route('admin.users.edit', $user)->with(
+            'glc_status',
+            "Personal details removed. The student's records are kept under an anonymous name.",
+        );
     }
 }

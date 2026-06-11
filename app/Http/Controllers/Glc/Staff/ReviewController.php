@@ -54,6 +54,7 @@ final readonly class ReviewController
                 'flags' => $review->flags ?? [],
                 'assigned_to' => $review->assigned_to,
                 'assignee' => $review->assignee?->name,
+                'is_assigned_to_me' => $review->assigned_to === $user->id,
                 'final_level' => $review->final_level?->value,
                 'skill_levels' => $review->skill_levels,
                 'override_reason' => $review->override_reason,

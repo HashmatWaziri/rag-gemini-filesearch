@@ -20,8 +20,8 @@ export default function StaffTutorIndex({ students }: Props) {
 
             <p className="mb-4 text-sm text-slate-600">
                 Tutor usage per student: last active date and conversation
-                count. Open a student to review transcripts, writing
-                submissions, and guardrail violations.
+                count. Open a student to read their conversations, see their
+                writing, and check anything that needs attention.
             </p>
 
             {students.length === 0 ? (

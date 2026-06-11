@@ -37,6 +37,6 @@ final readonly class ArchiveDocumentController
 
         RemoveCurriculumDocumentFromIndexJob::dispatch($document);
 
-        return back()->with('status', 'Document archived and queued for removal from tutor retrieval.');
+        return back()->with('status', 'Document archived. The AI Tutor will stop using it with students.');
     }
 }

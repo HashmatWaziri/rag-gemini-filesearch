@@ -45,7 +45,10 @@ export default function Entry({ minimumAge }: EntryProps) {
             return;
         }
 
-        setCodeError(result.data.message ?? 'Unable to validate the code.');
+        setCodeError(
+            result.data.message ??
+                "We couldn't check that code. Please try again.",
+        );
     };
 
     const acceptPrivacy = () => {
@@ -122,9 +125,8 @@ export default function Entry({ minimumAge }: EntryProps) {
                         </p>
                         <p>
                             Your responses are stored securely and reviewed by
-                            GLC staff before any result is released. Contact
-                            GLC if you have questions about how your data is
-                            used.
+                            GLC staff before any result is released. Contact GLC
+                            if you have questions about how your data is used.
                         </p>
                     </div>
                     <label className="mt-4 flex items-start gap-2 text-sm">

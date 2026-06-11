@@ -14,10 +14,10 @@ enum PlacementReviewStatus: string
     public function label(): string
     {
         return match ($this) {
-            self::Pending => 'Pending Review',
-            self::InReview => 'In Review',
-            self::Approved => 'Approved',
-            self::Sent => 'Result Sent',
+            self::Pending => 'Waiting for review',
+            self::InReview => 'Being reviewed',
+            self::Approved => 'Ready to send',
+            self::Sent => 'Result sent',
         };
     }
 }

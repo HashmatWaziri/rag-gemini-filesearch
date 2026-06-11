@@ -25,13 +25,13 @@ final readonly class ResultSendController
     {
         if (! in_array($review->status, [PlacementReviewStatus::Approved, PlacementReviewStatus::Sent], true)) {
             throw ValidationException::withMessages([
-                'status' => 'The review must be approved before the result can be sent.',
+                'status' => 'Give final approval before sending the result.',
             ]);
         }
 
         if (! $review->canGeneratePdf()) {
             throw ValidationException::withMessages([
-                'status' => 'The narrative must be approved before the result can be sent.',
+                'status' => 'Approve the parent summary before sending the result.',
             ]);
         }
 
@@ -40,7 +40,7 @@ final readonly class ResultSendController
         if ($attempt->isMinor()) {
             $request->validate(
                 ['guardian_consent' => ['accepted']],
-                ['guardian_consent.accepted' => 'Guardian consent must be confirmed before sending a result to a minor candidate.'],
+                ['guardian_consent.accepted' => 'This candidate is under 18 — confirm guardian consent before sending the result.'],
             );
 
             if (! $review->hasFlag('guardian_consent_confirmed')) {

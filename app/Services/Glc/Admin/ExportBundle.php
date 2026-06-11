@@ -15,22 +15,22 @@ enum ExportBundle: string
     public function label(): string
     {
         return match ($this) {
-            self::Placement => 'Placement Data',
-            self::Curriculum => 'Curriculum Metadata',
-            self::Students => 'Student Records',
-            self::Tutor => 'Tutor Data',
-            self::Audit => 'Audit Log',
+            self::Placement => 'Placement test data',
+            self::Curriculum => 'Curriculum documents',
+            self::Students => 'Student records',
+            self::Tutor => 'AI Tutor records',
+            self::Audit => 'Activity log',
         };
     }
 
     public function description(): string
     {
         return match ($this) {
-            self::Placement => 'Placement items, attempts, answers, scores and reviews as JSON and CSV files.',
-            self::Curriculum => 'Curriculum documents and course hierarchy as JSON, plus a manifest of original files with storage paths.',
-            self::Students => 'Enrolled students with guardian and consent state, plus course assignments, as JSON and CSV files.',
-            self::Tutor => 'Tutor conversations, messages, violations and writing submissions as JSON files.',
-            self::Audit => 'Full audit log of sensitive staff actions as CSV.',
+            self::Placement => 'Every placement test question, attempt, answer, score and staff review. CSV files open in Excel; JSON files open in any text editor.',
+            self::Curriculum => 'A list of every curriculum document — its course, level, unit, lesson, status, file details and a text preview — plus the full course structure. Readable without this system.',
+            self::Students => 'Every enrolled student with guardian and consent details, plus their course assignments. CSV files open in Excel.',
+            self::Tutor => 'Every AI Tutor conversation and message, flagged messages, and writing submissions, as plain JSON files.',
+            self::Audit => 'The complete activity log — who did what, and when — as a CSV file that opens in Excel.',
         };
     }
 

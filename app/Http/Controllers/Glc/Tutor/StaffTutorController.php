@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Glc\Tutor;
 
+use App\Enums\Glc\TutorViolationCategory;
 use App\Enums\Glc\UserRole;
 use App\Models\Glc\TutorConversation;
 use App\Models\Glc\TutorMessage;
@@ -111,7 +112,7 @@ final readonly class StaffTutorController
                 'role' => $message->role,
                 'content' => $message->content,
                 'rotated' => (bool) data_get($message->metadata, 'rotated', false),
-                'violation' => data_get($message->metadata, 'violation'),
+                'violation' => $this->violationLabel($message),
                 'created_at' => $message->created_at?->toIso8601String(),
             ])
             ->all();
@@ -150,5 +151,12 @@ final readonly class StaffTutorController
                 'created_at' => $submission->created_at?->toIso8601String(),
             ],
         ]);
+    }
+
+    private function violationLabel(TutorMessage $message): ?string
+    {
+        $value = data_get($message->metadata, 'violation');
+
+        return is_string($value) ? TutorViolationCategory::tryFrom($value)?->label() : null;
     }
 }

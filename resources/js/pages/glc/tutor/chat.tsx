@@ -27,6 +27,7 @@ interface Props {
     messages: Message[];
     conversations: ConversationItem[];
     assignment: Assignment;
+    materialsReady: boolean;
 }
 
 export default function TutorChat({
@@ -34,6 +35,7 @@ export default function TutorChat({
     messages,
     conversations,
     assignment,
+    materialsReady,
 }: Props) {
     const { data, setData, post, processing, reset } = useForm({
         message: '',
@@ -130,10 +132,15 @@ export default function TutorChat({
                                 >
                                     {message.content}
                                     {message.citations.length > 0 && (
-                                        <p className="mt-2 border-t border-slate-200 pt-1.5 text-xs text-slate-500">
-                                            Sources:{' '}
-                                            {message.citations.join(', ')}
-                                        </p>
+                                        <div className="mt-2 space-y-0.5 border-t border-slate-200 pt-1.5 text-xs text-slate-500">
+                                            {message.citations.map(
+                                                (citation) => (
+                                                    <p key={citation}>
+                                                        Source: {citation}
+                                                    </p>
+                                                ),
+                                            )}
+                                        </div>
                                     )}
                                 </div>
                             </div>
@@ -164,25 +171,32 @@ export default function TutorChat({
                         <div ref={bottomRef} />
                     </div>
 
-                    <form onSubmit={submit} className="mt-3 flex gap-2">
-                        <input
-                            type="text"
-                            value={data.message}
-                            onChange={(event) =>
-                                setData('message', event.target.value)
-                            }
-                            placeholder="Type your question in any language; the tutor answers in English"
-                            maxLength={5000}
-                            className="min-w-0 flex-1 rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 focus:outline-none"
-                        />
-                        <button
-                            type="submit"
-                            disabled={processing || !data.message.trim()}
-                            className="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
-                        >
-                            Send
-                        </button>
-                    </form>
+                    {materialsReady ? (
+                        <form onSubmit={submit} className="mt-3 flex gap-2">
+                            <input
+                                type="text"
+                                value={data.message}
+                                onChange={(event) =>
+                                    setData('message', event.target.value)
+                                }
+                                placeholder="Type your question in any language; the tutor answers in English"
+                                maxLength={5000}
+                                className="min-w-0 flex-1 rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 focus:outline-none"
+                            />
+                            <button
+                                type="submit"
+                                disabled={processing || !data.message.trim()}
+                                className="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
+                            >
+                                Send
+                            </button>
+                        </form>
+                    ) : (
+                        <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                            Your study materials aren&apos;t ready yet — please
+                            check back soon or contact your teacher.
+                        </p>
+                    )}
                 </div>
             </div>
         </GlcLayout>

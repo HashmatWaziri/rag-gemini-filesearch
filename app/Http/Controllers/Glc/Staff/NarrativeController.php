@@ -25,7 +25,7 @@ final readonly class NarrativeController
     public function update(Request $request, PlacementReview $review, #[CurrentUser] User $user): RedirectResponse
     {
         $this->authorizeAccess($review, $user);
-        abort_if($review->status === PlacementReviewStatus::Sent, 422, 'This review has already been sent.');
+        abort_if($review->status === PlacementReviewStatus::Sent, 422, 'This result has already been sent, so the parent summary can no longer change.');
 
         $data = $request->validate([
             'strengths' => ['nullable', 'string', 'max:5000'],
@@ -45,7 +45,7 @@ final readonly class NarrativeController
             'narrative_approved_by' => null,
         ]);
 
-        return back()->with('success', 'Narrative saved. Approve it before generating the PDF.');
+        return back()->with('success', 'Parent summary saved. Approve it when it is ready to appear on the result.');
     }
 
     public function draft(PlacementReview $review, #[CurrentUser] User $user, NarrativeDraftService $service): JsonResponse
@@ -55,8 +55,10 @@ final readonly class NarrativeController
         try {
             return response()->json(['narrative' => $service->draft($review)]);
         } catch (Throwable $exception) {
+            report($exception);
+
             return response()->json([
-                'message' => 'The AI draft could not be generated ('.$exception->getMessage().'). You can write the narrative manually.',
+                'message' => 'The AI suggestion is unavailable right now. You can write the parent summary yourself.',
             ], 422);
         }
     }
@@ -64,7 +66,7 @@ final readonly class NarrativeController
     public function approve(PlacementReview $review, #[CurrentUser] User $user): RedirectResponse
     {
         $this->authorizeAccess($review, $user);
-        abort_if($review->status === PlacementReviewStatus::Sent, 422, 'This review has already been sent.');
+        abort_if($review->status === PlacementReviewStatus::Sent, 422, 'This result has already been sent, so the parent summary can no longer change.');
 
         $narrative = $review->narrative ?? [];
 
@@ -73,7 +75,7 @@ final readonly class NarrativeController
 
             if (! is_string($value) || mb_trim($value) === '') {
                 throw ValidationException::withMessages([
-                    'narrative' => 'All four narrative fields must be filled in before approval.',
+                    'narrative' => 'Fill in all four parent summary fields before approving.',
                 ]);
             }
         }
@@ -85,7 +87,7 @@ final readonly class NarrativeController
 
         $this->audit->log(AuditAction::NarrativeApproved, $user, $review);
 
-        return back()->with('success', 'Narrative approved.');
+        return back()->with('success', 'Parent summary approved.');
     }
 
     private function authorizeAccess(PlacementReview $review, User $user): void

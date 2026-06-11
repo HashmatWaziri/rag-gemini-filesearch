@@ -35,6 +35,12 @@ function formatDateTime(value: string | null): string {
     return value ? new Date(value).toLocaleString() : '';
 }
 
+const SUBMISSION_STATUS_LABELS: Record<string, string> = {
+    completed: 'Feedback ready',
+    pending: 'Being checked',
+    failed: 'Could not be checked',
+};
+
 export default function StaffTutorStudent({
     student,
     activity,
@@ -50,7 +56,7 @@ export default function StaffTutorStudent({
                 href="/staff/tutor"
                 className="mb-4 inline-block text-sm font-medium text-emerald-700 hover:underline"
             >
-                Back to tutor activity
+                Back to Tutor Activity
             </Link>
 
             <div className="mb-6 grid grid-cols-2 gap-3">
@@ -130,7 +136,9 @@ export default function StaffTutorStudent({
                                         {submission.excerpt}
                                     </p>
                                     <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
-                                        {submission.status}
+                                        {SUBMISSION_STATUS_LABELS[
+                                            submission.status
+                                        ] ?? submission.status}
                                     </span>
                                 </Link>
                             </li>
@@ -141,11 +149,11 @@ export default function StaffTutorStudent({
 
             <section>
                 <h2 className="mb-2 text-sm font-semibold tracking-wide text-slate-500 uppercase">
-                    Guardrail violations
+                    Needs attention
                 </h2>
                 {violations.length === 0 ? (
                     <p className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-500">
-                        No violations logged.
+                        Nothing needs attention.
                     </p>
                 ) : (
                     <ul className="divide-y divide-slate-200 overflow-hidden rounded-lg border border-slate-200 bg-white">

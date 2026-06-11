@@ -5,8 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Glc\Curriculum;
 
 use App\Enums\Glc\AuditAction;
-use App\Http\Concerns\Glc\ValidatesHierarchy;
-use App\Jobs\Glc\Curriculum\RemoveCurriculumDocumentFromIndexJob;
+use App\Enums\Glc\CurriculumDocumentStatus;
 use App\Models\Glc\CurriculumDocument;
 use App\Services\Glc\AuditLogger;
 use App\Services\Glc\Curriculum\CurriculumUploadService;
@@ -18,8 +17,6 @@ use RuntimeException;
 
 final readonly class ReplaceDocumentController
 {
-    use ValidatesHierarchy;
-
     public function __construct(
         private CurriculumUploadService $uploads,
         private AuditLogger $auditLogger,
@@ -28,10 +25,11 @@ final readonly class ReplaceDocumentController
     public function __invoke(Request $request, CurriculumDocument $document): RedirectResponse
     {
         $validated = $request->validate([
-            'file' => ['required', ...$this->fileRules()],
+            'file' => ['required', 'file'],
         ]);
 
-        $staleDocumentName = $document->gemini_document_name;
+        $wasLive = $document->status === CurriculumDocumentStatus::Published
+            && $document->gemini_document_name !== null;
         $previousVersion = $document->version;
 
         /** @var UploadedFile $file */
@@ -50,13 +48,15 @@ final readonly class ReplaceDocumentController
             'original_filename' => $document->original_filename,
         ]);
 
-        if ($staleDocumentName !== null) {
-            RemoveCurriculumDocumentFromIndexJob::dispatch($document, $staleDocumentName);
+        $message = sprintf(
+            'New file saved as version %d. The document is back in draft — check the new text preview, then publish it to the AI Tutor.',
+            $document->version,
+        );
+
+        if ($wasLive) {
+            $message .= ' Until then, students keep the previous published version.';
         }
 
-        return back()->with('status', sprintf(
-            'File replaced as version %d. The document is back in draft: review the new extracted text and publish again to reindex.',
-            $document->version,
-        ));
+        return back()->with('status', $message);
     }
 }

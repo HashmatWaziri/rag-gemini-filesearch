@@ -38,7 +38,7 @@ it('lists audit entries with actor, action, subject, details, and timestamp', fu
             ->has('logs.data', 1)
             ->where('logs.data.0.actor_name', 'Audit Admin')
             ->where('logs.data.0.action', 'consent_confirmed')
-            ->where('logs.data.0.action_label', 'Consent Confirmed')
+            ->where('logs.data.0.action_label', 'Confirmed guardian consent')
             ->where('logs.data.0.subject', 'User #'.$student->id)
             ->where('logs.data.0.details.guardian_email', 'parent@glc.test')
             ->where('logs.data.0.created_at', fn ($value) => $value !== null)

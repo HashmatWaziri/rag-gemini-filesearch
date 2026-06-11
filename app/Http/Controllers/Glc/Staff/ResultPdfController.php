@@ -14,7 +14,7 @@ final readonly class ResultPdfController
 
     public function show(PlacementReview $review): Response
     {
-        abort_unless($review->canGeneratePdf(), 403, 'The PDF is available once the review and narrative are approved.');
+        abort_unless($review->canGeneratePdf(), 403, 'The PDF is available after final approval and an approved parent summary.');
 
         return $this->renderer->pdf($review)->stream('placement-test-result.pdf');
     }

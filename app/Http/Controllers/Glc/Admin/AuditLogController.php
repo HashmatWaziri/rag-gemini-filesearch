@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Glc\Admin;
 
 use App\Enums\Glc\AuditAction;
 use App\Models\Glc\AuditLog;
+use App\Services\Glc\Admin\AuditActionLabels;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -27,12 +28,12 @@ final readonly class AuditLogController
             ->through(fn (AuditLog $log): array => [
                 'id' => $log->id,
                 'action' => $log->action->value,
-                'action_label' => $log->action->label(),
+                'action_label' => AuditActionLabels::for($log->action),
                 'actor_name' => $log->actor?->name,
                 'actor_email' => $log->actor?->email,
                 'subject' => $log->subject_type === null
                     ? null
-                    : class_basename($log->subject_type).' #'.$log->subject_id,
+                    : str(class_basename($log->subject_type))->headline()->toString().' #'.$log->subject_id,
                 'details' => $log->details,
                 'created_at' => $log->created_at->toIso8601String(),
             ]);
@@ -42,7 +43,7 @@ final readonly class AuditLogController
             'filters' => ['action' => $action?->value],
             'actions' => array_map(fn (AuditAction $case): array => [
                 'value' => $case->value,
-                'label' => $case->label(),
+                'label' => AuditActionLabels::for($case),
             ], AuditAction::cases()),
         ]);
     }

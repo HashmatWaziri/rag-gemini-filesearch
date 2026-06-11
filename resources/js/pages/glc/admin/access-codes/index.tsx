@@ -108,8 +108,13 @@ export default function AccessCodesIndex({
     };
 
     return (
-        <GlcLayout title="Placement Access Codes">
+        <GlcLayout title="Access Codes">
             <Head title="Access Codes" />
+
+            <p className="-mt-2 mb-4 text-sm text-slate-600">
+                Single-use codes that let one candidate take the placement test.
+                Share a code with a candidate to invite them.
+            </p>
 
             <StatusBanner message={status} />
 
@@ -315,7 +320,7 @@ export default function AccessCodesIndex({
             <ConfirmDialog
                 open={revoking !== null}
                 title="Revoke access code"
-                message={`Revoke code ${revoking?.code ?? ''}? It can no longer start a placement session and cannot be un-revoked.`}
+                message={`Revoke code ${revoking?.code ?? ''}? The candidate holding it will no longer be able to start or continue the placement test, and the code cannot be brought back. If they still need to take the test, create a new code for them.`}
                 confirmLabel="Revoke"
                 danger
                 onConfirm={confirmRevoke}

@@ -19,7 +19,9 @@ final class TutorChatService
 {
     public const UNAVAILABLE_MESSAGE = 'The tutor is temporarily unavailable. Please try again in a few minutes. Your message has been saved.';
 
-    public const UNASSIGNED_MESSAGE = 'You do not have a course assignment yet. Please ask your teacher or a GLC admin to assign your course, level, and unit.';
+    public const UNASSIGNED_MESSAGE = 'Your teacher has not set up your course yet. Please ask your teacher or GLC to set it up, then come back and try again.';
+
+    public const MATERIALS_NOT_READY_MESSAGE = "Your study materials aren't ready yet — please check back soon or contact your teacher.";
 
     public function __construct(
         private readonly GeminiTutorClient $client,
@@ -43,11 +45,11 @@ final class TutorChatService
         }
 
         if (! $assignment instanceof StudentAssignment) {
-            $assistantMessage = $this->persistAssistantMessage($conversation, self::UNASSIGNED_MESSAGE, null, []);
-            $conversation->last_activity_at = now();
-            $conversation->save();
+            return $this->finishWithoutModelCall($conversation, self::UNASSIGNED_MESSAGE);
+        }
 
-            return $assistantMessage;
+        if (! $this->hasPublishedMaterials($assignment)) {
+            return $this->finishWithoutModelCall($conversation, self::MATERIALS_NOT_READY_MESSAGE);
         }
 
         [$reply, $violation, $citations] = $this->generateReply($conversation, $assignment);
@@ -78,6 +80,23 @@ final class TutorChatService
         );
     }
 
+    public function hasPublishedMaterials(StudentAssignment $assignment): bool
+    {
+        return CurriculumDocument::query()
+            ->published()
+            ->withinAssignment($assignment)
+            ->exists();
+    }
+
+    private function finishWithoutModelCall(TutorConversation $conversation, string $reply): TutorMessage
+    {
+        $assistantMessage = $this->persistAssistantMessage($conversation, $reply, null, []);
+        $conversation->last_activity_at = now();
+        $conversation->save();
+
+        return $assistantMessage;
+    }
+
     /**
      * @return array{0: string, 1: TutorViolationCategory|null, 2: list<string>}
      */
@@ -97,7 +116,43 @@ final class TutorChatService
 
         [$reply, $violation] = $this->parseStructuredReply($text);
 
-        return [$reply, $violation, $this->client->extractCitations($response)];
+        return [$reply, $violation, $this->formatCitations($this->client->extractCitations($response), $assignment)];
+    }
+
+    /**
+     * @param  list<string>  $titles
+     * @return list<string>
+     */
+    private function formatCitations(array $titles, StudentAssignment $assignment): array
+    {
+        if ($titles === []) {
+            return [];
+        }
+
+        $assignment->loadMissing(['course', 'unit']);
+
+        $documents = CurriculumDocument::query()
+            ->published()
+            ->withinAssignment($assignment)
+            ->whereIn('title', $titles)
+            ->with('lesson')
+            ->get()
+            ->keyBy('title');
+
+        return array_map(
+            function (string $title) use ($assignment, $documents): string {
+                $document = $documents->get($title);
+
+                return sprintf(
+                    '%s (%s / %s / %s)',
+                    $title,
+                    $assignment->course->name,
+                    $assignment->unit->name,
+                    $document?->lesson?->name ?? 'Unit-wide',
+                );
+            },
+            $titles,
+        );
     }
 
     /**
@@ -132,7 +187,7 @@ final class TutorChatService
 
         $storeName = Setting::get(SettingKey::GlcCurriculumStoreName);
 
-        if (is_string($storeName) && $storeName !== '' && $this->hasPublishedDocumentsInScope($assignment)) {
+        if (is_string($storeName) && $storeName !== '') {
             $payload['tools'] = [[
                 'file_search' => [
                     'file_search_store_names' => [$storeName],
@@ -142,14 +197,6 @@ final class TutorChatService
         }
 
         return $payload;
-    }
-
-    private function hasPublishedDocumentsInScope(StudentAssignment $assignment): bool
-    {
-        return CurriculumDocument::query()
-            ->published()
-            ->withinAssignment($assignment)
-            ->exists();
     }
 
     /**

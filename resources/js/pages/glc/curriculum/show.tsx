@@ -3,11 +3,11 @@ import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useState, type FormEvent } from 'react';
 import {
     dangerButtonClass,
-    indexBadgeClass,
     inputClass,
     primaryButtonClass,
     secondaryButtonClass,
-    statusBadgeClass,
+    stateBadgeClass,
+    type DocumentState,
 } from './components/types';
 
 interface DocumentDetail {
@@ -20,10 +20,10 @@ interface DocumentDetail {
     format: string;
     original_filename: string;
     status: string;
-    status_label: string;
     index_status: string;
-    index_status_label: string;
     index_error: string | null;
+    state: DocumentState;
+    state_label: string;
     version: number;
     extracted_text: string | null;
     uploaded_by: string | null;
@@ -51,6 +51,7 @@ export default function CurriculumShow({
     const [showReplace, setShowReplace] = useState(false);
 
     const baseUrl = `/staff/curriculum/documents/${document.id}`;
+    const hasPreviewText = Boolean(document.extracted_text?.trim());
 
     const submitPublish = (e: FormEvent) => {
         e.preventDefault();
@@ -72,20 +73,20 @@ export default function CurriculumShow({
     const archive = () => {
         if (
             confirm(
-                'Archive this document? It will be removed from tutor retrieval.',
+                'Archive this document? The AI Tutor will stop using it with students. The file and its details stay saved, and you can bring it back later by uploading a new version.',
             )
         ) {
             router.post(`${baseUrl}/archive`, {}, { preserveScroll: true });
         }
     };
 
-    const reindex = () =>
+    const tryAgain = () =>
         router.post(`${baseUrl}/reindex`, {}, { preserveScroll: true });
 
     const destroy = () => {
         if (
             confirm(
-                'Permanently delete this document, its file, and its search index entry? This cannot be undone.',
+                'Permanently delete this document? It will be removed for everyone — staff, students, and the AI Tutor — along with its file. This cannot be undone.',
             )
         ) {
             router.delete(baseUrl);
@@ -96,7 +97,7 @@ export default function CurriculumShow({
         ['Course', document.course],
         ['Level', document.level],
         ['Unit', document.unit],
-        ['Lesson', document.lesson ?? 'Not set'],
+        ['Lesson', document.lesson ?? 'Whole unit'],
         ['Format', document.format.toUpperCase()],
         ['Original filename', document.original_filename],
         ['Version', `v${document.version}`],
@@ -107,8 +108,10 @@ export default function CurriculumShow({
         ['Archived at', document.archived_at ?? '-'],
     ];
 
-    const canReindex =
-        document.status === 'published' && document.index_status !== 'indexing';
+    const canTryAgain =
+        document.state === 'publish_failed' ||
+        (document.state === 'publishing' &&
+            document.index_status === 'pending');
 
     return (
         <GlcLayout title={document.title}>
@@ -136,20 +139,37 @@ export default function CurriculumShow({
 
                 <section className="rounded-lg border border-slate-200 bg-white p-4">
                     <div className="mb-3 flex flex-wrap items-center gap-2">
-                        <span className={statusBadgeClass(document.status)}>
-                            {document.status_label}
-                        </span>
-                        <span
-                            className={indexBadgeClass(document.index_status)}
-                        >
-                            Index: {document.index_status_label}
+                        <span className={stateBadgeClass(document.state)}>
+                            {document.state_label}
                         </span>
                     </div>
 
-                    {document.index_error && (
+                    {document.state === 'publish_failed' && (
                         <div className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-                            Indexing error: {document.index_error}
+                            <p>
+                                Something went wrong while making this document
+                                available to the AI Tutor. Use "Try again" below
+                                — if it keeps failing, contact support.
+                            </p>
+                            {document.index_error && (
+                                <details className="mt-1">
+                                    <summary className="cursor-pointer font-medium">
+                                        Technical details
+                                    </summary>
+                                    <p className="mt-1 break-words">
+                                        {document.index_error}
+                                    </p>
+                                </details>
+                            )}
                         </div>
+                    )}
+
+                    {document.state === 'publishing' && (
+                        <p className="mb-3 text-xs text-slate-500">
+                            This document is being prepared for the AI Tutor.
+                            This usually takes a few minutes — refresh the page
+                            to see the latest status.
+                        </p>
                     )}
 
                     <dl className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -168,28 +188,35 @@ export default function CurriculumShow({
 
                 <section className="rounded-lg border border-slate-200 bg-white p-4">
                     <h2 className="mb-2 text-sm font-semibold text-slate-800">
-                        Extracted text preview
+                        Text preview
                     </h2>
                     <p className="mb-3 text-xs text-slate-500">
-                        This is the text the AI tutor will retrieve. Review it
-                        before publishing.
+                        This is the text the AI Tutor will read from this
+                        document. Check that it looks right before publishing.
                     </p>
                     <pre className="max-h-96 overflow-auto rounded-md border border-slate-200 bg-slate-50 p-3 text-xs leading-relaxed whitespace-pre-wrap text-slate-700">
                         {document.extracted_text?.trim() ||
-                            'No text could be extracted from this file.'}
+                            'No readable text was found in this file. Replace it with a readable PDF, Word, or text document before publishing.'}
                     </pre>
                 </section>
 
                 {document.status === 'draft' && (
                     <section className="rounded-lg border border-emerald-200 bg-white p-4">
                         <h2 className="mb-2 text-sm font-semibold text-slate-800">
-                            Publish
+                            Publish to the AI Tutor
                         </h2>
                         <p className="mb-3 text-xs text-slate-500">
-                            Publishing makes this document retrievable by the AI
-                            tutor for students assigned to its course, level,
+                            Publishing makes this document available to the AI
+                            Tutor for students working on this course, level,
                             and unit.
                         </p>
+                        {!hasPreviewText && (
+                            <p className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                                This document can't be published yet because no
+                                readable text was found in the file. Replace the
+                                file first.
+                            </p>
+                        )}
                         <form onSubmit={submitPublish} className="space-y-3">
                             <label className="flex items-start gap-2 text-sm text-slate-700">
                                 <input
@@ -204,8 +231,8 @@ export default function CurriculumShow({
                                     }
                                 />
                                 <span>
-                                    I have reviewed the extracted text preview
-                                    above and it is correct.
+                                    I have checked the text preview above and it
+                                    looks right.
                                 </span>
                             </label>
                             {(publishForm.errors.preview_confirmed ||
@@ -220,12 +247,13 @@ export default function CurriculumShow({
                                 className={primaryButtonClass}
                                 disabled={
                                     publishForm.processing ||
-                                    !publishForm.data.preview_confirmed
+                                    !publishForm.data.preview_confirmed ||
+                                    !hasPreviewText
                                 }
                             >
                                 {publishForm.processing
                                     ? 'Publishing...'
-                                    : 'Publish document'}
+                                    : 'Publish to the AI Tutor'}
                             </button>
                         </form>
                     </section>
@@ -245,13 +273,13 @@ export default function CurriculumShow({
                                 Archive
                             </button>
                         )}
-                        {canReindex && (
+                        {canTryAgain && (
                             <button
                                 type="button"
-                                onClick={reindex}
+                                onClick={tryAgain}
                                 className={secondaryButtonClass}
                             >
-                                Reindex
+                                Try again
                             </button>
                         )}
                         <button
@@ -278,10 +306,11 @@ export default function CurriculumShow({
                             className="mt-4 space-y-3 rounded-md border border-slate-200 bg-slate-50 p-3"
                         >
                             <p className="text-xs text-slate-500">
-                                Uploading a replacement bumps the version,
-                                returns the document to draft, and removes the
-                                old version from the search index. Review the
-                                new extracted text and publish again.
+                                Uploading a new file creates a new version and
+                                takes the document back to draft so you can
+                                check it. If a published version is live for
+                                students, it stays available to the AI Tutor
+                                until you publish the new one.
                             </p>
                             <input
                                 type="file"
@@ -307,8 +336,8 @@ export default function CurriculumShow({
                                 }
                             >
                                 {replaceForm.processing
-                                    ? 'Replacing...'
-                                    : 'Replace and re-extract'}
+                                    ? 'Uploading...'
+                                    : 'Upload new version'}
                             </button>
                         </form>
                     )}

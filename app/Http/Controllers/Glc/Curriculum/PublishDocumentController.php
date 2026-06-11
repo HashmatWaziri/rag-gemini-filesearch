@@ -23,13 +23,19 @@ final readonly class PublishDocumentController
         $request->validate([
             'preview_confirmed' => ['required', 'accepted'],
         ], [
-            'preview_confirmed.required' => 'Review the extracted text preview and confirm it before publishing.',
-            'preview_confirmed.accepted' => 'Review the extracted text preview and confirm it before publishing.',
+            'preview_confirmed.required' => 'Please check the text preview and confirm it looks right before publishing.',
+            'preview_confirmed.accepted' => 'Please check the text preview and confirm it looks right before publishing.',
         ]);
 
         if ($document->status !== CurriculumDocumentStatus::Draft) {
             throw ValidationException::withMessages([
-                'status' => 'Only draft documents can be published.',
+                'status' => 'Only drafts can be published.',
+            ]);
+        }
+
+        if (mb_trim((string) $document->extracted_text) === '') {
+            throw ValidationException::withMessages([
+                'status' => 'No readable text was found in this file, so the AI Tutor can\'t use it. Replace the file with a readable PDF, Word, or text document first.',
             ]);
         }
 
@@ -47,6 +53,6 @@ final readonly class PublishDocumentController
 
         IndexCurriculumDocumentJob::dispatch($document);
 
-        return back()->with('status', 'Document published. Indexing for tutor retrieval has been queued.');
+        return back()->with('status', 'Publishing started. This document will be available to the AI Tutor shortly.');
     }
 }

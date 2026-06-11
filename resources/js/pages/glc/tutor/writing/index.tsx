@@ -19,6 +19,12 @@ const STATUS_STYLES: Record<string, string> = {
     failed: 'bg-red-100 text-red-700',
 };
 
+const STATUS_LABELS: Record<string, string> = {
+    completed: 'Feedback ready',
+    pending: 'Being checked',
+    failed: 'Could not be checked',
+};
+
 export default function WritingIndex({ submissions }: Props) {
     const { data, setData, post, processing, errors, reset } = useForm({
         text: '',
@@ -111,7 +117,8 @@ export default function WritingIndex({ submissions }: Props) {
                                         'bg-slate-100 text-slate-600'
                                     }`}
                                 >
-                                    {submission.status}
+                                    {STATUS_LABELS[submission.status] ??
+                                        submission.status}
                                 </span>
                             </Link>
                         </li>

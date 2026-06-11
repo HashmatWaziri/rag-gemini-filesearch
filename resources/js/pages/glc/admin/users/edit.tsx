@@ -89,23 +89,23 @@ export default function UserEdit({
     > = {
         consent: {
             title: 'Confirm guardian consent',
-            message: `Mark guardian consent as confirmed for ${user.name}? This unlocks the AI Tutor for this student and is recorded in the audit log.`,
+            message: `Mark guardian consent as confirmed for ${user.name}? This lets the student use the AI Tutor once a teacher has assigned their course. The action is recorded in the Activity Log.`,
             confirmLabel: 'Confirm consent',
         },
         'revoke-consent': {
-            title: 'Revoke guardian consent',
-            message: `Revoke guardian consent for ${user.name}? The student will lose AI Tutor access until consent is confirmed again.`,
-            confirmLabel: 'Revoke consent',
+            title: 'Remove guardian consent',
+            message: `Remove guardian consent for ${user.name}? The student immediately loses access to the AI Tutor until consent is confirmed again. The action is recorded in the Activity Log.`,
+            confirmLabel: 'Remove consent',
         },
         delete: {
             title: 'Delete user',
-            message: `Permanently delete ${user.name}? All account data is removed. This cannot be undone and will be recorded in the audit log.`,
+            message: `Permanently delete ${user.name}? Their account is removed and they will no longer be able to log in. This cannot be undone. The action is recorded in the Activity Log.`,
             confirmLabel: 'Delete',
         },
         anonymize: {
-            title: 'Anonymize student',
-            message: `Replace ${user.name}'s name, email and guardian details with redacted placeholders? Records are kept. This cannot be undone and will be recorded in the audit log.`,
-            confirmLabel: 'Anonymize',
+            title: 'Remove personal details',
+            message: `Replace ${user.name}'s name, email and guardian details with anonymous placeholders? Their test history and chat records are kept, but will no longer show who they belong to. This cannot be undone. The action is recorded in the Activity Log.`,
+            confirmLabel: 'Remove details',
         },
     };
 
@@ -219,10 +219,13 @@ export default function UserEdit({
                         Danger zone
                     </h2>
                     <p className="mt-2 text-sm text-slate-600">
-                        Deletion permanently removes the account. Anonymization
-                        replaces name, email and guardian details with redacted
-                        placeholders while keeping records (students only). Both
-                        actions are recorded in the audit log.
+                        Deleting removes the account permanently — the person
+                        can no longer log in. Removing personal details
+                        (students only) keeps the student's records but replaces
+                        their name, email and guardian details with anonymous
+                        placeholders, so the records no longer show who they
+                        belong to. Both actions are recorded in the Activity Log
+                        and cannot be undone.
                     </p>
                     <div className="mt-4 flex flex-wrap gap-2">
                         <button
@@ -238,7 +241,7 @@ export default function UserEdit({
                                 onClick={() => setPending('anonymize')}
                                 className={buttonSecondaryClass}
                             >
-                                Anonymize student
+                                Remove personal details
                             </button>
                         )}
                     </div>

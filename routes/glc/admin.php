@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Glc\Admin\AccessCodeController;
 use App\Http\Controllers\Glc\Admin\AuditLogController;
+use App\Http\Controllers\Glc\Admin\CurriculumIndexRebuildController;
 use App\Http\Controllers\Glc\Admin\ExportController;
 use App\Http\Controllers\Glc\Admin\SettingsController;
 use App\Http\Controllers\Glc\Admin\UserAnonymizeController;
@@ -32,4 +33,5 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'glc.role:admin'])->
     Route::get('audit', [AuditLogController::class, 'index'])->name('audit.index');
     Route::get('settings', [SettingsController::class, 'edit'])->name('settings.edit');
     Route::put('settings', [SettingsController::class, 'update'])->name('settings.update');
+    Route::post('curriculum-index/rebuild', [CurriculumIndexRebuildController::class, 'store'])->name('curriculum-index.rebuild');
 });

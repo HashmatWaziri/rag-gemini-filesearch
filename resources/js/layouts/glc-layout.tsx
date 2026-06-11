@@ -15,27 +15,27 @@ interface NavItem {
 const NAV_BY_ROLE: Record<string, NavItem[]> = {
     student: [{ label: 'AI Tutor', href: '/tutor' }],
     teacher: [
-        { label: 'Review Queue', href: '/staff/review' },
+        { label: 'Placement Tests', href: '/staff/review' },
         { label: 'My Students', href: '/staff/students' },
         { label: 'Tutor Activity', href: '/staff/tutor' },
     ],
     academic_supervisor: [
-        { label: 'Review Queue', href: '/staff/review' },
+        { label: 'Placement Tests', href: '/staff/review' },
         { label: 'My Students', href: '/staff/students' },
         { label: 'Tutor Activity', href: '/staff/tutor' },
         { label: 'Curriculum', href: '/staff/curriculum' },
-        { label: 'Placement Content', href: '/staff/placement-content' },
+        { label: 'Placement Test Content', href: '/staff/placement-content' },
     ],
     admin: [
-        { label: 'Review Queue', href: '/staff/review' },
+        { label: 'Placement Tests', href: '/staff/review' },
         { label: 'My Students', href: '/staff/students' },
         { label: 'Tutor Activity', href: '/staff/tutor' },
         { label: 'Curriculum', href: '/staff/curriculum' },
-        { label: 'Placement Content', href: '/staff/placement-content' },
+        { label: 'Placement Test Content', href: '/staff/placement-content' },
         { label: 'Users', href: '/admin/users' },
         { label: 'Access Codes', href: '/admin/access-codes' },
         { label: 'Exports', href: '/admin/exports' },
-        { label: 'Audit Log', href: '/admin/audit' },
+        { label: 'Activity Log', href: '/admin/audit' },
         { label: 'Settings', href: '/admin/settings' },
     ],
 };

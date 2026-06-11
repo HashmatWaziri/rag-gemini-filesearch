@@ -58,7 +58,7 @@ final readonly class EntryController
 
             if ($resolution['terminated']) {
                 return response()->json([
-                    'message' => 'This access code is already in use on another device. The session has been terminated - please contact GLC.',
+                    'message' => 'This access code is already in use on another device, so the test was ended - please contact GLC.',
                     'redirect' => route('placement.terminated'),
                 ], 409);
             }

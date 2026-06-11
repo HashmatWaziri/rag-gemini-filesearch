@@ -8,6 +8,7 @@ use App\Models\Glc\StudentAssignment;
 use App\Models\Glc\TutorConversation;
 use App\Models\Glc\TutorMessage;
 use App\Models\User;
+use App\Services\Glc\Tutor\TutorChatService;
 use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -15,19 +16,23 @@ use Inertia\Response;
 
 final readonly class ConversationController
 {
-    public function __construct(#[CurrentUser] private User $user) {}
+    public function __construct(
+        #[CurrentUser] private User $user,
+        private TutorChatService $chat,
+    ) {}
 
     public function index(): Response
     {
         return Inertia::render('glc/tutor/index', [
             'assignment' => $this->assignmentPayload(),
+            'materialsReady' => $this->materialsReady(),
             'conversations' => $this->conversationsPayload(),
         ]);
     }
 
     public function store(): RedirectResponse
     {
-        if (! $this->user->studentAssignment instanceof StudentAssignment) {
+        if (! $this->user->studentAssignment instanceof StudentAssignment || ! $this->materialsReady()) {
             return redirect()->route('tutor.index');
         }
 
@@ -65,7 +70,15 @@ final readonly class ConversationController
             'messages' => $messages,
             'conversations' => $this->conversationsPayload(),
             'assignment' => $this->assignmentPayload(),
+            'materialsReady' => $this->materialsReady(),
         ]);
+    }
+
+    private function materialsReady(): bool
+    {
+        $assignment = $this->user->studentAssignment;
+
+        return $assignment instanceof StudentAssignment && $this->chat->hasPublishedMaterials($assignment);
     }
 
     /**

@@ -7,6 +7,7 @@ namespace Tests\Fixtures\Glc;
 use App\Models\Glc\Course;
 use App\Models\Glc\CourseLevel;
 use App\Models\Glc\CourseUnit;
+use App\Models\Glc\CurriculumDocument;
 use App\Models\Glc\StudentAssignment;
 use App\Models\User;
 
@@ -20,9 +21,10 @@ final class TutorScenario
      *     course: Course,
      *     level: CourseLevel,
      *     unit: CourseUnit,
+     *     document: CurriculumDocument|null,
      * }
      */
-    public static function assignedStudent(?User $teacher = null, ?User $student = null): array
+    public static function assignedStudent(?User $teacher = null, ?User $student = null, bool $withMaterials = true): array
     {
         $teacher ??= User::factory()->teacher()->create();
         $student ??= User::factory()->student()->create();
@@ -41,6 +43,14 @@ final class TutorScenario
             'assigned_by' => $teacher->id,
         ]);
 
+        $document = $withMaterials
+            ? CurriculumDocument::factory()->published()->create([
+                'course_id' => $course->id,
+                'course_level_id' => $level->id,
+                'course_unit_id' => $unit->id,
+            ])
+            : null;
+
         return [
             'student' => $student,
             'teacher' => $teacher,
@@ -48,6 +58,7 @@ final class TutorScenario
             'course' => $course,
             'level' => $level,
             'unit' => $unit,
+            'document' => $document,
         ];
     }
 }

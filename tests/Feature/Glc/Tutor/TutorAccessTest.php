@@ -43,6 +43,46 @@ it('does not create conversations for unassigned students', function (): void {
     expect(TutorConversation::query()->count())->toBe(0);
 });
 
+it('tells assigned students when their study materials are not ready yet', function (): void {
+    ['student' => $student] = TutorScenario::assignedStudent(withMaterials: false);
+
+    actingAs($student)
+        ->get(route('tutor.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('glc/tutor/index')
+            ->whereNot('assignment', null)
+            ->where('materialsReady', false));
+});
+
+it('does not create conversations while no study materials are published', function (): void {
+    ['student' => $student] = TutorScenario::assignedStudent(withMaterials: false);
+
+    actingAs($student)
+        ->post(route('tutor.conversations.store'))
+        ->assertRedirect(route('tutor.index'));
+
+    expect(TutorConversation::query()->count())->toBe(0);
+});
+
+it('marks materials readiness on the chat screen', function (): void {
+    ['student' => $student] = TutorScenario::assignedStudent();
+    $conversation = TutorConversation::factory()->create(['user_id' => $student->id]);
+
+    actingAs($student)
+        ->get(route('tutor.conversations.show', $conversation))
+        ->assertInertia(fn ($page) => $page->where('materialsReady', true));
+});
+
+it('flags the chat screen when materials become unavailable for an existing conversation', function (): void {
+    ['student' => $student] = TutorScenario::assignedStudent(withMaterials: false);
+    $conversation = TutorConversation::factory()->create(['user_id' => $student->id]);
+
+    actingAs($student)
+        ->get(route('tutor.conversations.show', $conversation))
+        ->assertInertia(fn ($page) => $page->where('materialsReady', false));
+});
+
 it('redirects unconsented minors to the blocked page', function (): void {
     $minor = User::factory()->minorStudent()->create();
 

@@ -20,6 +20,7 @@ use App\Models\Glc\TutorMessage;
 use App\Models\Glc\TutorViolation;
 use App\Models\Glc\WritingSubmission;
 use App\Models\User;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
 
 function openExportZip(TestResponse $response): ZipArchive
@@ -106,16 +107,20 @@ it('exports the placement bundle with JSON and CSV entries', function (): void {
 });
 
 it('exports the curriculum bundle with documents, hierarchy, and files manifest', function (): void {
+    Storage::fake('local');
+
     $admin = User::factory()->admin()->create();
 
     $course = Course::factory()->create(['name' => 'General English']);
-    $level = CourseLevel::factory()->create(['course_id' => $course->id]);
-    $unit = CourseUnit::factory()->create(['course_level_id' => $level->id]);
+    $level = CourseLevel::factory()->create(['course_id' => $course->id, 'name' => 'Beginner']);
+    $unit = CourseUnit::factory()->create(['course_level_id' => $level->id, 'name' => 'Unit 1']);
     CourseLesson::factory()->create(['course_unit_id' => $unit->id]);
     $document = CurriculumDocument::factory()->published()->create([
         'course_id' => $course->id,
         'course_level_id' => $level->id,
         'course_unit_id' => $unit->id,
+        'course_lesson_id' => null,
+        'extracted_text' => 'Plural nouns add -s in most cases.',
     ]);
 
     $response = $this->actingAs($admin)
@@ -134,10 +139,117 @@ it('exports the curriculum bundle with documents, hierarchy, and files manifest'
         ->and($manifest)->toContain('storage_path')
         ->and($manifest)->toContain($document->file_path);
 
+    $rows = array_map('str_getcsv', array_filter(explode("\n", mb_trim($manifest))));
+    $row = array_combine($rows[0], $rows[1]);
+
+    expect($row['id'])->toBe((string) $document->id)
+        ->and($row['title'])->toBe($document->title)
+        ->and($row['original_filename'])->toBe($document->original_filename)
+        ->and($row['course'])->toBe('General English')
+        ->and($row['level'])->toBe('Beginner')
+        ->and($row['unit'])->toBe('Unit 1')
+        ->and($row['lesson'])->toBe('Unit-wide')
+        ->and($row['status'])->toBe('published')
+        ->and($row['version'])->toBe('1')
+        ->and($row['created_at'])->toBe($document->created_at->toIso8601String())
+        ->and($row['updated_at'])->toBe($document->updated_at->toIso8601String())
+        ->and($row['extracted_text_preview'])->toBe('Plural nouns add -s in most cases.')
+        ->and($row['gemini_file_resource_name'])->toBe($document->gemini_file_name)
+        ->and($row['gemini_sync_status'])->toBe('indexed');
+
     $zip->close();
 
     expect(AuditLog::query()->where('action', AuditAction::DataExported)->where('details->bundle', 'curriculum')->exists())
         ->toBeTrue();
+});
+
+it('names the lesson in the manifest when a document is lesson-specific', function (): void {
+    Storage::fake('local');
+
+    $admin = User::factory()->admin()->create();
+    $unit = CourseUnit::factory()->create();
+    $lesson = CourseLesson::factory()->create(['course_unit_id' => $unit->id, 'name' => 'Lesson 3']);
+    CurriculumDocument::factory()->create([
+        'course_unit_id' => $unit->id,
+        'course_level_id' => $unit->course_level_id,
+        'course_lesson_id' => $lesson->id,
+    ]);
+
+    $response = $this->actingAs($admin)
+        ->get(route('admin.exports.download', 'curriculum'))
+        ->assertOk();
+
+    $zip = openExportZip($response);
+
+    expect((string) $zip->getFromName('curriculum/files-manifest.csv'))->toContain('Lesson 3');
+
+    $zip->close();
+});
+
+it('filters the curriculum bundle by lifecycle state and audits the choice', function (): void {
+    Storage::fake('local');
+
+    $admin = User::factory()->admin()->create();
+    $draft = CurriculumDocument::factory()->create(['title' => 'Draft Worksheet']);
+    $published = CurriculumDocument::factory()->published()->create(['title' => 'Published Worksheet']);
+    CurriculumDocument::factory()->archived()->create(['title' => 'Archived Worksheet']);
+
+    $response = $this->actingAs($admin)
+        ->get(route('admin.exports.download', ['bundle' => 'curriculum', 'statuses' => ['published']]))
+        ->assertOk();
+
+    $zip = openExportZip($response);
+
+    $documents = json_decode((string) $zip->getFromName('curriculum/documents.json'), true);
+    $manifest = (string) $zip->getFromName('curriculum/files-manifest.csv');
+
+    expect($documents)->toHaveCount(1)
+        ->and($documents[0]['id'])->toBe($published->id)
+        ->and($manifest)->toContain('Published Worksheet')
+        ->and($manifest)->not->toContain('Draft Worksheet')
+        ->and($manifest)->not->toContain('Archived Worksheet');
+
+    $zip->close();
+
+    $log = AuditLog::query()->where('action', AuditAction::DataExported)->firstOrFail();
+
+    expect($log->details)->toMatchArray(['bundle' => 'curriculum', 'statuses' => ['published']])
+        ->and(CurriculumDocument::query()->whereKey($draft->id)->exists())->toBeTrue();
+});
+
+it('rejects unknown lifecycle states for the curriculum bundle', function (): void {
+    $admin = User::factory()->admin()->create();
+
+    $this->actingAs($admin)
+        ->from(route('admin.exports.index'))
+        ->get(route('admin.exports.download', ['bundle' => 'curriculum', 'statuses' => ['nonsense']]))
+        ->assertRedirect(route('admin.exports.index'))
+        ->assertSessionHasErrors('statuses.0');
+
+    expect(AuditLog::query()->where('action', AuditAction::DataExported)->exists())->toBeFalse();
+});
+
+it('includes all lifecycle states when no filter is given', function (): void {
+    Storage::fake('local');
+
+    $admin = User::factory()->admin()->create();
+    CurriculumDocument::factory()->create();
+    CurriculumDocument::factory()->published()->create();
+    CurriculumDocument::factory()->archived()->create();
+
+    $response = $this->actingAs($admin)
+        ->get(route('admin.exports.download', 'curriculum'))
+        ->assertOk();
+
+    $zip = openExportZip($response);
+
+    expect(json_decode((string) $zip->getFromName('curriculum/documents.json'), true))->toHaveCount(3);
+
+    $zip->close();
+
+    $log = AuditLog::query()->where('action', AuditAction::DataExported)->firstOrFail();
+
+    expect($log->details)->toBe(['bundle' => 'curriculum']);
 });
 
 it('exports student records with consent state and assignments', function (): void {

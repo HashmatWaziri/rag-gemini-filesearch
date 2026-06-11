@@ -26,6 +26,7 @@ enum AuditAction: string
     case CurriculumArchived = 'curriculum_archived';
     case CurriculumReplaced = 'curriculum_replaced';
     case CurriculumDeleted = 'curriculum_deleted';
+    case CurriculumIndexRebuilt = 'curriculum_index_rebuilt';
     case StudentAssigned = 'student_assigned';
     case DataExported = 'data_exported';
     case SettingsUpdated = 'settings_updated';

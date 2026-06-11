@@ -133,8 +133,11 @@ export default function UsersIndex({
             {importResult && (
                 <div className="mb-4 rounded-md border border-slate-200 bg-white p-4 text-sm">
                     <p className="font-medium text-slate-800">
-                        Bulk import: {importResult.created} user(s) created,{' '}
-                        {importResult.errors.length} row(s) failed.
+                        Import finished: {importResult.created}{' '}
+                        {importResult.created === 1 ? 'user' : 'users'} added,{' '}
+                        {importResult.errors.length}{' '}
+                        {importResult.errors.length === 1 ? 'row' : 'rows'} with
+                        problems.
                     </p>
                     {importResult.errors.length > 0 && (
                         <ul className="mt-2 space-y-1 text-red-700">
@@ -329,9 +332,9 @@ export default function UsersIndex({
                         <code className="rounded bg-slate-100 px-1 text-xs">
                             name,email,password,role,age,guardian_name,guardian_email
                         </code>
-                        . Each row is validated individually; valid rows are
-                        imported and failed rows are reported with their row
-                        number.
+                        . Each row is checked separately: rows that pass are
+                        added straight away, and rows with problems are listed
+                        with their row number so you can fix and re-upload them.
                     </p>
 
                     <input
@@ -376,7 +379,7 @@ export default function UsersIndex({
             <ConfirmDialog
                 open={deleting !== null}
                 title="Delete user"
-                message={`Permanently delete ${deleting?.name ?? ''}? This cannot be undone and will be recorded in the audit log.`}
+                message={`Permanently delete ${deleting?.name ?? ''}? Their account is removed and they will no longer be able to log in. This cannot be undone. The action is recorded in the Activity Log.`}
                 confirmLabel="Delete"
                 danger
                 onConfirm={confirmDelete}

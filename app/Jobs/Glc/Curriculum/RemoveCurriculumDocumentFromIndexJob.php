@@ -15,16 +15,10 @@ final class RemoveCurriculumDocumentFromIndexJob implements ShouldQueue
 {
     use Queueable;
 
-    /**
-     * @param  string|null  $documentName  Stale store document to delete after
-     */
-    public function __construct(
-        public CurriculumDocument $document,
-        public ?string $documentName = null,
-    ) {}
+    public function __construct(public CurriculumDocument $document) {}
 
     public function handle(CurriculumIndexService $service): void
     {
-        $service->removeFromIndex($this->document, $this->documentName);
+        $service->removeFromIndex($this->document);
     }
 }

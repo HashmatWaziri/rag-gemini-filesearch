@@ -58,12 +58,12 @@ final readonly class ListeningAudioController
 
     public function stream(Request $request, PlacementItem $item): StreamedResponse
     {
-        abort_unless($request->hasValidSignature(), 403, 'Invalid or expired audio link.');
+        abort_unless($request->hasValidSignature(), 403, 'This audio link has expired or does not look right. Please go back to your test.');
 
         $attempt = $this->sessions->currentAttempt($request);
 
-        abort_unless($attempt instanceof PlacementAttempt, 403, 'No active placement session.');
-        abort_unless($attempt->status === PlacementAttemptStatus::InProgress, 403, 'Session is not active.');
+        abort_unless($attempt instanceof PlacementAttempt, 403, 'We could not find your test on this device. Please enter your access code again.');
+        abort_unless($attempt->status === PlacementAttemptStatus::InProgress, 403, 'This test is no longer in progress.');
 
         $played = $attempt->audioPlays()->where('placement_item_id', $item->id)->exists();
         abort_unless($played, 403, 'This clip has not been unlocked for playback.');

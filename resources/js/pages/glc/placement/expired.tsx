@@ -6,15 +6,13 @@ interface ExpiredProps {
 
 export default function Expired({ resumeWindowHours }: ExpiredProps) {
     return (
-        <CandidateShell title="Session Expired">
+        <CandidateShell title="Test Expired">
             <Card>
-                <h1 className="text-lg font-semibold">
-                    Your test session has expired
-                </h1>
+                <h1 className="text-lg font-semibold">Your test has expired</h1>
                 <p className="mt-2 text-sm text-slate-600">
-                    Placement test sessions can be resumed within{' '}
-                    {resumeWindowHours} hours of starting. That window has now
-                    passed, so this session is closed.
+                    You can return to an unfinished test within{' '}
+                    {resumeWindowHours} hours of starting it. That time has now
+                    passed, so this test is closed.
                 </p>
                 <p className="mt-2 text-sm text-slate-600">
                     Please contact Greats Language Center to receive a new

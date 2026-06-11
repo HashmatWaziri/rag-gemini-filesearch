@@ -764,6 +764,87 @@ Complete staging UAT with GLC staff across placement and tutor flows. Deploy pro
 
 ---
 
+### GLC-029 — Reusable Gemini File Search service and store rebuild
+
+**Type:** AFK  
+**Blocked by:** GLC-019  
+**Requirements:** Locked architecture decisions (client follow-up): one File Search store per environment; DB + local files are source of truth; File Search is a derivative index only
+
+## What to build
+
+Refactor the bootstrap-era `upload:document-to-gemini-file-search` command logic into a reusable `App\Services\Glc\Curriculum\GeminiFileSearchService`. Keep `upload:document-to-gemini-file-search` as a thin ops wrapper and `check:gemini-file-search-store` as a read-only ops CLI. Add `rebuild:gemini-file-search-store`, an idempotent command that re-imports every Published curriculum document into the environment store from the database and local files, and expose the same rebuild through an Admin UI button.
+
+## Acceptance criteria
+
+- [ ] `GeminiFileSearchService` exposes `isConfigured(): bool` and `rebuildStore(): array{total,succeeded,failed}`
+- [ ] Rebuild re-imports all Published documents, replaces prior index entries (no duplicates), and tolerates per-document failures
+- [ ] Rebuild never touches placement test content
+- [ ] `upload:document-to-gemini-file-search` delegates to the service with unchanged CLI behavior
+- [ ] `check:gemini-file-search-store` still works read-only
+- [ ] Empty `GEMINI_API_KEY` degrades gracefully (clear message, nothing blocked)
+- [ ] Feature tests use `Http::fake` only
+
+## Blocked by
+
+- GLC-019
+
+---
+
+### GLC-030 — Curriculum staff UI with async publish, replace, archive, and File Search sync
+
+**Type:** AFK  
+**Blocked by:** GLC-019, GLC-029  
+**Requirements:** Locked architecture decisions: lifecycle `draft | publishing | published | publish_failed | archived`; publish only on successful index sync
+
+## What to build
+
+Staff (Admin + Academic Supervisor only) manage tutor curriculum documents end-to-end in the UI: upload (PDF/DOCX/TXT only, env-configurable caps ~25 MB / ~150 pages / ~500k extracted chars), mandatory extraction preview, async queue-based publish that marks Published only after File Search import succeeds, `publish_failed` with automatic backoff (3 attempts) plus manual retry, replace that keeps the prior Published version live on failure, archive that removes from the index but keeps records and files, and Admin-only confirmed, audited hard delete. Bulk upload is per-file independent; nothing auto-publishes.
+
+## Acceptance criteria
+
+- [ ] Teachers and students cannot upload or manage curriculum
+- [ ] MP3/video/images/PPTX rejected at upload with a message pointing audio to Placement Test Content
+- [ ] Publish blocked while extraction preview is empty or failed
+- [ ] Document is not tutor-retrievable until index sync succeeds
+- [ ] `publish_failed` keeps already-Published corpus live; staff can retry
+- [ ] Replace, archive, and hard delete behave per locked decisions and are audit-logged
+- [ ] Bulk upload reports per-row outcomes; successes land in Draft
+- [ ] Lesson tag optional: null lesson means unit-wide document
+
+## Blocked by
+
+- GLC-019
+- GLC-029
+
+---
+
+### GLC-031 — Tutor agent File Search wiring, scope filter, citations, and hard gates
+
+**Type:** AFK  
+**Blocked by:** GLC-021, GLC-029, GLC-030  
+**Requirements:** Locked architecture decisions: tutor scope = current teacher-assigned course + level + unit; placement AI never uses File Search
+
+## What to build
+
+Wire the tutor agent to Gemini File Search using the store name from settings, filtered to the student's current assignment (unit-wide documents with null lesson plus lesson-specific documents in the assigned unit). Enforce hard gates before any model call: no assignment, missing guardian consent (ages 12–17), or zero Published materials in scope. Grounded replies must show the student a source line: `Source: {document title} ({course} / {unit} / {lesson or Unit-wide})`. Assignment changes apply to the next message immediately with chat history preserved.
+
+## Acceptance criteria
+
+- [ ] No chat and no File Search call when any hard gate fails; each gate shows a plain-language next step
+- [ ] Scope filter includes unit-wide plus lesson-specific documents for the current assignment only
+- [ ] Citation source line rendered in the exact format, with `Unit-wide` fallback
+- [ ] New messages pick up a changed assignment immediately; history preserved
+- [ ] English-only and homework guardrails unchanged (GLC-023); speaking/listening practice refused
+- [ ] Placement AI paths use direct model calls only — never File Search
+
+## Blocked by
+
+- GLC-021
+- GLC-029
+- GLC-030
+
+---
+
 ## Suggested implementation waves
 
 For planning only — not additional requirements.

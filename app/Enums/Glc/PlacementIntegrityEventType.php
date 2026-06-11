@@ -13,9 +13,9 @@ enum PlacementIntegrityEventType: string
     public function label(): string
     {
         return match ($this) {
-            self::TabSwitch => 'Tab Switch',
-            self::DualDevice => 'Dual Device Use',
-            self::PasteAttempt => 'Paste Attempt',
+            self::TabSwitch => 'Left the test page during a section',
+            self::DualDevice => 'Same access code opened on two devices',
+            self::PasteAttempt => 'Tried to paste text into an answer',
         };
     }
 }

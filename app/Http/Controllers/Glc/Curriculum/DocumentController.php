@@ -15,6 +15,7 @@ use App\Models\User;
 use App\Services\Glc\AuditLogger;
 use App\Services\Glc\Curriculum\CurriculumIndexService;
 use App\Services\Glc\Curriculum\CurriculumUploadService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -29,6 +30,8 @@ final readonly class DocumentController
 {
     use ValidatesHierarchy;
 
+    private const array STATES = ['draft', 'publishing', 'published', 'publish_failed', 'archived'];
+
     public function __construct(
         private CurriculumUploadService $uploads,
         private CurriculumIndexService $indexService,
@@ -42,6 +45,7 @@ final readonly class DocumentController
             'course_level_id' => ['nullable', 'integer'],
             'course_unit_id' => ['nullable', 'integer'],
             'course_lesson_id' => ['nullable', 'integer'],
+            'state' => ['nullable', Rule::in(self::STATES)],
             'status' => ['nullable', Rule::enum(CurriculumDocumentStatus::class)],
             'index_status' => ['nullable', Rule::enum(CurriculumIndexStatus::class)],
         ]);
@@ -52,6 +56,7 @@ final readonly class DocumentController
             ->when($filters['course_level_id'] ?? null, fn ($query, $value) => $query->where('course_level_id', $value))
             ->when($filters['course_unit_id'] ?? null, fn ($query, $value) => $query->where('course_unit_id', $value))
             ->when($filters['course_lesson_id'] ?? null, fn ($query, $value) => $query->where('course_lesson_id', $value))
+            ->when($filters['state'] ?? null, fn (Builder $query, string $state) => $this->applyStateFilter($query, $state))
             ->when($filters['status'] ?? null, fn ($query, $value) => $query->where('status', $value))
             ->when($filters['index_status'] ?? null, fn ($query, $value) => $query->where('index_status', $value))
             ->latest('updated_at')
@@ -70,6 +75,8 @@ final readonly class DocumentController
                 'status_label' => $document->status->label(),
                 'index_status' => $document->index_status->value,
                 'index_status_label' => $document->index_status->label(),
+                'state' => $this->documentState($document),
+                'state_label' => $this->documentStateLabel($document),
                 'version' => $document->version,
                 'updated_at' => $document->updated_at?->format('d M Y H:i'),
             ]);
@@ -107,6 +114,8 @@ final readonly class DocumentController
                 'index_status' => $document->index_status->value,
                 'index_status_label' => $document->index_status->label(),
                 'index_error' => $document->index_error,
+                'state' => $this->documentState($document),
+                'state_label' => $this->documentStateLabel($document),
                 'version' => $document->version,
                 'extracted_text' => $document->extracted_text,
                 'uploaded_by' => $document->uploader?->name,
@@ -124,7 +133,7 @@ final readonly class DocumentController
     {
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
-            'file' => ['required', ...$this->fileRules()],
+            'file' => ['required', 'file'],
             ...$this->hierarchyRules($request),
         ]);
 
@@ -147,7 +156,7 @@ final readonly class DocumentController
 
         return redirect()
             ->route('curriculum.documents.show', $document)
-            ->with('status', 'Document uploaded as draft. Review the extracted text below before publishing.');
+            ->with('status', 'Document uploaded as a draft. Check the text preview below, then publish it to the AI Tutor.');
     }
 
     public function destroy(Request $request, CurriculumDocument $document): RedirectResponse
@@ -169,6 +178,51 @@ final readonly class DocumentController
         return redirect()
             ->route('curriculum.index')
             ->with('status', 'Document permanently deleted.');
+    }
+
+    /**
+     * @param  Builder<CurriculumDocument>  $query
+     * @return Builder<CurriculumDocument>
+     */
+    private function applyStateFilter(Builder $query, string $state): Builder
+    {
+        return match ($state) {
+            'draft' => $query->where('status', CurriculumDocumentStatus::Draft),
+            'publishing' => $query
+                ->where('status', CurriculumDocumentStatus::Published)
+                ->whereIn('index_status', [CurriculumIndexStatus::Pending, CurriculumIndexStatus::Indexing]),
+            'published' => $query
+                ->where('status', CurriculumDocumentStatus::Published)
+                ->where('index_status', CurriculumIndexStatus::Indexed),
+            'publish_failed' => $query
+                ->where('status', CurriculumDocumentStatus::Published)
+                ->where('index_status', CurriculumIndexStatus::Failed),
+            'archived' => $query->where('status', CurriculumDocumentStatus::Archived),
+            default => $query,
+        };
+    }
+
+    private function documentState(CurriculumDocument $document): string
+    {
+        return match (true) {
+            $document->status === CurriculumDocumentStatus::Archived => 'archived',
+            $document->status === CurriculumDocumentStatus::Draft => 'draft',
+            $document->index_status === CurriculumIndexStatus::Indexed => 'published',
+            $document->index_status === CurriculumIndexStatus::Failed => 'publish_failed',
+            default => 'publishing',
+        };
+    }
+
+    private function documentStateLabel(CurriculumDocument $document): string
+    {
+        return match ($this->documentState($document)) {
+            'draft' => 'Draft — not visible to students',
+            'publishing' => 'Being prepared...',
+            'published' => 'Live for students',
+            'publish_failed' => 'Couldn\'t be published — try again',
+            'archived' => 'Archived',
+            default => 'Draft — not visible to students',
+        };
     }
 
     /**

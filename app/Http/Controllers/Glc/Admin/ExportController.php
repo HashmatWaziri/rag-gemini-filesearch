@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Glc\Admin;
 
 use App\Enums\Glc\AuditAction;
+use App\Enums\Glc\CurriculumDocumentStatus;
 use App\Models\Glc\AuditLog;
 use App\Services\Glc\Admin\DataExporter;
 use App\Services\Glc\Admin\ExportBundle;
 use App\Services\Glc\AuditLogger;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -44,6 +46,10 @@ final readonly class ExportController
                 'description' => $bundle->description(),
                 'contents' => $bundle->contents(),
             ], ExportBundle::cases()),
+            'curriculumStatuses' => array_map(fn (CurriculumDocumentStatus $status): array => [
+                'value' => $status->value,
+                'label' => $this->curriculumStatusLabel($status),
+            ], CurriculumDocumentStatus::cases()),
             'recentExports' => $recentExports,
         ]);
     }
@@ -54,14 +60,52 @@ final readonly class ExportController
 
         abort_unless($type instanceof ExportBundle, 404);
 
-        $path = $this->exporter->build($type);
+        $statuses = $this->curriculumStatuses($request, $type);
 
-        $this->auditLogger->log(AuditAction::DataExported, $request->user(), null, [
-            'bundle' => $type->value,
-        ]);
+        $path = $this->exporter->build($type, $statuses);
+
+        $details = ['bundle' => $type->value];
+
+        if ($statuses !== null) {
+            $details['statuses'] = array_map(
+                fn (CurriculumDocumentStatus $status): string => $status->value,
+                $statuses,
+            );
+        }
+
+        $this->auditLogger->log(AuditAction::DataExported, $request->user(), null, $details);
 
         return response()
             ->download($path, $type->fileName(), ['Content-Type' => 'application/zip'])
             ->deleteFileAfterSend();
+    }
+
+    /**
+     * @return list<CurriculumDocumentStatus>|null
+     */
+    private function curriculumStatuses(Request $request, ExportBundle $type): ?array
+    {
+        if ($type !== ExportBundle::Curriculum || ! $request->has('statuses')) {
+            return null;
+        }
+
+        $validated = $request->validate([
+            'statuses' => ['required', 'array', 'min:1'],
+            'statuses.*' => ['string', Rule::enum(CurriculumDocumentStatus::class)],
+        ]);
+
+        return array_values(array_map(
+            fn (string $value): CurriculumDocumentStatus => CurriculumDocumentStatus::from($value),
+            array_unique($validated['statuses']),
+        ));
+    }
+
+    private function curriculumStatusLabel(CurriculumDocumentStatus $status): string
+    {
+        return match ($status) {
+            CurriculumDocumentStatus::Draft => 'Draft — not yet available to the AI Tutor',
+            CurriculumDocumentStatus::Published => 'Published — available to the AI Tutor',
+            CurriculumDocumentStatus::Archived => 'Archived — removed from the AI Tutor',
+        };
     }
 }

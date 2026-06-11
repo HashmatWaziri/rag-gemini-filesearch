@@ -24,6 +24,13 @@ export interface TreeCourse {
     levels: TreeLevel[];
 }
 
+export type DocumentState =
+    | 'draft'
+    | 'publishing'
+    | 'published'
+    | 'publish_failed'
+    | 'archived';
+
 export interface DocumentRow {
     id: number;
     title: string;
@@ -33,9 +40,9 @@ export interface DocumentRow {
     lesson: string | null;
     format: string;
     status: string;
-    status_label: string;
     index_status: string;
-    index_status_label: string;
+    state: DocumentState;
+    state_label: string;
     version: number;
     updated_at: string | null;
 }
@@ -95,24 +102,22 @@ export const secondaryButtonClass =
 export const dangerButtonClass =
     'rounded-md border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50';
 
-const statusBadgeColors: Record<string, string> = {
+export const documentStateFilterOptions: [DocumentState, string][] = [
+    ['draft', 'Draft'],
+    ['publishing', 'Being prepared'],
+    ['published', 'Live for students'],
+    ['publish_failed', "Couldn't be published"],
+    ['archived', 'Archived'],
+];
+
+const stateBadgeColors: Record<DocumentState, string> = {
     draft: 'bg-slate-100 text-slate-700',
+    publishing: 'bg-blue-100 text-blue-700',
     published: 'bg-emerald-100 text-emerald-700',
+    publish_failed: 'bg-red-100 text-red-700',
     archived: 'bg-amber-100 text-amber-700',
 };
 
-const indexBadgeColors: Record<string, string> = {
-    pending: 'bg-slate-100 text-slate-600',
-    indexing: 'bg-blue-100 text-blue-700',
-    indexed: 'bg-emerald-100 text-emerald-700',
-    failed: 'bg-red-100 text-red-700',
-    removed: 'bg-slate-100 text-slate-500',
-};
-
-export function statusBadgeClass(status: string): string {
-    return `inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${statusBadgeColors[status] ?? 'bg-slate-100 text-slate-600'}`;
-}
-
-export function indexBadgeClass(indexStatus: string): string {
-    return `inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${indexBadgeColors[indexStatus] ?? 'bg-slate-100 text-slate-600'}`;
+export function stateBadgeClass(state: DocumentState): string {
+    return `inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${stateBadgeColors[state] ?? 'bg-slate-100 text-slate-600'}`;
 }

@@ -95,7 +95,7 @@ export default function UploadPanel({ tree, upload }: UploadPanelProps) {
                 Accepted formats: {upload.allowedExtensions.join(', ')} (max{' '}
                 {Math.round(upload.maxFileSizeKb / 1024)} MB per file). New
                 uploads start as drafts and are not visible to students or the
-                tutor until published.
+                AI Tutor until you publish them.
             </p>
 
             {mode === 'single' ? (

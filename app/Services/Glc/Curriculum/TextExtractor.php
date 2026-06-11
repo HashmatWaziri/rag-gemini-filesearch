@@ -31,9 +31,20 @@ final class TextExtractor
 
     private function extractPdf(string $path): string
     {
-        $text = (new Parser)->parseFile($path)->getText();
+        $document = (new Parser)->parseFile($path);
 
-        return $this->normalize($text);
+        $pageCount = count($document->getPages());
+        $maxPages = config()->integer('glc.curriculum.max_pdf_pages', (int) env('GLC_CURRICULUM_MAX_PDF_PAGES', 150));
+
+        if ($pageCount > $maxPages) {
+            throw new RuntimeException(sprintf(
+                'This PDF has %d pages — the limit is %d pages. Split it into smaller parts and upload each one.',
+                $pageCount,
+                $maxPages,
+            ));
+        }
+
+        return $this->normalize($document->getText());
     }
 
     private function extractDocx(string $path): string
@@ -55,7 +66,7 @@ final class TextExtractor
         $contents = file_get_contents($path);
 
         if ($contents === false) {
-            throw new RuntimeException(sprintf('Unable to read file [%s].', $path));
+            throw new RuntimeException('The file could not be opened.');
         }
 
         return $this->normalize($contents);

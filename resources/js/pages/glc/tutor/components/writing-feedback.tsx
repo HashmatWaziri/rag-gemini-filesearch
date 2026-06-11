@@ -25,7 +25,10 @@ export interface SubmissionPayload {
     created_at: string | null;
 }
 
-export const DIMENSIONS: Record<string, { label: string; mark: string; dot: string }> = {
+export const DIMENSIONS: Record<
+    string,
+    { label: string; mark: string; dot: string }
+> = {
     grammar: {
         label: 'Grammar',
         mark: 'bg-red-100 decoration-red-400',
@@ -167,7 +170,7 @@ export default function WritingFeedback({
     if (submission.status !== 'completed' || !submission.feedback) {
         return (
             <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-500">
-                This submission is still being evaluated.
+                This writing is still being checked. Please refresh in a moment.
             </div>
         );
     }
@@ -229,7 +232,7 @@ export default function WritingFeedback({
 
             <section>
                 <h3 className="mb-2 text-sm font-semibold tracking-wide text-slate-500 uppercase">
-                    Feedback by dimension
+                    Feedback by area
                 </h3>
                 <ul className="divide-y divide-slate-200 overflow-hidden rounded-lg border border-slate-200 bg-white">
                     {Object.entries(DIMENSIONS).map(([key, meta]) => {

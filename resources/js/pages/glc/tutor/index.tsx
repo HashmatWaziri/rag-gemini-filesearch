@@ -16,6 +16,7 @@ interface ConversationItem {
 
 interface Props {
     assignment: Assignment | null;
+    materialsReady: boolean;
     conversations: ConversationItem[];
 }
 
@@ -30,19 +31,22 @@ function formatDate(value: string | null): string {
     });
 }
 
-export default function TutorIndex({ assignment, conversations }: Props) {
+export default function TutorIndex({
+    assignment,
+    materialsReady,
+    conversations,
+}: Props) {
     if (!assignment) {
         return (
             <GlcLayout title="AI Tutor">
                 <Head title="AI Tutor" />
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center">
                     <h2 className="text-lg font-semibold text-amber-900">
-                        No course assignment yet
+                        Your course is not set up yet
                     </h2>
                     <p className="mx-auto mt-2 max-w-md text-sm text-amber-800">
-                        The AI Tutor works with the course, level, and unit
-                        your teacher assigns to you. Please ask your teacher or
-                        a GLC admin to assign your course, then come back here.
+                        Please ask your teacher or GLC to set up your course —
+                        then the tutor will be ready for you here.
                     </p>
                 </div>
             </GlcLayout>
@@ -55,24 +59,30 @@ export default function TutorIndex({ assignment, conversations }: Props) {
 
             <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
                 <p className="font-medium">
-                    Your scope: {assignment.course} / {assignment.level} /{' '}
+                    Your course: {assignment.course} / {assignment.level} /{' '}
                     {assignment.unit}
                 </p>
                 <p className="mt-1 text-emerald-800">
                     The tutor replies in English only and helps with Reading,
-                    Writing, Grammar, and Vocabulary from your assigned
-                    materials.
+                    Writing, Grammar, and Vocabulary from your study materials.
                 </p>
             </div>
 
             <div className="mb-6 flex flex-col gap-2 sm:flex-row">
-                <button
-                    type="button"
-                    onClick={() => router.post('/tutor/conversations')}
-                    className="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500"
-                >
-                    Start a new conversation
-                </button>
+                {materialsReady ? (
+                    <button
+                        type="button"
+                        onClick={() => router.post('/tutor/conversations')}
+                        className="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500"
+                    >
+                        Start a new conversation
+                    </button>
+                ) : (
+                    <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900">
+                        Your study materials aren&apos;t ready yet — please
+                        check back soon or contact your teacher.
+                    </p>
+                )}
                 <Link
                     href="/tutor/writing"
                     className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-center text-sm font-semibold text-slate-700 hover:bg-slate-50"

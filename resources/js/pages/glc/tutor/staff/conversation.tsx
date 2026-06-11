@@ -40,7 +40,7 @@ export default function StaffTutorConversation({
             {conversation.summary && (
                 <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
                     <p className="mb-1 text-xs font-semibold tracking-wide text-slate-500 uppercase">
-                        Rotation summary
+                        Summary of earlier messages
                     </p>
                     <p className="text-sm whitespace-pre-wrap text-slate-700">
                         {conversation.summary}
@@ -77,12 +77,12 @@ export default function StaffTutorConversation({
                                                 : 'bg-slate-200 text-slate-600'
                                         }`}
                                     >
-                                        Rotated out of active context
+                                        Covered by the summary above
                                     </span>
                                 )}
                                 {message.violation && (
                                     <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-medium text-red-700">
-                                        Violation: {message.violation}
+                                        Needs attention: {message.violation}
                                     </span>
                                 )}
                                 {message.created_at && (

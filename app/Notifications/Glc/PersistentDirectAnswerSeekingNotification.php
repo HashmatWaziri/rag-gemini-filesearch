@@ -35,7 +35,7 @@ final class PersistentDirectAnswerSeekingNotification extends Notification
             'violation_count' => $this->violationCount,
             'window_days' => $this->windowDays,
             'message' => sprintf(
-                '%s has asked the AI Tutor for direct homework answers %d times in the last %d days.',
+                '%s has asked the AI Tutor for direct homework answers %d times in the last %d days. A quick check-in with them may help.',
                 $this->student->name,
                 $this->violationCount,
                 $this->windowDays,

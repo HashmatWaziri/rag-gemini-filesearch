@@ -58,7 +58,7 @@ it('shows the index error on the detail page after a failed index run', function
             ->where('document.index_error', 'quota exceeded'));
 });
 
-it('queues a reindex for a failed published document', function (): void {
+it('queues a retry for a failed published document', function (): void {
     Queue::fake();
 
     $document = CurriculumDocument::factory()->published()->create([
@@ -81,7 +81,7 @@ it('queues a reindex for a failed published document', function (): void {
     Queue::assertNotPushed(RemoveCurriculumDocumentFromIndexJob::class);
 });
 
-it('removes the stale store entry before reindexing an already indexed document', function (): void {
+it('keeps the existing store entry live while a retry is queued', function (): void {
     Queue::fake();
 
     $document = CurriculumDocument::factory()->published()->create([
@@ -92,10 +92,9 @@ it('removes the stale store entry before reindexing an already indexed document'
         ->post(route('curriculum.documents.reindex', $document))
         ->assertRedirect();
 
-    Queue::assertPushed(
-        RemoveCurriculumDocumentFromIndexJob::class,
-        fn (RemoveCurriculumDocumentFromIndexJob $job): bool => $job->documentName === 'fileSearchStores/glc-store/documents/stale',
-    );
+    expect($document->refresh()->gemini_document_name)->toBe('fileSearchStores/glc-store/documents/stale');
+
+    Queue::assertNotPushed(RemoveCurriculumDocumentFromIndexJob::class);
     Queue::assertPushed(IndexCurriculumDocumentJob::class);
 });
 

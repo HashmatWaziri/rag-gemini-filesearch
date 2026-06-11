@@ -42,6 +42,6 @@ final readonly class UserConsentController
 
         $this->auditLogger->log(AuditAction::ConsentRevoked, $request->user(), $user);
 
-        return back()->with('glc_status', 'Guardian consent revoked.');
+        return back()->with('glc_status', 'Guardian consent removed. The student can no longer use the AI Tutor until consent is confirmed again.');
     }
 }

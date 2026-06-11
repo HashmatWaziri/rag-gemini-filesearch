@@ -48,6 +48,18 @@ final class RunGuardrailUatCommand extends Command
             return self::FAILURE;
         }
 
+        $assignment = $student->studentAssignment;
+
+        if (! $assignment instanceof StudentAssignment || ! $this->chat->hasPublishedMaterials($assignment)) {
+            $this->error(
+                'No published study materials exist for the student\'s assigned course/level/unit, so the tutor '
+                .'blocks every exchange before reaching the model. Publish at least one document for that scope '
+                .'(or pass --student-id for a student whose materials are published) and run the UAT again.',
+            );
+
+            return self::FAILURE;
+        }
+
         if (config('gemini.api_key') === null || config('gemini.api_key') === '') {
             $this->warn('GEMINI_API_KEY is not configured - every question will fail the gate.');
         }

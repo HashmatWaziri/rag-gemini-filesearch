@@ -293,7 +293,7 @@ export default function StaffStudents({
                                     </span>
                                 ) : (
                                     <span className="rounded-md bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800">
-                                        No assignment yet
+                                        No course set yet
                                     </span>
                                 )}
 
@@ -309,8 +309,8 @@ export default function StaffStudents({
                                     className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
                                 >
                                     {student.assignment
-                                        ? 'Change assignment'
-                                        : 'Set assignment'}
+                                        ? 'Change course'
+                                        : 'Set course'}
                                 </button>
 
                                 {student.linked ? (

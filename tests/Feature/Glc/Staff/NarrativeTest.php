@@ -113,7 +113,7 @@ it('prefills the editor from the staff-only AI narrative draft helper', function
         ->and($review->narrative_approved_at)->toBeNull();
 });
 
-it('tolerates AI narrative draft failure with a clear message', function (): void {
+it('tolerates AI narrative draft failure with a clear jargon-free message', function (): void {
     config(['gemini.api_key' => null]);
     Http::fake();
 
@@ -123,7 +123,9 @@ it('tolerates AI narrative draft failure with a clear message', function (): voi
         ->post(route('staff.review.narrative.draft', $review));
 
     $response->assertStatus(422);
-    expect($response->json('message'))->toContain('manually');
+    expect($response->json('message'))
+        ->toContain('write the parent summary yourself')
+        ->not->toContain('GEMINI');
 });
 
 it('blocks PDF generation until narrative AND review are approved', function (): void {

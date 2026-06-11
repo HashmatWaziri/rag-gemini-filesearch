@@ -37,7 +37,7 @@ final readonly class AccessCodeController
                 'id' => $code->id,
                 'code' => $code->code,
                 'status' => $code->status->value,
-                'status_label' => $code->status->label(),
+                'status_label' => $this->statusLabel($code->status),
                 'is_expired' => $code->isExpired(),
                 'expires_at' => $code->expires_at?->toIso8601String(),
                 'revoked_at' => $code->revoked_at?->toIso8601String(),
@@ -53,7 +53,7 @@ final readonly class AccessCodeController
             'filters' => ['status' => $status?->value, 'search' => $search],
             'statuses' => array_map(fn (PlacementAccessCodeStatus $case): array => [
                 'value' => $case->value,
-                'label' => $case->label(),
+                'label' => $this->statusLabel($case),
             ], PlacementAccessCodeStatus::cases()),
             'status' => $request->session()->get('glc_status'),
         ]);
@@ -94,7 +94,7 @@ final readonly class AccessCodeController
     {
         if (! $this->canRevoke($accessCode)) {
             throw ValidationException::withMessages([
-                'code' => 'Only unused or in-progress codes can be revoked.',
+                'code' => 'This code can no longer be revoked — the test was already completed, or the code was already cancelled.',
             ]);
         }
 
@@ -107,7 +107,20 @@ final readonly class AccessCodeController
             'code' => $accessCode->code,
         ]);
 
-        return back()->with('glc_status', "Access code {$accessCode->code} revoked.");
+        return back()->with(
+            'glc_status',
+            "Access code {$accessCode->code} has been cancelled. It can no longer be used to start the placement test.",
+        );
+    }
+
+    private function statusLabel(PlacementAccessCodeStatus $status): string
+    {
+        return match ($status) {
+            PlacementAccessCodeStatus::Unused => 'Not used yet',
+            PlacementAccessCodeStatus::InProgress => 'Being used',
+            PlacementAccessCodeStatus::Completed => 'Test completed',
+            PlacementAccessCodeStatus::Revoked => 'Cancelled',
+        };
     }
 
     private function canRevoke(PlacementAccessCode $code): bool

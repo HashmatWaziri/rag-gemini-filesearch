@@ -143,7 +143,7 @@ it('shows the full transcript including rotated messages', function (): void {
             ->where('messages.0.content', 'Old question')
             ->where('messages.0.rotated', true)
             ->where('messages.1.rotated', false)
-            ->where('messages.1.violation', 'off_topic'));
+            ->where('messages.1.violation', 'Off Topic'));
 });
 
 it('blocks teachers from transcripts of unassigned students', function (): void {

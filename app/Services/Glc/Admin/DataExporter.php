@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Glc\Admin;
 
+use App\Enums\Glc\CurriculumDocumentStatus;
 use App\Enums\Glc\UserRole;
 use App\Models\Glc\AuditLog;
 use App\Models\Glc\Course;
@@ -19,12 +20,17 @@ use App\Models\Glc\TutorMessage;
 use App\Models\Glc\TutorViolation;
 use App\Models\Glc\WritingSubmission;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Str;
 use RuntimeException;
 use ZipArchive;
 
 final class DataExporter
 {
-    public function build(ExportBundle $bundle): string
+    /**
+     * @param  list<CurriculumDocumentStatus>|null  $curriculumStatuses  Lifecycle states to include in the curriculum bundle; null includes all.
+     */
+    public function build(ExportBundle $bundle, ?array $curriculumStatuses = null): string
     {
         $path = sys_get_temp_dir().'/glc-export-'.bin2hex(random_bytes(16)).'.zip';
 
@@ -36,7 +42,7 @@ final class DataExporter
 
         match ($bundle) {
             ExportBundle::Placement => $this->addPlacement($zip),
-            ExportBundle::Curriculum => $this->addCurriculum($zip),
+            ExportBundle::Curriculum => $this->addCurriculum($zip, $curriculumStatuses),
             ExportBundle::Students => $this->addStudents($zip),
             ExportBundle::Tutor => $this->addTutor($zip),
             ExportBundle::Audit => $this->addAudit($zip),
@@ -56,9 +62,16 @@ final class DataExporter
         $this->addJsonAndCsv($zip, 'placement/reviews', PlacementReview::query()->with('notes')->orderBy('id')->get()->toArray());
     }
 
-    private function addCurriculum(ZipArchive $zip): void
+    /**
+     * @param  list<CurriculumDocumentStatus>|null  $statuses
+     */
+    private function addCurriculum(ZipArchive $zip, ?array $statuses = null): void
     {
-        $documents = CurriculumDocument::query()->orderBy('id')->get();
+        $documents = CurriculumDocument::query()
+            ->with(['course:id,name', 'level:id,name', 'unit:id,name', 'lesson:id,name'])
+            ->when($statuses !== null, fn (Builder $query) => $query->whereIn('status', $statuses))
+            ->orderBy('id')
+            ->get();
 
         $hierarchy = Course::query()
             ->with(['levels.units.lessons'])
@@ -72,8 +85,19 @@ final class DataExporter
             'original_filename' => $document->original_filename,
             'storage_path' => $document->file_path,
             'format' => $document->format,
-            'version' => $document->version,
+            'course' => $document->course->name,
+            'level' => $document->level->name,
+            'unit' => $document->unit->name,
+            'lesson' => $document->lesson?->name ?? 'Unit-wide',
             'status' => $document->status->value,
+            'version' => $document->version,
+            'created_at' => $document->created_at->toIso8601String(),
+            'updated_at' => $document->updated_at->toIso8601String(),
+            'extracted_text_preview' => $document->extracted_text === null
+                ? null
+                : Str::limit($document->extracted_text, 500),
+            'gemini_file_resource_name' => $document->gemini_file_name,
+            'gemini_sync_status' => $document->index_status->value,
         ])->all();
 
         $zip->addFromString('curriculum/documents.json', $this->toJson($documents->toArray()));

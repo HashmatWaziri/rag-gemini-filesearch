@@ -188,7 +188,7 @@ export default function Speaking({
         if (!result.ok) {
             setUploadError(
                 result.data.message ??
-                    'Upload failed. Check your connection and try again.',
+                    "We couldn't save your recording. Check your connection and try again.",
             );
             setPhase('preview');
             return;

@@ -106,6 +106,22 @@ it('filters by status, flag, assignee, date range, and candidate search', functi
         ->assertInertia(fn (Assert $page) => $page->has('reviews.data', 3));
 });
 
+it('exposes the pipeline progress props used by the next-step hints', function (): void {
+    PlacementReview::factory()->create();
+    PlacementReview::factory()->approved()->create();
+
+    actingAs(User::factory()->academicSupervisor()->create())
+        ->get(route('staff.review.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('reviews.data.0.status', 'pending')
+            ->where('reviews.data.0.has_decision', false)
+            ->where('reviews.data.0.narrative_approved', false)
+            ->where('reviews.data.1.status', 'approved')
+            ->where('reviews.data.1.has_decision', true)
+            ->where('reviews.data.1.narrative_approved', true)
+        );
+});
+
 it('surfaces integrity events as a flag source in the queue payload', function (): void {
     $review = PlacementReview::factory()->create();
     PlacementIntegrityEvent::factory()->dualDevice()->create([

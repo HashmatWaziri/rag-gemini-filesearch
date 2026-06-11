@@ -87,6 +87,8 @@ final readonly class ReviewQueueController
                     'assignee' => $review->assignee?->name,
                     'assigned_to' => $review->assigned_to,
                     'can_claim' => $review->assigned_to === null && $review->status === PlacementReviewStatus::Pending,
+                    'has_decision' => $review->final_level !== null,
+                    'narrative_approved' => $review->narrative_approved_at !== null,
                 ])->all(),
                 'links' => $reviews->linkCollection(),
                 'total' => $reviews->total(),

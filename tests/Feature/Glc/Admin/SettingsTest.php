@@ -3,8 +3,10 @@
 declare(strict_types=1);
 
 use App\Enums\Glc\AuditAction;
+use App\Enums\Glc\CurriculumIndexStatus;
 use App\Enums\SettingKey;
 use App\Models\Glc\AuditLog;
+use App\Models\Glc\CurriculumDocument;
 use App\Models\Setting;
 use App\Models\User;
 
@@ -36,6 +38,42 @@ it('shows config defaults as effective values when no setting exists', function 
             ->where('effective.reading', 900)
             ->where('bounds.min', 60)
             ->where('bounds.max', 7200));
+});
+
+it('summarizes AI Tutor material health by lifecycle state', function (): void {
+    $admin = User::factory()->admin()->create();
+
+    CurriculumDocument::factory()->count(2)->create();
+    CurriculumDocument::factory()->published()->create();
+    CurriculumDocument::factory()->published()->create([
+        'index_status' => CurriculumIndexStatus::Indexing,
+    ]);
+    CurriculumDocument::factory()->published()->create([
+        'index_status' => CurriculumIndexStatus::Failed,
+        'index_error' => 'Upload failed.',
+    ]);
+    CurriculumDocument::factory()->archived()->create();
+
+    $this->actingAs($admin)
+        ->get(route('admin.settings.edit'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('tutorMaterials.counts.draft', 2)
+            ->where('tutorMaterials.counts.publishing', 1)
+            ->where('tutorMaterials.counts.published', 1)
+            ->where('tutorMaterials.counts.publish_failed', 1)
+            ->where('tutorMaterials.counts.archived', 1)
+            ->has('tutorMaterials.rebuild_available'));
+});
+
+it('shows zero counts for AI Tutor materials when none exist', function (): void {
+    $admin = User::factory()->admin()->create();
+
+    $this->actingAs($admin)
+        ->get(route('admin.settings.edit'))
+        ->assertInertia(fn ($page) => $page
+            ->where('tutorMaterials.counts.draft', 0)
+            ->where('tutorMaterials.counts.publish_failed', 0));
 });
 
 it('overrides config defaults with the stored setting', function (): void {

@@ -42,59 +42,32 @@ final readonly class BulkUploadController
         $succeeded = 0;
 
         foreach ($files as $file) {
-            $error = $this->fileError($file);
+            try {
+                $document = $this->uploads->store($file, [
+                    ...$attributes,
+                    'title' => pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME),
+                ], $user);
 
-            if ($error === null) {
-                try {
-                    $document = $this->uploads->store($file, [
-                        ...$attributes,
-                        'title' => pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME),
-                    ], $user);
-
-                    $report[] = [
-                        'filename' => $file->getClientOriginalName(),
-                        'success' => true,
-                        'error' => null,
-                        'document_id' => $document->id,
-                    ];
-                    $succeeded++;
-
-                    continue;
-                } catch (Throwable $throwable) {
-                    $error = $throwable->getMessage();
-                }
+                $report[] = [
+                    'filename' => $file->getClientOriginalName(),
+                    'success' => true,
+                    'error' => null,
+                    'document_id' => $document->id,
+                ];
+                $succeeded++;
+            } catch (Throwable $throwable) {
+                $report[] = [
+                    'filename' => $file->getClientOriginalName(),
+                    'success' => false,
+                    'error' => $throwable->getMessage(),
+                    'document_id' => null,
+                ];
             }
-
-            $report[] = [
-                'filename' => $file->getClientOriginalName(),
-                'success' => false,
-                'error' => $error,
-                'document_id' => null,
-            ];
         }
 
         return redirect()
             ->route('curriculum.index')
             ->with('bulk_report', $report)
-            ->with('status', sprintf('Bulk upload finished: %d of %d file(s) uploaded as drafts.', $succeeded, count($files)));
-    }
-
-    private function fileError(UploadedFile $file): ?string
-    {
-        /** @var list<string> $extensions */
-        $extensions = config('glc.curriculum.allowed_extensions', []);
-        $extension = mb_strtolower($file->getClientOriginalExtension());
-
-        if (! in_array($extension, $extensions, true)) {
-            return sprintf('Unsupported file type ".%s". Allowed: %s.', $extension, implode(', ', $extensions));
-        }
-
-        $maxKb = config()->integer('glc.curriculum.max_file_size_kb');
-
-        if ($file->getSize() > $maxKb * 1024) {
-            return sprintf('File exceeds the %d KB size limit.', $maxKb);
-        }
-
-        return null;
+            ->with('status', sprintf('%d of %d files uploaded as drafts.', $succeeded, count($files)));
     }
 }

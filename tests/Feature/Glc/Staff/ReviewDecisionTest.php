@@ -67,7 +67,22 @@ it('shows the review detail with drafts, integrity events, and scores to staff',
             ->where('ai_drafts.writing.confidence', 'medium')
             ->has('integrity_events', 1)
             ->where('suggested_skill_levels.reading', 'intermediate')
+            ->where('review.is_assigned_to_me', false)
         );
+});
+
+it('tells the assigned reviewer the review is theirs via is_assigned_to_me', function (): void {
+    $teacher = User::factory()->teacher()->create();
+    $review = PlacementReview::factory()->create([
+        'assigned_to' => $teacher->id,
+        'status' => PlacementReviewStatus::InReview,
+    ]);
+
+    actingAs($teacher)
+        ->get(route('staff.review.show', $review))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('review.is_assigned_to_me', true));
 });
 
 it('persists the integrity flag on first load when integrity events exist', function (): void {
@@ -176,18 +191,18 @@ it('approves an in-review decision and audits it', function (): void {
         ->and(AuditLog::query()->where('action', AuditAction::ReviewApproved)->exists())->toBeTrue();
 });
 
-it('requires claiming before approval and a saved decision', function (): void {
+it('requires starting the review before approval, with a plain-language message', function (): void {
     $supervisor = User::factory()->academicSupervisor()->create();
 
     $pending = PlacementReview::factory()->create();
     actingAs($supervisor)
         ->post(route('staff.review.approve', $pending))
-        ->assertSessionHasErrors('status');
+        ->assertSessionHasErrors(['status' => 'Start the review before approving the result.']);
 
     $undecided = PlacementReview::factory()->create(['status' => PlacementReviewStatus::InReview]);
     actingAs($supervisor)
         ->post(route('staff.review.approve', $undecided))
-        ->assertSessionHasErrors('status');
+        ->assertSessionHasErrors(['status' => 'Choose the final level and a level for every section before approving.']);
 });
 
 it('stores internal notes visible to staff', function (): void {

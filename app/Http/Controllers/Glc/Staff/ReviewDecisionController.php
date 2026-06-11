@@ -25,7 +25,7 @@ final readonly class ReviewDecisionController
     public function update(Request $request, PlacementReview $review, #[CurrentUser] User $user): RedirectResponse
     {
         $this->authorizeAccess($review, $user);
-        abort_if($review->status === PlacementReviewStatus::Sent, 422, 'This review has already been sent.');
+        abort_if($review->status === PlacementReviewStatus::Sent, 422, 'This result has already been sent, so the levels can no longer change.');
 
         $rules = [
             'final_level' => ['required', Rule::enum(GlcLevel::class)],
@@ -65,7 +65,7 @@ final readonly class ReviewDecisionController
 
         if ($hasDeviation && $reason === '') {
             throw ValidationException::withMessages([
-                'override_reason' => 'An override reason is required when deviating from the suggested level or skill levels.',
+                'override_reason' => 'Please add a short reason — the levels you chose differ from the automatic suggestion.',
             ]);
         }
 
@@ -91,7 +91,7 @@ final readonly class ReviewDecisionController
             ]);
         }
 
-        return back()->with('success', 'Decision saved.');
+        return back()->with('success', 'Levels saved.');
     }
 
     public function approve(PlacementReview $review, #[CurrentUser] User $user): RedirectResponse
@@ -100,13 +100,13 @@ final readonly class ReviewDecisionController
 
         if ($review->status !== PlacementReviewStatus::InReview) {
             throw ValidationException::withMessages([
-                'status' => 'Only reviews that are in review can be approved. Claim the review first.',
+                'status' => 'Start the review before approving the result.',
             ]);
         }
 
         if ($review->final_level === null || $review->skill_levels === null) {
             throw ValidationException::withMessages([
-                'status' => 'Confirm the final level and per-skill levels before approving.',
+                'status' => 'Choose the final level and a level for every section before approving.',
             ]);
         }
 
@@ -120,7 +120,7 @@ final readonly class ReviewDecisionController
             'final_level' => $review->final_level->value,
         ]);
 
-        return back()->with('success', 'Review approved.');
+        return back()->with('success', 'Final approval given. You can now send the result once the parent summary is approved.');
     }
 
     private function authorizeAccess(PlacementReview $review, User $user): void

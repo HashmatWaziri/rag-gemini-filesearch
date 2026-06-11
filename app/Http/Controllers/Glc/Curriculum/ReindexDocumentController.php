@@ -7,7 +7,6 @@ namespace App\Http\Controllers\Glc\Curriculum;
 use App\Enums\Glc\CurriculumDocumentStatus;
 use App\Enums\Glc\CurriculumIndexStatus;
 use App\Jobs\Glc\Curriculum\IndexCurriculumDocumentJob;
-use App\Jobs\Glc\Curriculum\RemoveCurriculumDocumentFromIndexJob;
 use App\Models\Glc\CurriculumDocument;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,31 +18,23 @@ final readonly class ReindexDocumentController
     {
         if ($document->status !== CurriculumDocumentStatus::Published) {
             throw ValidationException::withMessages([
-                'status' => 'Only published documents can be reindexed.',
+                'status' => 'This document is not published, so there is nothing to retry.',
             ]);
         }
 
         if ($document->index_status === CurriculumIndexStatus::Indexing) {
             throw ValidationException::withMessages([
-                'status' => 'Indexing is already in progress.',
+                'status' => 'This document is already being prepared for the AI Tutor.',
             ]);
         }
-
-        $staleDocumentName = $document->gemini_document_name;
 
         $document->update([
             'index_status' => CurriculumIndexStatus::Pending,
             'index_error' => null,
-            'gemini_file_name' => null,
-            'gemini_document_name' => null,
         ]);
-
-        if ($staleDocumentName !== null) {
-            RemoveCurriculumDocumentFromIndexJob::dispatch($document, $staleDocumentName);
-        }
 
         IndexCurriculumDocumentJob::dispatch($document);
 
-        return back()->with('status', 'Reindexing has been queued.');
+        return back()->with('status', 'Trying again — this document will be available to the AI Tutor shortly.');
     }
 }

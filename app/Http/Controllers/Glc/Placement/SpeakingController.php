@@ -54,6 +54,15 @@ final readonly class SpeakingController
                 'max:25600',
                 'mimetypes:audio/webm,video/webm,audio/ogg,application/ogg,audio/mp4,video/mp4,audio/mpeg,audio/aac,audio/x-m4a',
             ],
+        ], [
+            'audio.required' => 'We could not find your recording. Please record again.',
+            'audio.file' => 'That recording does not look right. Please record again.',
+            'audio.max' => 'Your recording is too large to save. Please record a shorter one.',
+            'audio.mimetypes' => 'That recording does not look right. Please record again.',
+            'duration_seconds.required' => 'The recording length does not look right. Please record again.',
+            'duration_seconds.integer' => 'The recording length does not look right. Please record again.',
+            'duration_seconds.min' => 'The recording length does not look right. Please record again.',
+            'duration_seconds.max' => 'Your recording is longer than allowed. Please record a shorter one.',
         ]);
 
         $answer = $attempt->answers()->firstOrNew(['placement_item_id' => $prompt->id]);
@@ -87,7 +96,7 @@ final readonly class SpeakingController
 
         if ($path === false) {
             return response()->json([
-                'message' => 'We could not save your recording because of a server problem. This try was not counted - please try again, and contact GLC if it keeps failing.',
+                'message' => 'Something went wrong on our side and your recording was not saved. This try was not counted - please try again, and contact GLC if it keeps happening.',
             ], 500);
         }
 

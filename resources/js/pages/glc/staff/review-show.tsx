@@ -2,6 +2,15 @@ import GlcLayout from '@/layouts/glc-layout';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import {
+    ATTENTION_LABELS,
+    ProcessSteps,
+    REVIEW_STATUS_LABELS,
+    REVIEW_STATUS_TONES,
+    TEST_TAKING_EVENT_LABELS,
+    type PipelineInput,
+    type ReviewStatus,
+} from './process-steps';
+import {
     Badge,
     btnPrimary,
     btnSecondary,
@@ -42,11 +51,12 @@ interface Narrative {
 interface PageProps {
     review: {
         id: number;
-        status: string;
+        status: ReviewStatus;
         status_label: string;
         flags: string[];
         assigned_to: number | null;
         assignee: string | null;
+        is_assigned_to_me: boolean;
         final_level: string | null;
         skill_levels: Record<string, string> | null;
         override_reason: string | null;
@@ -116,7 +126,13 @@ interface PageProps {
     [key: string]: unknown;
 }
 
-function QuestionRow({ question, index }: { question: Question; index: number }) {
+function QuestionRow({
+    question,
+    index,
+}: {
+    question: Question;
+    index: number;
+}) {
     return (
         <div className="rounded-md border border-slate-100 p-2 text-sm">
             <p className="mb-1 font-medium text-slate-800">
@@ -140,8 +156,7 @@ function QuestionRow({ question, index }: { question: Question; index: number })
                         >
                             {String.fromCharCode(65 + optionIndex)}. {option}
                             {isCorrect && ' ✓'}
-                            {isSelected && !isCorrect && ' (candidate)'}
-                            {isSelected && isCorrect && ' (candidate)'}
+                            {isSelected && " — candidate's answer"}
                         </div>
                     );
                 })}
@@ -153,33 +168,51 @@ function QuestionRow({ question, index }: { question: Question; index: number })
     );
 }
 
-function DraftCard({ section, draft }: { section: string; draft?: AiDraft }) {
+const AI_SUGGESTION_BADGES: Record<
+    string,
+    { label: string; tone: 'emerald' | 'red' | 'amber' }
+> = {
+    completed: { label: 'Ready', tone: 'emerald' },
+    failed: { label: 'Unavailable', tone: 'red' },
+    pending: { label: 'Preparing…', tone: 'amber' },
+};
+
+function SuggestionCard({
+    section,
+    draft,
+}: {
+    section: string;
+    draft?: AiDraft;
+}) {
+    const badge = draft ? AI_SUGGESTION_BADGES[draft.status] : undefined;
+
     return (
         <div className="rounded-md border border-slate-200 p-3">
             <div className="mb-2 flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-slate-700">
                     {SECTION_LABELS[section]}
                 </h3>
-                {draft ? (
-                    <Badge
-                        tone={
-                            draft.status === 'completed'
-                                ? 'emerald'
-                                : draft.status === 'failed'
-                                  ? 'red'
-                                  : 'amber'
-                        }
-                    >
-                        {draft.status}
-                    </Badge>
+                {badge ? (
+                    <Badge tone={badge.tone}>{badge.label}</Badge>
                 ) : (
-                    <Badge tone="slate">not generated</Badge>
+                    <Badge tone="slate">Not available yet</Badge>
                 )}
             </div>
             {draft?.status === 'failed' && (
-                <p className="text-xs text-red-600">
-                    {draft.error ?? 'Draft generation failed.'} Review manually.
-                </p>
+                <div className="mb-2">
+                    <p className="text-xs text-amber-700">
+                        This AI suggestion is unavailable — you can review this
+                        section normally without it.
+                    </p>
+                    {draft.error && (
+                        <details className="mt-1 text-xs text-slate-400">
+                            <summary className="cursor-pointer">
+                                Technical details
+                            </summary>
+                            <p className="mt-1">{draft.error}</p>
+                        </details>
+                    )}
+                </div>
             )}
             {draft?.dimension_scores && (
                 <table className="mb-2 w-full text-xs">
@@ -204,7 +237,7 @@ function DraftCard({ section, draft }: { section: string; draft?: AiDraft }) {
             )}
             {draft?.confidence && (
                 <p className="text-xs text-slate-500">
-                    Confidence:{' '}
+                    AI confidence:{' '}
                     <span className="font-medium">{draft.confidence}</span>
                 </p>
             )}
@@ -249,6 +282,24 @@ export default function ReviewShow() {
     const baseUrl = `/staff/review/${review.id}`;
     const isSent = review.status === 'sent';
 
+    const pipelineInput: PipelineInput = {
+        status: review.status,
+        submittedAt: attempt.submitted_at,
+        hasScore: score !== null,
+        aiSuggestionsUnavailable: Object.values(ai_drafts).some(
+            (draft) => draft.status === 'failed',
+        ),
+        assigneeName: review.assignee,
+        assignedToMe: review.is_assigned_to_me,
+        levelConfirmed: review.final_level !== null,
+        summaryApprovedAt: review.narrative_approved_at,
+        finalApprovalAt: review.approved_at,
+        isMinor: candidate.is_minor,
+        guardianConsentConfirmed: review.flags.includes(
+            'guardian_consent_confirmed',
+        ),
+    };
+
     const decisionForm = useForm({
         final_level: review.final_level ?? score?.suggested_level ?? '',
         skill_levels: Object.fromEntries(
@@ -282,12 +333,12 @@ export default function ReviewShow() {
     const noteForm = useForm({ note: '' });
     const [assignTo, setAssignTo] = useState('');
     const [guardianConsent, setGuardianConsent] = useState(false);
-    const [draftLoading, setDraftLoading] = useState(false);
-    const [draftError, setDraftError] = useState<string | null>(null);
+    const [suggestionLoading, setSuggestionLoading] = useState(false);
+    const [suggestionError, setSuggestionError] = useState<string | null>(null);
 
-    const generateNarrativeDraft = async () => {
-        setDraftLoading(true);
-        setDraftError(null);
+    const fetchSummarySuggestion = async () => {
+        setSuggestionLoading(true);
+        setSuggestionError(null);
 
         try {
             const response = await fetch(`${baseUrl}/narrative/draft`, {
@@ -300,8 +351,9 @@ export default function ReviewShow() {
             const json = await response.json();
 
             if (!response.ok) {
-                setDraftError(
-                    json.message ?? 'The AI draft could not be generated.',
+                setSuggestionError(
+                    json.message ??
+                        'The AI suggestion is unavailable right now — you can write the summary yourself.',
                 );
             } else {
                 narrativeForm.setData({
@@ -312,15 +364,17 @@ export default function ReviewShow() {
                 });
             }
         } catch {
-            setDraftError('The AI draft could not be generated.');
+            setSuggestionError(
+                'The AI suggestion is unavailable right now — you can write the summary yourself.',
+            );
         } finally {
-            setDraftLoading(false);
+            setSuggestionLoading(false);
         }
     };
 
     return (
-        <GlcLayout title={`Review — ${candidate.name}`}>
-            <Head title={`Review ${candidate.name}`} />
+        <GlcLayout title={`Placement test — ${candidate.name}`}>
+            <Head title={`Placement test — ${candidate.name}`} />
 
             <div className="space-y-4">
                 <Card>
@@ -330,17 +384,25 @@ export default function ReviewShow() {
                                 <span className="text-base font-semibold text-slate-900">
                                     {candidate.name}
                                 </span>
-                                <Badge tone="blue">{review.status_label}</Badge>
+                                <Badge
+                                    tone={REVIEW_STATUS_TONES[review.status]}
+                                >
+                                    {REVIEW_STATUS_LABELS[review.status]}
+                                </Badge>
                                 {candidate.is_minor && (
                                     <Badge tone="amber">
-                                        Minor (age {candidate.age})
+                                        Under 18 (age {candidate.age})
                                     </Badge>
                                 )}
                                 {review.flags.includes('variance') && (
-                                    <Badge tone="red">Variance flag</Badge>
+                                    <Badge tone="red">
+                                        {ATTENTION_LABELS.variance}
+                                    </Badge>
                                 )}
                                 {review.flags.includes('integrity') && (
-                                    <Badge tone="red">Integrity flag</Badge>
+                                    <Badge tone="red">
+                                        {ATTENTION_LABELS.integrity}
+                                    </Badge>
                                 )}
                                 {review.flags.includes(
                                     'guardian_consent_confirmed',
@@ -353,11 +415,11 @@ export default function ReviewShow() {
                             <p className="mt-1 text-xs text-slate-500">
                                 {candidate.email} · age {candidate.age} ·
                                 submitted {attempt.submitted_at ?? '—'} ·
-                                assignee: {review.assignee ?? 'unassigned'}
+                                reviewer: {review.assignee ?? 'no reviewer yet'}
                             </p>
                         </div>
                         <div className="flex items-center gap-2">
-                            {!isSent && (
+                            {!isSent && !review.is_assigned_to_me && (
                                 <button
                                     type="button"
                                     className={btnSecondary}
@@ -369,7 +431,9 @@ export default function ReviewShow() {
                                         )
                                     }
                                 >
-                                    Claim
+                                    {review.assigned_to === null
+                                        ? 'Start reviewing this test'
+                                        : 'Assign to me'}
                                 </button>
                             )}
                             {supervises && !isSent && (
@@ -381,7 +445,9 @@ export default function ReviewShow() {
                                             setAssignTo(e.target.value)
                                         }
                                     >
-                                        <option value="">Assign to…</option>
+                                        <option value="">
+                                            Hand over to another reviewer…
+                                        </option>
                                         {staff.map((member) => (
                                             <option
                                                 key={member.id}
@@ -403,7 +469,7 @@ export default function ReviewShow() {
                                             )
                                         }
                                     >
-                                        Assign
+                                        Hand over
                                     </button>
                                 </span>
                             )}
@@ -411,12 +477,21 @@ export default function ReviewShow() {
                     </div>
                 </Card>
 
+                <ProcessSteps input={pipelineInput} />
+
                 {integrity_events.length > 0 && (
-                    <Card title="Integrity events">
+                    <Card title="Test-taking alerts">
+                        <p className="mb-2 text-xs text-slate-500">
+                            Recorded automatically while the candidate took the
+                            test. Use your judgement during the review.
+                        </p>
                         <ul className="space-y-1 text-sm text-slate-700">
                             {integrity_events.map((event, index) => (
                                 <li key={index} className="flex gap-2">
-                                    <Badge tone="red">{event.label}</Badge>
+                                    <Badge tone="red">
+                                        {TEST_TAKING_EVENT_LABELS[event.type] ??
+                                            event.label}
+                                    </Badge>
                                     <span className="text-xs text-slate-500">
                                         {event.occurred_at}
                                     </span>
@@ -426,7 +501,7 @@ export default function ReviewShow() {
                     </Card>
                 )}
 
-                <Card title="Objective scores (staff-only)">
+                <Card title="Automatic scores (staff-only)">
                     {score ? (
                         <div>
                             <table className="w-full text-sm">
@@ -464,7 +539,7 @@ export default function ReviewShow() {
                                                 <td className="py-1.5 text-right font-medium">
                                                     {value != null
                                                         ? `${value}%`
-                                                        : 'pending'}
+                                                        : 'not ready yet'}
                                                 </td>
                                                 <td className="py-1.5 text-right">
                                                     {level?.label ?? '—'}
@@ -476,30 +551,30 @@ export default function ReviewShow() {
                             </table>
                             <div className="mt-2 flex items-center justify-between border-t border-slate-200 pt-2 text-sm">
                                 <span className="font-semibold">
-                                    Composite: {score.composite ?? '—'}% →{' '}
+                                    Overall: {score.composite ?? '—'}% →{' '}
                                     {score.suggested_level_label ?? '—'}
                                 </span>
                                 {score.variance_flagged && (
                                     <Badge tone="red">
-                                        High cross-section variance
+                                        {ATTENTION_LABELS.variance}
                                     </Badge>
                                 )}
                             </div>
                         </div>
                     ) : (
                         <p className="text-sm text-slate-400">
-                            Not scored yet.
+                            The automatic checks have not finished yet.
                         </p>
                     )}
                 </Card>
 
-                <Card title="AI provisional drafts (staff-only — never shown to candidates)">
+                <Card title="AI suggestions (staff-only — never shown to candidates or parents)">
                     <div className="grid gap-3 sm:grid-cols-2">
-                        <DraftCard
+                        <SuggestionCard
                             section="writing"
                             draft={ai_drafts.writing}
                         />
-                        <DraftCard
+                        <SuggestionCard
                             section="speaking"
                             draft={ai_drafts.speaking}
                         />
@@ -628,7 +703,7 @@ export default function ReviewShow() {
                     </div>
                 </Card>
 
-                <Card title="Decision — confirm or override">
+                <Card title="Confirm the level">
                     <div className="grid gap-2 sm:grid-cols-3">
                         <Field
                             label={`Final GLC level (suggested: ${score?.suggested_level_label ?? '—'})`}
@@ -696,7 +771,7 @@ export default function ReviewShow() {
                     {deviates && (
                         <div className="mt-3">
                             <Field
-                                label="Override reason (required — you are deviating from the suggested values)"
+                                label="Reason for the change (required — your levels differ from the automatic suggestion)"
                                 error={errors.override_reason}
                             >
                                 <textarea
@@ -730,7 +805,7 @@ export default function ReviewShow() {
                                 })
                             }
                         >
-                            Save decision
+                            Save levels
                         </button>
                         {review.status === 'in_review' && (
                             <button
@@ -744,12 +819,12 @@ export default function ReviewShow() {
                                     )
                                 }
                             >
-                                Approve review
+                                Give final approval
                             </button>
                         )}
                         {review.approved_at && (
                             <span className="text-xs text-slate-500">
-                                Approved {review.approved_at} by{' '}
+                                Final approval given {review.approved_at} by{' '}
                                 {review.approved_by}
                             </span>
                         )}
@@ -762,12 +837,11 @@ export default function ReviewShow() {
                 </Card>
 
                 <Card
-                    title="Reviewer narrative (appears on the PDF)"
+                    title="Parent summary (appears on the result PDF)"
                     aside={
                         review.narrative_approved_at ? (
                             <Badge tone="emerald">
-                                Narrative approved{' '}
-                                {review.narrative_approved_at}
+                                Summary approved {review.narrative_approved_at}
                             </Badge>
                         ) : (
                             <Badge tone="amber">Not approved yet</Badge>
@@ -778,21 +852,22 @@ export default function ReviewShow() {
                         <button
                             type="button"
                             className={btnSecondary}
-                            disabled={draftLoading || isSent}
-                            onClick={() => void generateNarrativeDraft()}
+                            disabled={suggestionLoading || isSent}
+                            onClick={() => void fetchSummarySuggestion()}
                         >
-                            {draftLoading
-                                ? 'Generating…'
-                                : 'Generate AI draft (staff-only helper)'}
+                            {suggestionLoading
+                                ? 'Preparing…'
+                                : 'Get AI suggestion (staff-only)'}
                         </button>
                         <span className="text-xs text-slate-400">
-                            Drafts only prefill the editor — review, edit and
-                            approve before the PDF.
+                            The AI suggestion only fills in these fields for you
+                            — review, edit and approve before anything reaches
+                            parents.
                         </span>
                     </div>
-                    {draftError && (
+                    {suggestionError && (
                         <p className="mb-2 text-xs text-red-600">
-                            {draftError}
+                            {suggestionError}
                         </p>
                     )}
 
@@ -808,9 +883,7 @@ export default function ReviewShow() {
                             <Field
                                 key={key}
                                 label={label}
-                                error={
-                                    (errors as Record<string, string>)[key]
-                                }
+                                error={(errors as Record<string, string>)[key]}
                             >
                                 <textarea
                                     className={`${inputCls} min-h-24`}
@@ -842,7 +915,7 @@ export default function ReviewShow() {
                                 })
                             }
                         >
-                            Save narrative
+                            Save summary
                         </button>
                         {!review.narrative_approved_at && !isSent && (
                             <button
@@ -856,13 +929,13 @@ export default function ReviewShow() {
                                     )
                                 }
                             >
-                                Approve narrative
+                                Approve summary
                             </button>
                         )}
                     </div>
                 </Card>
 
-                <Card title="Result delivery">
+                <Card title="Send the result">
                     {review.can_generate_pdf ? (
                         <div className="space-y-3">
                             <a
@@ -877,8 +950,8 @@ export default function ReviewShow() {
                             <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
                                 <p className="mb-2 text-sm text-slate-700">
                                     Send the result link to{' '}
-                                    <strong>{candidate.email}</strong> (valid
-                                    30 days).
+                                    <strong>{candidate.email}</strong> (valid 30
+                                    days).
                                 </p>
                                 {candidate.is_minor && (
                                     <label className="mb-2 flex items-start gap-2 text-sm text-amber-800">
@@ -895,7 +968,7 @@ export default function ReviewShow() {
                                         <span>
                                             Guardian consent received — I
                                             confirm GLC has guardian consent to
-                                            send this minor candidate's result.
+                                            send this candidate's result.
                                         </span>
                                     </label>
                                 )}
@@ -926,15 +999,16 @@ export default function ReviewShow() {
                         </div>
                     ) : (
                         <p className="text-sm text-slate-500">
-                            The PDF and send action unlock once the review is
-                            approved and the narrative is approved.
+                            You can preview the PDF and send the result once the
+                            levels have final approval and the parent summary is
+                            approved.
                         </p>
                     )}
 
                     {result_links.length > 0 && (
                         <div className="mt-3 border-t border-slate-200 pt-2">
                             <h3 className="mb-1 text-xs font-semibold tracking-wide text-slate-500 uppercase">
-                                Sent links
+                                Sent results
                             </h3>
                             <ul className="space-y-1 text-xs text-slate-600">
                                 {result_links.map((link) => (

@@ -37,6 +37,15 @@ final readonly class MicCheckController
                 'mimetypes:audio/webm,video/webm,audio/ogg,application/ogg,audio/mp4,video/mp4,audio/mpeg,audio/aac,audio/x-m4a,audio/wav,audio/x-wav',
             ],
             'duration_seconds' => ['required', 'integer', 'min:1', 'max:'.($maxSeconds + 2)],
+        ], [
+            'audio.required' => 'We could not find your recording. Please record again.',
+            'audio.file' => 'That recording does not look right. Please record again.',
+            'audio.max' => 'Your recording is too large to save. Please record a shorter one.',
+            'audio.mimetypes' => 'That recording does not look right. Please record again.',
+            'duration_seconds.required' => 'The recording length does not look right. Please record again.',
+            'duration_seconds.integer' => 'The recording length does not look right. Please record again.',
+            'duration_seconds.min' => 'The recording length does not look right. Please record again.',
+            'duration_seconds.max' => 'Your recording is longer than allowed. Please record a shorter one.',
         ]);
 
         $file = $request->file('audio');

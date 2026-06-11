@@ -25,6 +25,26 @@ interface AuditIndexProps {
     actions: Option[];
 }
 
+function detailValue(value: unknown): string {
+    if (value === null || value === undefined) {
+        return '-';
+    }
+
+    if (typeof value === 'string') {
+        return value;
+    }
+
+    if (typeof value === 'number' || typeof value === 'boolean') {
+        return String(value);
+    }
+
+    if (Array.isArray(value)) {
+        return value.map((entry) => detailValue(entry)).join(', ');
+    }
+
+    return JSON.stringify(value);
+}
+
 export default function AuditIndex({
     logs,
     filters,
@@ -39,17 +59,22 @@ export default function AuditIndex({
     };
 
     return (
-        <GlcLayout title="Audit Log">
-            <Head title="Audit Log" />
+        <GlcLayout title="Activity Log">
+            <Head title="Activity Log" />
+
+            <p className="-mt-2 mb-4 text-sm text-slate-600">
+                Who did what, and when. Every sensitive action is recorded here
+                and cannot be edited or deleted.
+            </p>
 
             <div className="mb-4 sm:max-w-xs">
                 <select
                     value={filters.action ?? ''}
                     onChange={(e) => applyFilter(e.target.value)}
-                    aria-label="Filter by action"
+                    aria-label="Show only one kind of activity"
                     className={inputClass}
                 >
-                    <option value="">All actions</option>
+                    <option value="">All activity</option>
                     {actions.map((option) => (
                         <option key={option.value} value={option.value}>
                             {option.label}
@@ -62,10 +87,10 @@ export default function AuditIndex({
                 <table className="w-full min-w-[720px] text-left text-sm">
                     <thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-500 uppercase">
                         <tr>
-                            <th className="px-4 py-3">Timestamp</th>
-                            <th className="px-4 py-3">Actor</th>
-                            <th className="px-4 py-3">Action</th>
-                            <th className="px-4 py-3">Subject</th>
+                            <th className="px-4 py-3">When</th>
+                            <th className="px-4 py-3">Who</th>
+                            <th className="px-4 py-3">What they did</th>
+                            <th className="px-4 py-3">Affected record</th>
                             <th className="px-4 py-3">Details</th>
                         </tr>
                     </thead>
@@ -76,7 +101,7 @@ export default function AuditIndex({
                                     colSpan={5}
                                     className="px-4 py-8 text-center text-slate-500"
                                 >
-                                    No audit entries found.
+                                    No activity recorded yet.
                                 </td>
                             </tr>
                         )}
@@ -107,9 +132,27 @@ export default function AuditIndex({
                                 </td>
                                 <td className="px-4 py-3">
                                     {entry.details ? (
-                                        <code className="block max-w-md text-xs break-all text-slate-500">
-                                            {JSON.stringify(entry.details)}
-                                        </code>
+                                        <dl className="max-w-md space-y-0.5 text-xs text-slate-500">
+                                            {Object.entries(entry.details).map(
+                                                ([key, value]) => (
+                                                    <div
+                                                        key={key}
+                                                        className="flex gap-1"
+                                                    >
+                                                        <dt className="shrink-0 font-medium text-slate-600">
+                                                            {key.replaceAll(
+                                                                '_',
+                                                                ' ',
+                                                            )}
+                                                            :
+                                                        </dt>
+                                                        <dd className="break-all">
+                                                            {detailValue(value)}
+                                                        </dd>
+                                                    </div>
+                                                ),
+                                            )}
+                                        </dl>
                                     ) : (
                                         <span className="text-slate-400">
                                             -

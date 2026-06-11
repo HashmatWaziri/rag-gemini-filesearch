@@ -99,7 +99,9 @@ function QuestionForm({
                             type="radio"
                             name={`correct-${item?.id ?? 'new'}-${parentId ?? section}`}
                             checked={form.data.correct_option === index}
-                            onChange={() => form.setData('correct_option', index)}
+                            onChange={() =>
+                                form.setData('correct_option', index)
+                            }
                             title="Correct option"
                         />
                         <input
@@ -321,7 +323,10 @@ function ClipEditor({ clip }: { clip: ContentItem }) {
                         onChange={(e) => form.setData('title', e.target.value)}
                     />
                 </Field>
-                <Field label="Replace audio (MP3/WAV)" error={form.errors.audio}>
+                <Field
+                    label="Replace audio (MP3/WAV)"
+                    error={form.errors.audio}
+                >
                     <input
                         type="file"
                         accept=".mp3,.wav,audio/mpeg,audio/wav"
@@ -439,7 +444,13 @@ function PromptEditor({
     prompt: ContentItem | undefined;
     settingsFields: { key: string; label: string }[];
 }) {
-    const form = useForm<Record<string, unknown>>({
+    const form = useForm<{
+        section: string;
+        type: string;
+        title: string;
+        body: string;
+        settings: Record<string, number | string>;
+    }>({
         section,
         type: 'prompt',
         title: prompt?.title ?? '',
@@ -452,7 +463,7 @@ function PromptEditor({
         ),
     });
 
-    const settings = form.data.settings as Record<string, number | string>;
+    const settings = form.data.settings;
 
     return (
         <Card title={`${SECTION_LABELS[section]} prompt`}>
@@ -460,14 +471,14 @@ function PromptEditor({
                 <Field label="Title">
                     <input
                         className={inputCls}
-                        value={form.data.title as string}
+                        value={form.data.title}
                         onChange={(e) => form.setData('title', e.target.value)}
                     />
                 </Field>
-                <Field label="Prompt" error={form.errors.body as string}>
+                <Field label="Prompt" error={form.errors.body}>
                     <textarea
                         className={`${inputCls} min-h-28`}
-                        value={form.data.body as string}
+                        value={form.data.body}
                         onChange={(e) => form.setData('body', e.target.value)}
                     />
                 </Field>
@@ -638,8 +649,8 @@ export default function ContentIndex() {
     const speakingPrompt = sections.speaking.find((i) => i.type === 'prompt');
 
     return (
-        <GlcLayout title="Placement Content">
-            <Head title="Placement Content" />
+        <GlcLayout title="Placement Test Content">
+            <Head title="Placement Test Content" />
 
             <p className="mb-4 text-sm text-slate-500">
                 One fixed form, same items and order for every candidate. Only

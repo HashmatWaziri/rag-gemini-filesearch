@@ -113,11 +113,11 @@ final class PlacementSessionService
         $attempt = $this->currentAttempt($request);
 
         if (! $attempt instanceof PlacementAttempt) {
-            $this->abortJson(401, 'No active placement session.', route('placement.entry'));
+            $this->abortJson(401, 'We could not find your test on this device. Please enter your access code again.', route('placement.entry'));
         }
 
         if ($attempt->status === PlacementAttemptStatus::Terminated) {
-            $this->abortJson(409, 'This placement session has been terminated.', route('placement.terminated'));
+            $this->abortJson(409, 'This test was ended - please contact GLC.', route('placement.terminated'));
         }
 
         if ($attempt->status === PlacementAttemptStatus::Submitted) {
@@ -125,7 +125,7 @@ final class PlacementSessionService
         }
 
         if (! $attempt->isWithinResumeWindow()) {
-            $this->abortJson(410, 'This placement session has expired.', route('placement.expired'));
+            $this->abortJson(410, 'This test has expired - please contact GLC for a new access code.', route('placement.expired'));
         }
 
         $attempt->update(['last_activity_at' => now()]);

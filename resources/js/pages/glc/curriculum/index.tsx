@@ -3,11 +3,11 @@ import { Head, Link, router } from '@inertiajs/react';
 import HierarchyManager from './components/hierarchy-manager';
 import HierarchyPicker from './components/hierarchy-picker';
 import {
+    documentStateFilterOptions,
     emptySelection,
-    indexBadgeClass,
     inputClass,
     labelClass,
-    statusBadgeClass,
+    stateBadgeClass,
     type BulkReportRow,
     type DocumentRow,
     type Paginated,
@@ -21,8 +21,7 @@ interface Filters {
     course_level_id?: number | string | null;
     course_unit_id?: number | string | null;
     course_lesson_id?: number | string | null;
-    status?: string | null;
-    index_status?: string | null;
+    state?: string | null;
 }
 
 interface CurriculumIndexProps {
@@ -33,20 +32,6 @@ interface CurriculumIndexProps {
     bulkReport: BulkReportRow[] | null;
     status: string | null;
 }
-
-const STATUS_OPTIONS = [
-    ['draft', 'Draft'],
-    ['published', 'Published'],
-    ['archived', 'Archived'],
-] as const;
-
-const INDEX_STATUS_OPTIONS = [
-    ['pending', 'Pending'],
-    ['indexing', 'Indexing'],
-    ['indexed', 'Indexed'],
-    ['failed', 'Failed'],
-    ['removed', 'Removed'],
-] as const;
 
 export default function CurriculumIndex({
     documents,
@@ -77,8 +62,7 @@ export default function CurriculumIndex({
         course_lesson_id: filters.course_lesson_id
             ? String(filters.course_lesson_id)
             : '',
-        status: filters.status ?? '',
-        index_status: filters.index_status ?? '',
+        state: filters.state ?? '',
     };
 
     return (
@@ -151,38 +135,16 @@ export default function CurriculumIndex({
                                 <label className={labelClass}>Status</label>
                                 <select
                                     className={inputClass}
-                                    value={currentFilters.status}
+                                    value={currentFilters.state}
                                     onChange={(e) =>
                                         applyFilters({
                                             ...currentFilters,
-                                            status: e.target.value,
+                                            state: e.target.value,
                                         })
                                     }
                                 >
                                     <option value="">All statuses</option>
-                                    {STATUS_OPTIONS.map(([value, label]) => (
-                                        <option key={value} value={value}>
-                                            {label}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div>
-                                <label className={labelClass}>
-                                    Index status
-                                </label>
-                                <select
-                                    className={inputClass}
-                                    value={currentFilters.index_status}
-                                    onChange={(e) =>
-                                        applyFilters({
-                                            ...currentFilters,
-                                            index_status: e.target.value,
-                                        })
-                                    }
-                                >
-                                    <option value="">All index statuses</option>
-                                    {INDEX_STATUS_OPTIONS.map(
+                                    {documentStateFilterOptions.map(
                                         ([value, label]) => (
                                             <option key={value} value={value}>
                                                 {label}
@@ -191,15 +153,14 @@ export default function CurriculumIndex({
                                     )}
                                 </select>
                             </div>
-                            <div className="flex items-end lg:col-span-2">
+                            <div className="flex items-end lg:col-span-3">
                                 <button
                                     type="button"
                                     className="text-sm font-medium text-slate-500 underline-offset-2 hover:underline"
                                     onClick={() =>
                                         applyFilters({
                                             ...emptySelection,
-                                            status: '',
-                                            index_status: '',
+                                            state: '',
                                         })
                                     }
                                 >
@@ -217,7 +178,6 @@ export default function CurriculumIndex({
                                     <th className="px-2 py-2">Path</th>
                                     <th className="px-2 py-2">Format</th>
                                     <th className="px-2 py-2">Status</th>
-                                    <th className="px-2 py-2">Index</th>
                                     <th className="px-2 py-2">Version</th>
                                     <th className="px-2 py-2">Updated</th>
                                 </tr>
@@ -248,20 +208,11 @@ export default function CurriculumIndex({
                                         </td>
                                         <td className="px-2 py-2">
                                             <span
-                                                className={statusBadgeClass(
-                                                    doc.status,
+                                                className={stateBadgeClass(
+                                                    doc.state,
                                                 )}
                                             >
-                                                {doc.status_label}
-                                            </span>
-                                        </td>
-                                        <td className="px-2 py-2">
-                                            <span
-                                                className={indexBadgeClass(
-                                                    doc.index_status,
-                                                )}
-                                            >
-                                                {doc.index_status_label}
+                                                {doc.state_label}
                                             </span>
                                         </td>
                                         <td className="px-2 py-2 text-slate-600">
@@ -275,7 +226,7 @@ export default function CurriculumIndex({
                                 {documents.data.length === 0 && (
                                     <tr>
                                         <td
-                                            colSpan={7}
+                                            colSpan={6}
                                             className="px-2 py-6 text-center text-sm text-slate-400"
                                         >
                                             No documents match the current
