@@ -37,14 +37,14 @@ export default function McqList({
                     <li
                         key={question.id}
                         id={questionAnchorId(question.id)}
-                        className={`rounded-lg border bg-white p-4 transition-colors ${
+                        className={`rounded-lg border bg-card p-4 transition-colors ${
                             highlighted
                                 ? 'border-amber-400 ring-2 ring-amber-300'
-                                : 'border-slate-200'
+                                : 'border-border'
                         }`}
                     >
                         <p className="text-sm font-medium">
-                            <span className="mr-1.5 text-slate-400">
+                            <span className="mr-1.5 text-muted-foreground">
                                 {startNumber + index}.
                             </span>
                             {question.body}
@@ -64,8 +64,8 @@ export default function McqList({
                                         key={optionIndex}
                                         className={`flex cursor-pointer items-start gap-2.5 rounded-lg border px-3 py-2 text-sm transition-colors ${
                                             selected
-                                                ? 'border-emerald-500 bg-emerald-50'
-                                                : 'border-slate-200 hover:bg-slate-50'
+                                                ? 'border-primary bg-primary/5'
+                                                : 'border-border hover:bg-accent'
                                         } ${disabled ? 'cursor-not-allowed opacity-60' : ''}`}
                                     >
                                         <input
@@ -79,7 +79,7 @@ export default function McqList({
                                                     optionIndex,
                                                 )
                                             }
-                                            className="mt-0.5 border-slate-300 text-emerald-600"
+                                            className="mt-0.5 border-input text-primary"
                                         />
                                         <span>{option}</span>
                                     </label>

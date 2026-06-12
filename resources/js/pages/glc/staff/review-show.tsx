@@ -158,8 +158,8 @@ function QuestionRow({
     index: number;
 }) {
     return (
-        <div className="rounded-md border border-slate-100 p-2 text-sm">
-            <p className="mb-1 font-medium text-slate-800">
+        <div className="rounded-md border border-border/60 p-2 text-sm">
+            <p className="mb-1 font-medium text-mono">
                 {index + 1}. {question.body}
             </p>
             <div className="grid gap-1 sm:grid-cols-2">
@@ -172,10 +172,10 @@ function QuestionRow({
                             key={optionIndex}
                             className={`rounded px-2 py-1 text-xs ${
                                 isCorrect
-                                    ? 'bg-emerald-50 text-emerald-800'
+                                    ? 'bg-primary/10 text-primary'
                                     : isSelected
                                       ? 'bg-red-50 text-red-700'
-                                      : 'text-slate-600'
+                                      : 'text-secondary-foreground'
                             }`}
                         >
                             {String.fromCharCode(65 + optionIndex)}. {option}
@@ -186,7 +186,7 @@ function QuestionRow({
                 })}
             </div>
             {question.selected === null && (
-                <p className="mt-1 text-xs text-slate-400">Not answered</p>
+                <p className="mt-1 text-xs text-muted-foreground">Not answered</p>
             )}
         </div>
     );
@@ -229,7 +229,7 @@ function DraftFailureNotice({ draft }: { draft?: AiDraft }) {
                 normally without it.
             </p>
             {draft.error && (
-                <details className="mt-1 text-xs text-slate-400">
+                <details className="mt-1 text-xs text-muted-foreground">
                     <summary className="cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400">
                         Technical details
                     </summary>
@@ -248,9 +248,9 @@ function ObjectiveScoreTile({
     breakdown?: { correct: number; total: number; percentage: number };
 }) {
     return (
-        <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-3">
+        <div className="rounded-lg border border-border bg-muted/50 p-3">
             <div className="mb-1.5 flex items-center justify-between gap-2">
-                <h3 className="text-sm font-semibold text-slate-800">
+                <h3 className="text-sm font-semibold text-mono">
                     {SECTION_LABELS[section]}
                 </h3>
                 {breakdown ? (
@@ -262,11 +262,11 @@ function ObjectiveScoreTile({
                 )}
             </div>
             {breakdown && (
-                <p className="text-lg font-semibold text-slate-900 tabular-nums">
+                <p className="text-lg font-semibold text-foreground tabular-nums">
                     {breakdown.percentage}%
                 </p>
             )}
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-muted-foreground">
                 Auto-scored from the question bank — supplied to the AI as
                 context.
             </p>
@@ -292,7 +292,7 @@ function ProvisionalScoreCard({
     return (
         <div className="rounded-lg border border-sky-200 bg-gradient-to-b from-sky-50/70 to-white p-3">
             <div className="mb-2 flex items-center justify-between gap-2">
-                <h3 className="flex items-center gap-1.5 text-sm font-semibold text-slate-800">
+                <h3 className="flex items-center gap-1.5 text-sm font-semibold text-mono">
                     <span className="text-sky-500">
                         <SparkIcon />
                     </span>
@@ -324,7 +324,7 @@ function ProvisionalScoreCard({
                                     key={dimension}
                                     className="flex items-center justify-between gap-2"
                                 >
-                                    <dt className="text-xs text-slate-600 capitalize">
+                                    <dt className="text-xs text-secondary-foreground capitalize">
                                         {label}
                                     </dt>
                                     <dd className="flex items-center gap-2">
@@ -332,7 +332,7 @@ function ProvisionalScoreCard({
                                             value={value}
                                             label={label}
                                         />
-                                        <span className="w-7 text-right text-xs font-medium text-slate-700 tabular-nums">
+                                        <span className="w-7 text-right text-xs font-medium text-secondary-foreground tabular-nums">
                                             {value}/5
                                         </span>
                                     </dd>
@@ -343,23 +343,23 @@ function ProvisionalScoreCard({
                 </dl>
             )}
             {draft?.feedback && (
-                <p className="mt-1 rounded-md bg-white/80 p-2 text-xs leading-relaxed text-slate-700">
+                <p className="mt-1 rounded-md bg-card/80 p-2 text-xs leading-relaxed text-secondary-foreground">
                     {draft.feedback}
                 </p>
             )}
             {showTranscript && draft?.transcript && (
                 <div className="mt-2 text-xs">
-                    <p className="font-medium text-slate-700">
+                    <p className="font-medium text-secondary-foreground">
                         Transcript (AI-generated) — always listen to the
                         recording too
                     </p>
-                    <p className="mt-1 rounded-md bg-white/80 p-2 leading-relaxed whitespace-pre-wrap text-slate-600">
+                    <p className="mt-1 rounded-md bg-card/80 p-2 leading-relaxed whitespace-pre-wrap text-secondary-foreground">
                         {draft.transcript}
                     </p>
                 </div>
             )}
-            <div className="mt-2 rounded-md bg-white/70 p-2">
-                <p className="text-[11px] font-medium tracking-wide text-slate-500 uppercase">
+            <div className="mt-2 rounded-md bg-card/70 p-2">
+                <p className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
                     Evaluated against the{' '}
                     {guidelines.customized ? 'school-configured' : 'default'}{' '}
                     {skillName} guidelines
@@ -372,7 +372,7 @@ function ProvisionalScoreCard({
                     ))}
                 </div>
             </div>
-            <p className="mt-2 text-[11px] text-slate-400">
+            <p className="mt-2 text-[11px] text-muted-foreground">
                 {draft?.generated_at && <>Generated {draft.generated_at}</>}
                 {draft?.generated_at && model && ' · '}
                 {model && (
@@ -400,7 +400,7 @@ function RecommendationCard({
     return (
         <div className="mt-3 rounded-lg border border-sky-200 bg-gradient-to-b from-sky-50/70 to-white p-3">
             <div className="mb-2 flex items-center justify-between gap-2">
-                <h3 className="flex items-center gap-1.5 text-sm font-semibold text-slate-800">
+                <h3 className="flex items-center gap-1.5 text-sm font-semibold text-mono">
                     <span className="text-sky-500">
                         <SparkIcon />
                     </span>
@@ -443,7 +443,7 @@ function RecommendationCard({
                         levels fall back to the automatic score bands.
                     </p>
                     {recommendation.error && (
-                        <details className="mt-1 text-xs text-slate-400">
+                        <details className="mt-1 text-xs text-muted-foreground">
                             <summary className="cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400">
                                 Technical details
                             </summary>
@@ -456,13 +456,13 @@ function RecommendationCard({
             )}
             {recommendation?.status === 'completed' && (
                 <>
-                    <p className="mb-2 text-sm font-semibold text-slate-900">
+                    <p className="mb-2 text-sm font-semibold text-foreground">
                         Recommended overall level:{' '}
                         {recommendation.recommended_level_label ??
                             levelLabel(recommendation.recommended_level)}
                     </p>
                     {recommendation.rationale && (
-                        <p className="mb-2 rounded-md bg-white/80 p-2 text-xs leading-relaxed text-slate-700">
+                        <p className="mb-2 rounded-md bg-card/80 p-2 text-xs leading-relaxed text-secondary-foreground">
                             {recommendation.rationale}
                         </p>
                     )}
@@ -470,10 +470,10 @@ function RecommendationCard({
                         {SECTION_ORDER.map((section) => (
                             <div
                                 key={section}
-                                className="rounded-md bg-white/70 p-2"
+                                className="rounded-md bg-card/70 p-2"
                             >
                                 <div className="flex items-center justify-between gap-2">
-                                    <dt className="text-xs font-semibold text-slate-700">
+                                    <dt className="text-xs font-semibold text-secondary-foreground">
                                         {SECTION_LABELS[section]}
                                     </dt>
                                     <dd>
@@ -487,7 +487,7 @@ function RecommendationCard({
                                     </dd>
                                 </div>
                                 {recommendation.skill_summaries?.[section] && (
-                                    <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                                    <p className="mt-1 text-xs leading-relaxed text-secondary-foreground">
                                         {
                                             recommendation.skill_summaries[
                                                 section
@@ -501,13 +501,13 @@ function RecommendationCard({
                 </>
             )}
             {(!recommendation || recommendation.status === 'pending') && (
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted-foreground">
                     The AI recommendation is prepared after the Writing and
                     Speaking evaluations finish. You can review and confirm
                     levels without it.
                 </p>
             )}
-            <p className="mt-2 text-[11px] text-slate-400">
+            <p className="mt-2 text-[11px] text-muted-foreground">
                 {recommendation?.generated_at && (
                     <>Generated {recommendation.generated_at}</>
                 )}
@@ -534,7 +534,7 @@ function SaveState({ dirty, saved }: { dirty: boolean; saved: boolean }) {
     if (saved) {
         return (
             <span
-                className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700"
+                className="inline-flex items-center gap-1 text-xs font-medium text-primary"
                 role="status"
             >
                 <CheckIcon className="h-3 w-3" />
@@ -694,11 +694,11 @@ export default function ReviewShow() {
 
             <div className="space-y-4">
                 {/* Sticky candidate context header */}
-                <div className="sticky top-14 z-30 -mx-4 border-b border-slate-200 bg-white/95 px-4 py-3 shadow-sm backdrop-blur sm:rounded-lg sm:border sm:shadow-sm">
+                <div className="sticky top-14 z-30 -mx-4 border-b border-border bg-card/95 px-4 py-3 shadow-sm backdrop-blur sm:rounded-lg sm:border sm:shadow-sm">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-base font-semibold text-slate-900">
+                                <span className="text-base font-semibold text-foreground">
                                     {candidate.name}
                                 </span>
                                 <Badge
@@ -729,7 +729,7 @@ export default function ReviewShow() {
                                     </Badge>
                                 )}
                             </div>
-                            <p className="mt-1 text-xs text-slate-500">
+                            <p className="mt-1 text-xs text-muted-foreground">
                                 {candidate.email} · age {candidate.age} ·
                                 submitted {attempt.submitted_at ?? '—'} ·
                                 reviewer: {review.assignee ?? 'no reviewer yet'}
@@ -799,18 +799,18 @@ export default function ReviewShow() {
 
                 {integrity_events.length > 0 && (
                     <Card title="Test-taking alerts">
-                        <p className="mb-2 text-xs text-slate-500">
+                        <p className="mb-2 text-xs text-muted-foreground">
                             Recorded automatically while the candidate took the
                             test. Use your judgement during the review.
                         </p>
-                        <ul className="space-y-1 text-sm text-slate-700">
+                        <ul className="space-y-1 text-sm text-secondary-foreground">
                             {integrity_events.map((event, index) => (
                                 <li key={index} className="flex gap-2">
                                     <Badge tone="red">
                                         {TEST_TAKING_EVENT_LABELS[event.type] ??
                                             event.label}
                                     </Badge>
-                                    <span className="text-xs text-slate-500">
+                                    <span className="text-xs text-muted-foreground">
                                         {event.occurred_at}
                                     </span>
                                 </li>
@@ -823,7 +823,7 @@ export default function ReviewShow() {
                     {score ? (
                         <div>
                             <table className="w-full text-sm">
-                                <thead className="text-xs text-slate-500 uppercase">
+                                <thead className="text-xs text-muted-foreground uppercase">
                                     <tr>
                                         <th
                                             scope="col"
@@ -858,7 +858,7 @@ export default function ReviewShow() {
                                         return (
                                             <tr
                                                 key={section}
-                                                className="border-t border-slate-100"
+                                                className="border-t border-border/60"
                                             >
                                                 <td className="py-1.5">
                                                     {SECTION_LABELS[section]}
@@ -868,13 +868,13 @@ export default function ReviewShow() {
                                                         <span className="inline-flex items-center justify-end gap-2">
                                                             <span
                                                                 aria-hidden
-                                                                className="hidden h-1.5 w-20 overflow-hidden rounded-full bg-slate-100 sm:block"
+                                                                className="hidden h-1.5 w-20 overflow-hidden rounded-full bg-muted sm:block"
                                                             >
                                                                 <span
                                                                     className={`block h-full rounded-full ${
                                                                         value >=
                                                                         70
-                                                                            ? 'bg-emerald-500'
+                                                                            ? 'bg-primary/100'
                                                                             : value >=
                                                                                 40
                                                                               ? 'bg-amber-400'
@@ -890,7 +890,7 @@ export default function ReviewShow() {
                                                             </span>
                                                         </span>
                                                     ) : (
-                                                        <span className="text-slate-400">
+                                                        <span className="text-muted-foreground">
                                                             {section ===
                                                             'speaking'
                                                                 ? 'staff-assigned'
@@ -906,7 +906,7 @@ export default function ReviewShow() {
                                     })}
                                 </tbody>
                             </table>
-                            <div className="mt-2 flex items-center justify-between border-t border-slate-200 pt-2 text-sm">
+                            <div className="mt-2 flex items-center justify-between border-t border-border pt-2 text-sm">
                                 <span className="font-semibold">
                                     Overall: {score.composite ?? '—'}% →{' '}
                                     {score.suggested_level_label ?? '—'}
@@ -919,14 +919,14 @@ export default function ReviewShow() {
                             </div>
                         </div>
                     ) : (
-                        <p className="text-sm text-slate-400">
+                        <p className="text-sm text-muted-foreground">
                             The automatic checks have not finished yet.
                         </p>
                     )}
                 </Card>
 
                 <Card title="AI provisional scoring (staff-only — never shown to candidates or parents)">
-                    <p className="mb-3 text-xs text-slate-500">
+                    <p className="mb-3 text-xs text-muted-foreground">
                         Reading, Grammar & Vocabulary and Listening are scored
                         from the question bank and supplied to the AI as
                         context. Writing and Speaking each get an AI
@@ -977,16 +977,16 @@ export default function ReviewShow() {
 
                 <Card title="Candidate answers">
                     <div className="space-y-3">
-                        <details className="rounded-md border border-slate-200 p-3">
-                            <summary className="cursor-pointer text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400">
+                        <details className="rounded-md border border-border p-3">
+                            <summary className="cursor-pointer text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
                                 Reading
                             </summary>
                             {sections.reading.map((passage) => (
                                 <div key={passage.id} className="mt-2">
-                                    <p className="text-sm font-medium text-slate-800">
+                                    <p className="text-sm font-medium text-mono">
                                         {passage.title}
                                     </p>
-                                    <p className="mb-2 text-xs whitespace-pre-wrap text-slate-500">
+                                    <p className="mb-2 text-xs whitespace-pre-wrap text-muted-foreground">
                                         {passage.body}
                                     </p>
                                     <div className="space-y-2">
@@ -1004,8 +1004,8 @@ export default function ReviewShow() {
                             ))}
                         </details>
 
-                        <details className="rounded-md border border-slate-200 p-3">
-                            <summary className="cursor-pointer text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400">
+                        <details className="rounded-md border border-border p-3">
+                            <summary className="cursor-pointer text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
                                 Grammar & Vocabulary
                             </summary>
                             <div className="mt-2 space-y-2">
@@ -1021,13 +1021,13 @@ export default function ReviewShow() {
                             </div>
                         </details>
 
-                        <details className="rounded-md border border-slate-200 p-3">
-                            <summary className="cursor-pointer text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400">
+                        <details className="rounded-md border border-border p-3">
+                            <summary className="cursor-pointer text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
                                 Listening
                             </summary>
                             {sections.listening.map((clip) => (
                                 <div key={clip.id} className="mt-2">
-                                    <p className="text-sm font-medium text-slate-800">
+                                    <p className="text-sm font-medium text-mono">
                                         {clip.title}
                                     </p>
                                     {clip.audio_url && (
@@ -1053,33 +1053,33 @@ export default function ReviewShow() {
                         </details>
 
                         <details
-                            className="rounded-md border border-slate-200 p-3"
+                            className="rounded-md border border-border p-3"
                             open
                         >
-                            <summary className="cursor-pointer text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400">
+                            <summary className="cursor-pointer text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
                                 Writing — essay
                                 {sections.writing.word_count != null &&
                                     ` (${sections.writing.word_count} words)`}
                             </summary>
-                            <p className="mt-1 text-xs text-slate-500">
+                            <p className="mt-1 text-xs text-muted-foreground">
                                 Prompt: {sections.writing.prompt ?? '—'}
                             </p>
-                            <p className="mt-2 rounded-md bg-slate-50 p-3 text-sm leading-relaxed whitespace-pre-wrap text-slate-800">
+                            <p className="mt-2 rounded-md bg-muted/50 p-3 text-sm leading-relaxed whitespace-pre-wrap text-mono">
                                 {sections.writing.essay ??
                                     'No essay submitted.'}
                             </p>
                         </details>
 
                         <details
-                            className="rounded-md border border-slate-200 p-3"
+                            className="rounded-md border border-border p-3"
                             open
                         >
-                            <summary className="cursor-pointer text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400">
+                            <summary className="cursor-pointer text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
                                 Speaking — recording
                                 {sections.speaking.recording_attempts != null &&
                                     ` (attempt ${sections.speaking.recording_attempts})`}
                             </summary>
-                            <p className="mt-1 text-xs text-slate-500">
+                            <p className="mt-1 text-xs text-muted-foreground">
                                 Prompt: {sections.speaking.prompt ?? '—'}
                             </p>
                             {sections.speaking.recording_url ? (
@@ -1089,7 +1089,7 @@ export default function ReviewShow() {
                                     className="mt-2 w-full"
                                 />
                             ) : (
-                                <p className="mt-2 text-sm text-slate-400">
+                                <p className="mt-2 text-sm text-muted-foreground">
                                     No recording submitted.
                                 </p>
                             )}
@@ -1253,7 +1253,7 @@ export default function ReviewShow() {
                                 ? 'Preparing…'
                                 : 'Get AI suggestion (staff-only)'}
                         </button>
-                        <span className="text-xs text-slate-400">
+                        <span className="text-xs text-muted-foreground">
                             The AI suggestion only fills in these fields for you
                             — review, edit and approve before anything reaches
                             parents.
@@ -1341,7 +1341,7 @@ export default function ReviewShow() {
                         )
                     }
                 >
-                    <p className="text-sm text-slate-600">
+                    <p className="text-sm text-secondary-foreground">
                         Confirm you have reviewed the answers, confirmed levels,
                         and approved the parent summary. Preview and send unlock
                         after this step.
@@ -1350,8 +1350,8 @@ export default function ReviewShow() {
                         <li
                             className={`flex items-center gap-1.5 ${
                                 levelConfirmed
-                                    ? 'text-emerald-700'
-                                    : 'text-slate-500'
+                                    ? 'text-primary'
+                                    : 'text-muted-foreground'
                             }`}
                         >
                             {levelConfirmed ? (
@@ -1359,7 +1359,7 @@ export default function ReviewShow() {
                             ) : (
                                 <span
                                     aria-hidden
-                                    className="inline-block h-3.5 w-3.5 rounded-full border-2 border-slate-300"
+                                    className="inline-block h-3.5 w-3.5 rounded-full border-2 border-input"
                                 />
                             )}
                             Levels saved
@@ -1367,8 +1367,8 @@ export default function ReviewShow() {
                         <li
                             className={`flex items-center gap-1.5 ${
                                 summaryApproved
-                                    ? 'text-emerald-700'
-                                    : 'text-slate-500'
+                                    ? 'text-primary'
+                                    : 'text-muted-foreground'
                             }`}
                         >
                             {summaryApproved ? (
@@ -1376,7 +1376,7 @@ export default function ReviewShow() {
                             ) : (
                                 <span
                                     aria-hidden
-                                    className="inline-block h-3.5 w-3.5 rounded-full border-2 border-slate-300"
+                                    className="inline-block h-3.5 w-3.5 rounded-full border-2 border-input"
                                 />
                             )}
                             Parent summary approved
@@ -1402,13 +1402,13 @@ export default function ReviewShow() {
                     {review.status === 'in_review' &&
                         !canGiveFinalApproval &&
                         !isSent && (
-                            <p className="mt-3 text-sm text-slate-500">
+                            <p className="mt-3 text-sm text-muted-foreground">
                                 Complete the checklist above before giving final
                                 approval.
                             </p>
                         )}
                     {review.approved_at && (
-                        <p className="mt-3 text-xs text-slate-500">
+                        <p className="mt-3 text-xs text-muted-foreground">
                             Final approval given {review.approved_at} by{' '}
                             {review.approved_by}
                         </p>
@@ -1432,8 +1432,8 @@ export default function ReviewShow() {
                                 Preview PDF
                             </a>
 
-                            <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
-                                <p className="mb-2 text-sm text-slate-700">
+                            <div className="rounded-md border border-border bg-muted/50 p-3">
+                                <p className="mb-2 text-sm text-secondary-foreground">
                                     Send the result link to{' '}
                                     <strong>{candidate.email}</strong> (valid 30
                                     days).
@@ -1483,7 +1483,7 @@ export default function ReviewShow() {
                             </div>
                         </div>
                     ) : (
-                        <p className="text-sm text-slate-500">
+                        <p className="text-sm text-muted-foreground">
                             {sendUnlockMessage({
                                 status: review.status,
                                 levelConfirmed,
@@ -1493,11 +1493,11 @@ export default function ReviewShow() {
                     )}
 
                     {result_links.length > 0 && (
-                        <div className="mt-3 border-t border-slate-200 pt-2">
-                            <h3 className="mb-1 text-xs font-semibold tracking-wide text-slate-500 uppercase">
+                        <div className="mt-3 border-t border-border pt-2">
+                            <h3 className="mb-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                                 Sent results
                             </h3>
-                            <ul className="space-y-1 text-xs text-slate-600">
+                            <ul className="space-y-1 text-xs text-secondary-foreground">
                                 {result_links.map((link) => (
                                     <li key={link.id}>
                                         Sent to {link.email_to} on{' '}
@@ -1517,17 +1517,17 @@ export default function ReviewShow() {
                 <Card title="Internal notes (staff-only — never on the PDF)">
                     <div className="mb-3 space-y-2">
                         {notes.length === 0 && (
-                            <p className="text-sm text-slate-400">
+                            <p className="text-sm text-muted-foreground">
                                 No notes yet.
                             </p>
                         )}
                         {notes.map((note) => (
                             <div
                                 key={note.id}
-                                className="rounded-md bg-slate-50 p-2 text-sm"
+                                className="rounded-md bg-muted/50 p-2 text-sm"
                             >
-                                <p className="text-slate-700">{note.note}</p>
-                                <p className="mt-1 text-xs text-slate-400">
+                                <p className="text-secondary-foreground">{note.note}</p>
+                                <p className="mt-1 text-xs text-muted-foreground">
                                     {note.author} · {note.created_at}
                                 </p>
                             </div>

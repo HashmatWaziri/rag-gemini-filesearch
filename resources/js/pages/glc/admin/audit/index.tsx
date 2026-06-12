@@ -1,8 +1,23 @@
+import { GlcDataTableCard } from '@/components/glc';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import GlcLayout from '@/layouts/glc-layout';
 import { Head, router } from '@inertiajs/react';
 import {
     Badge,
-    inputClass,
     Pagination,
     type Option,
     type Paginator,
@@ -62,84 +77,106 @@ export default function AuditIndex({
         <GlcLayout title="Activity Log">
             <Head title="Activity Log" />
 
-            <p className="-mt-2 mb-4 text-sm text-slate-600">
+            <p className="-mt-2 mb-4 text-sm text-secondary-foreground">
                 Who did what, and when. Every sensitive action is recorded here
                 and cannot be edited or deleted.
             </p>
 
-            <div className="mb-4 sm:max-w-xs">
-                <select
-                    value={filters.action ?? ''}
-                    onChange={(e) => applyFilter(e.target.value)}
-                    aria-label="Show only one kind of activity"
-                    className={inputClass}
-                >
-                    <option value="">All activity</option>
-                    {actions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                            {option.label}
-                        </option>
-                    ))}
-                </select>
-            </div>
-
-            <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-                <table className="w-full min-w-[720px] text-left text-sm">
-                    <thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-500 uppercase">
-                        <tr>
-                            <th className="px-4 py-3">When</th>
-                            <th className="px-4 py-3">Who</th>
-                            <th className="px-4 py-3">What they did</th>
-                            <th className="px-4 py-3">Affected record</th>
-                            <th className="px-4 py-3">Details</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
+            <GlcDataTableCard
+                filters={
+                    <Select
+                        value={filters.action ?? 'all'}
+                        onValueChange={(value) =>
+                            applyFilter(value === 'all' ? '' : value)
+                        }
+                    >
+                        <SelectTrigger
+                            className="w-56"
+                            aria-label="Show only one kind of activity"
+                        >
+                            <SelectValue placeholder="All activity" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All activity</SelectItem>
+                            {actions.map((option) => (
+                                <SelectItem
+                                    key={option.value}
+                                    value={option.value}
+                                >
+                                    {option.label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                }
+                footer={<Pagination paginator={logs} />}
+            >
+                <Table>
+                    <TableHeader>
+                        <TableRow className="bg-muted/50 hover:bg-muted/50">
+                            <TableHead className="text-xs uppercase">
+                                When
+                            </TableHead>
+                            <TableHead className="text-xs uppercase">
+                                Who
+                            </TableHead>
+                            <TableHead className="text-xs uppercase">
+                                What they did
+                            </TableHead>
+                            <TableHead className="text-xs uppercase">
+                                Affected record
+                            </TableHead>
+                            <TableHead className="text-xs uppercase">
+                                Details
+                            </TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
                         {logs.data.length === 0 && (
-                            <tr>
-                                <td
+                            <TableRow>
+                                <TableCell
                                     colSpan={5}
-                                    className="px-4 py-8 text-center text-slate-500"
+                                    className="py-8 text-center text-muted-foreground"
                                 >
                                     No activity recorded yet.
-                                </td>
-                            </tr>
+                                </TableCell>
+                            </TableRow>
                         )}
                         {logs.data.map((entry) => (
-                            <tr key={entry.id} className="align-top">
-                                <td className="px-4 py-3 whitespace-nowrap text-slate-600">
+                            <TableRow key={entry.id} className="align-top">
+                                <TableCell className="whitespace-nowrap text-secondary-foreground">
                                     {new Date(
                                         entry.created_at,
                                     ).toLocaleString()}
-                                </td>
-                                <td className="px-4 py-3">
-                                    <p className="font-medium text-slate-900">
+                                </TableCell>
+                                <TableCell>
+                                    <p className="font-medium text-mono">
                                         {entry.actor_name ?? 'System'}
                                     </p>
                                     {entry.actor_email && (
-                                        <p className="text-xs text-slate-500">
+                                        <p className="text-xs text-muted-foreground">
                                             {entry.actor_email}
                                         </p>
                                     )}
-                                </td>
-                                <td className="px-4 py-3">
+                                </TableCell>
+                                <TableCell>
                                     <Badge tone="blue">
                                         {entry.action_label}
                                     </Badge>
-                                </td>
-                                <td className="px-4 py-3 text-slate-600">
+                                </TableCell>
+                                <TableCell className="text-secondary-foreground">
                                     {entry.subject ?? '-'}
-                                </td>
-                                <td className="px-4 py-3">
+                                </TableCell>
+                                <TableCell>
                                     {entry.details ? (
-                                        <dl className="max-w-md space-y-0.5 text-xs text-slate-500">
+                                        <dl className="max-w-md space-y-0.5 text-xs text-muted-foreground">
                                             {Object.entries(entry.details).map(
                                                 ([key, value]) => (
                                                     <div
                                                         key={key}
                                                         className="flex gap-1"
                                                     >
-                                                        <dt className="shrink-0 font-medium text-slate-600">
+                                                        <dt className="shrink-0 font-medium text-secondary-foreground">
                                                             {key.replaceAll(
                                                                 '_',
                                                                 ' ',
@@ -154,18 +191,16 @@ export default function AuditIndex({
                                             )}
                                         </dl>
                                     ) : (
-                                        <span className="text-slate-400">
+                                        <span className="text-muted-foreground">
                                             -
                                         </span>
                                     )}
-                                </td>
-                            </tr>
+                                </TableCell>
+                            </TableRow>
                         ))}
-                    </tbody>
-                </table>
-            </div>
-
-            <Pagination paginator={logs} />
+                    </TableBody>
+                </Table>
+            </GlcDataTableCard>
         </GlcLayout>
     );
 }

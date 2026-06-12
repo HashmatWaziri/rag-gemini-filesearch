@@ -42,7 +42,7 @@ export default function Instructions({
                 <h1 className="text-lg font-semibold">
                     Before you start, {candidateName}
                 </h1>
-                <p className="mt-1 text-sm text-slate-600">
+                <p className="mt-1 text-sm text-muted-foreground">
                     The placement test has five sections in a fixed order. Each
                     section has its own timer. Total time is about{' '}
                     {totalMinutes} minutes.
@@ -52,23 +52,23 @@ export default function Instructions({
                     {sections.map((section) => (
                         <li
                             key={section.value}
-                            className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                            className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm"
                         >
                             <span>
-                                <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-xs font-semibold text-emerald-700">
+                                <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
                                     {section.order}
                                 </span>
                                 {section.label}
                             </span>
-                            <span className="text-slate-500">
+                            <span className="text-muted-foreground">
                                 ~{section.estimatedMinutes} min
                             </span>
                         </li>
                     ))}
                 </ol>
 
-                <div className="mt-4 space-y-2 rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
-                    <p className="font-medium text-slate-700">
+                <div className="mt-4 space-y-2 rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground">
+                    <p className="font-medium text-foreground">
                         Important notes
                     </p>
                     <ul className="list-disc space-y-1 pl-4">
@@ -111,7 +111,7 @@ export default function Instructions({
                                     event.target.checked,
                                 )
                             }
-                            className="mt-0.5 rounded border-slate-300"
+                            className="mt-0.5 rounded border-input"
                         />
                         <span>
                             I have read the instructions and I am ready to

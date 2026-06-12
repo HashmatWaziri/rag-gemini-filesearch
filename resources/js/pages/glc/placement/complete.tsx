@@ -13,9 +13,9 @@ export default function Complete({ candidateName }: CompleteProps) {
     return (
         <CandidateShell title="Test Submitted">
             <Card>
-                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100">
+                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
                     <svg
-                        className="h-5 w-5 text-emerald-600"
+                        className="h-5 w-5 text-primary"
                         viewBox="0 0 20 20"
                         fill="currentColor"
                         aria-hidden="true"
@@ -30,11 +30,11 @@ export default function Complete({ candidateName }: CompleteProps) {
                 <h1 className="text-lg font-semibold">
                     Thank you, {candidateName}. Your test has been submitted.
                 </h1>
-                <p className="mt-2 text-sm text-slate-600">
+                <p className="mt-2 text-sm text-muted-foreground">
                     Your placement test is now pending review by GLC staff.
                     There is nothing more you need to do.
                 </p>
-                <p className="mt-2 text-sm text-slate-600">
+                <p className="mt-2 text-sm text-muted-foreground">
                     Greats Language Center will contact you with your official
                     Placement Test Result once the review is complete.
                 </p>

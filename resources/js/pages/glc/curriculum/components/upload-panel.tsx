@@ -3,13 +3,15 @@ import { useState, type FormEvent } from 'react';
 import HierarchyPicker from './hierarchy-picker';
 import {
     emptySelection,
-    inputClass,
-    labelClass,
-    primaryButtonClass,
     type HierarchySelection,
     type TreeCourse,
     type UploadConfig,
 } from './types';
+import {
+    inputClass,
+    labelClass,
+    primaryButtonClass,
+} from './ui';
 
 interface UploadPanelProps {
     tree: TreeCourse[];
@@ -63,17 +65,17 @@ export default function UploadPanel({ tree, upload }: UploadPanelProps) {
     const tabClass = (active: boolean) =>
         `rounded-md px-3 py-1.5 text-sm font-medium ${
             active
-                ? 'bg-emerald-600 text-white'
-                : 'bg-white text-slate-600 hover:bg-slate-100'
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-card text-secondary-foreground hover:bg-accent'
         }`;
 
     return (
-        <section className="rounded-lg border border-slate-200 bg-white p-4">
+        <section className="rounded-lg border border-border bg-card p-4">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <h2 className="text-sm font-semibold text-slate-800">
+                <h2 className="text-sm font-semibold text-mono">
                     Upload curriculum documents
                 </h2>
-                <div className="flex gap-1 rounded-lg border border-slate-200 p-0.5">
+                <div className="flex gap-1 rounded-lg border border-border p-0.5">
                     <button
                         type="button"
                         className={tabClass(mode === 'single')}
@@ -91,7 +93,7 @@ export default function UploadPanel({ tree, upload }: UploadPanelProps) {
                 </div>
             </div>
 
-            <p className="mb-4 text-xs text-slate-500">
+            <p className="mb-4 text-xs text-muted-foreground">
                 Accepted formats: {upload.allowedExtensions.join(', ')} (max{' '}
                 {Math.round(upload.maxFileSizeKb / 1024)} MB per file). New
                 uploads start as drafts and are not visible to students or the
@@ -195,7 +197,7 @@ export default function UploadPanel({ tree, upload }: UploadPanelProps) {
                             }
                         />
                         {bulk.data.files.length > 0 && (
-                            <p className="mt-1 text-xs text-slate-500">
+                            <p className="mt-1 text-xs text-muted-foreground">
                                 {bulk.data.files.length} file(s) selected
                             </p>
                         )}

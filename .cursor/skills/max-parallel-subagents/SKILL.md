@@ -1,3 +1,4 @@
+
 ---
 name: max-parallel-subagents
 description: Dispatch the maximum number of parallel subagents for GLC Phase 1 work while avoiding write conflicts. Use when parallelizing implementation across domains, splitting tasks for concurrent execution, or when the user asks for maximum parallel dispatch without file conflicts.

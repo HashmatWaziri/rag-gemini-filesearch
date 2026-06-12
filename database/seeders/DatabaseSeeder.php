@@ -10,6 +10,10 @@ final class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        if (app()->environment(['local', 'development'])) {
+            $this->call(GlcUserSeeder::class);
+        }
+
         $this->call(GlcPlacementContentSeeder::class);
     }
 }

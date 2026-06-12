@@ -1,28 +1,43 @@
+import { Badge as UiBadge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+    Card as UiCard,
+    CardContent,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 import { type ReactNode } from 'react';
 
 /** Small shared UI helpers for the GLC staff pages (not an Inertia page). */
+
+type BadgeTone = 'slate' | 'amber' | 'red' | 'emerald' | 'blue' | 'green';
+
+const BADGE_VARIANTS: Record<
+    BadgeTone,
+    'default' | 'secondary' | 'destructive' | 'outline'
+> = {
+    slate: 'outline',
+    amber: 'secondary',
+    red: 'destructive',
+    emerald: 'default',
+    green: 'default',
+    blue: 'default',
+};
 
 export function Badge({
     tone = 'slate',
     children,
 }: {
-    tone?: 'slate' | 'amber' | 'red' | 'emerald' | 'blue';
+    tone?: BadgeTone;
     children: ReactNode;
 }) {
-    const tones: Record<string, string> = {
-        slate: 'bg-slate-100 text-slate-700',
-        amber: 'bg-amber-100 text-amber-800',
-        red: 'bg-red-100 text-red-700',
-        emerald: 'bg-emerald-100 text-emerald-700',
-        blue: 'bg-blue-100 text-blue-700',
-    };
-
     return (
-        <span
-            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${tones[tone]}`}
-        >
+        <UiBadge variant={BADGE_VARIANTS[tone]} className="whitespace-nowrap">
             {children}
-        </span>
+        </UiBadge>
     );
 }
 
@@ -36,17 +51,23 @@ export function Card({
     aside?: ReactNode;
 }) {
     return (
-        <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <UiCard className="py-4">
             {(title || aside) && (
-                <div className="mb-3 flex items-center justify-between gap-2">
-                    <h2 className="text-sm font-semibold text-slate-800">
-                        {title}
-                    </h2>
+                <CardHeader className="flex-row items-center justify-between space-y-0 pb-3">
+                    {title ? (
+                        <CardTitle className="text-sm font-semibold text-mono">
+                            {title}
+                        </CardTitle>
+                    ) : (
+                        <div />
+                    )}
                     {aside}
-                </div>
+                </CardHeader>
             )}
-            {children}
-        </section>
+            <CardContent className={title || aside ? undefined : 'pt-0'}>
+                {children}
+            </CardContent>
+        </UiCard>
     );
 }
 
@@ -54,35 +75,37 @@ export function Field({
     label,
     children,
     error,
+    htmlFor,
 }: {
     label: string;
     children: ReactNode;
     error?: string;
+    htmlFor?: string;
 }) {
     return (
-        <label className="block text-sm">
-            <span className="mb-1 block text-xs font-medium text-slate-600">
-                {label}
-            </span>
+        <div className="space-y-1.5 text-sm">
+            <Label htmlFor={htmlFor}>{label}</Label>
             {children}
             {error && (
-                <span className="mt-1 block text-xs text-red-600">{error}</span>
+                <p className="text-xs text-destructive">{error}</p>
             )}
-        </label>
+        </div>
     );
 }
 
 export const inputCls =
-    'w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-sm focus:border-emerald-500 focus:outline-none';
+    'flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-xs transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50';
 
 export const btnPrimary =
-    'inline-flex items-center justify-center rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50';
+    'inline-flex h-9 items-center justify-center rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90 disabled:opacity-50';
 
 export const btnSecondary =
-    'inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50';
+    'inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium text-foreground shadow-xs hover:bg-accent disabled:opacity-50';
 
 export const btnDanger =
-    'inline-flex items-center justify-center rounded-md border border-red-200 bg-white px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-50';
+    'inline-flex h-9 items-center justify-center rounded-md bg-destructive px-2.5 py-1 text-xs font-medium text-white hover:bg-destructive/90';
+
+export { Button, Input };
 
 export function xsrfToken(): string {
     const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
@@ -112,7 +135,11 @@ export function ScoreBars({
     scores: Record<string, number | null> | null | undefined;
 }) {
     if (!scores) {
-        return <span className="text-xs text-slate-300">Scores pending</span>;
+        return (
+            <span className="text-xs text-muted-foreground/50">
+                Scores pending
+            </span>
+        );
     }
 
     return (
@@ -126,9 +153,9 @@ export function ScoreBars({
                         : Math.max(3, Math.round((pct / 100) * 24));
                 const tone =
                     pct === null
-                        ? 'bg-slate-200'
+                        ? 'bg-muted'
                         : pct >= 70
-                          ? 'bg-emerald-500'
+                          ? 'bg-primary'
                           : pct >= 40
                             ? 'bg-amber-400'
                             : 'bg-red-400';
@@ -141,7 +168,7 @@ export function ScoreBars({
                         aria-label={`${SECTION_LABELS[section]}: ${pct === null ? 'not scored yet' : `${pct} percent`}`}
                     >
                         <span
-                            className={`block w-1.5 rounded-sm ${tone}`}
+                            className={cn('block w-1.5 rounded-sm', tone)}
                             style={{ height: `${height}px` }}
                         />
                     </span>
@@ -168,15 +195,16 @@ export function DimensionScale({
             {[1, 2, 3, 4, 5].map((step) => (
                 <span
                     key={step}
-                    className={`h-1.5 w-4 rounded-full ${
+                    className={cn(
+                        'h-1.5 w-4 rounded-full',
                         step <= value
                             ? value >= 4
-                                ? 'bg-emerald-500'
+                                ? 'bg-primary'
                                 : value >= 3
-                                  ? 'bg-sky-500'
+                                  ? 'bg-primary/70'
                                   : 'bg-amber-400'
-                            : 'bg-slate-200'
-                    }`}
+                            : 'bg-muted',
+                    )}
                 />
             ))}
         </div>

@@ -68,7 +68,7 @@ export default function Entry({ minimumAge }: EntryProps) {
                     <h1 className="text-lg font-semibold">
                         Welcome to the GLC Placement Test
                     </h1>
-                    <p className="mt-1 text-sm text-slate-600">
+                    <p className="mt-1 text-sm text-muted-foreground">
                         Enter the access code you received from Greats Language
                         Center to begin.
                     </p>
@@ -93,7 +93,7 @@ export default function Entry({ minimumAge }: EntryProps) {
                                 autoComplete="off"
                                 autoCapitalize="characters"
                                 spellCheck={false}
-                                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 font-mono text-base tracking-widest uppercase focus:border-emerald-500 focus:ring-emerald-500"
+                                className="w-full rounded-lg border border-input bg-background px-3 py-2.5 font-mono text-base tracking-widest uppercase focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
                                 placeholder="XXXXXXXX"
                             />
                             <ErrorText message={codeError} />
@@ -110,7 +110,7 @@ export default function Entry({ minimumAge }: EntryProps) {
             {step === 'privacy' && (
                 <Card>
                     <h1 className="text-lg font-semibold">Privacy Notice</h1>
-                    <div className="mt-3 space-y-3 text-sm text-slate-600">
+                    <div className="mt-3 space-y-3 text-sm text-muted-foreground">
                         <p>
                             Greats Language Center (GLC) collects your name,
                             email address, age, test responses, and speaking
@@ -120,7 +120,7 @@ export default function Entry({ minimumAge }: EntryProps) {
                             Act (PDPA) and is only accessible to authorised GLC
                             staff.
                         </p>
-                        <p className="font-medium text-slate-700">
+                        <p className="font-medium text-foreground">
                             Your data is not used to train AI models.
                         </p>
                         <p>
@@ -136,7 +136,7 @@ export default function Entry({ minimumAge }: EntryProps) {
                             onChange={(event) =>
                                 setPrivacyAccepted(event.target.checked)
                             }
-                            className="mt-0.5 rounded border-slate-300"
+                            className="mt-0.5 rounded border-input"
                         />
                         <span>
                             I have read and understood the privacy notice.
@@ -157,7 +157,7 @@ export default function Entry({ minimumAge }: EntryProps) {
             {step === 'profile' && (
                 <Card>
                     <h1 className="text-lg font-semibold">Your details</h1>
-                    <p className="mt-1 text-sm text-slate-600">
+                    <p className="mt-1 text-sm text-muted-foreground">
                         GLC uses these details to deliver your result.
                         Candidates under {minimumAge} cannot take this test.
                     </p>
@@ -176,7 +176,7 @@ export default function Entry({ minimumAge }: EntryProps) {
                                 onChange={(event) =>
                                     form.setData('name', event.target.value)
                                 }
-                                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-base"
+                                className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-base focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
                                 autoComplete="name"
                             />
                             <ErrorText message={form.errors.name} />
@@ -195,7 +195,7 @@ export default function Entry({ minimumAge }: EntryProps) {
                                 onChange={(event) =>
                                     form.setData('email', event.target.value)
                                 }
-                                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-base"
+                                className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-base focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
                                 autoComplete="email"
                             />
                             <ErrorText message={form.errors.email} />
@@ -217,7 +217,7 @@ export default function Entry({ minimumAge }: EntryProps) {
                                 onChange={(event) =>
                                     form.setData('age', event.target.value)
                                 }
-                                className="w-32 rounded-lg border border-slate-300 px-3 py-2.5 text-base"
+                                className="w-32 rounded-lg border border-input bg-background px-3 py-2.5 text-base focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
                             />
                             <ErrorText message={form.errors.age} />
                         </div>

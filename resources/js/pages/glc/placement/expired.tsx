@@ -9,12 +9,12 @@ export default function Expired({ resumeWindowHours }: ExpiredProps) {
         <CandidateShell title="Test Expired">
             <Card>
                 <h1 className="text-lg font-semibold">Your test has expired</h1>
-                <p className="mt-2 text-sm text-slate-600">
+                <p className="mt-2 text-sm text-muted-foreground">
                     You can return to an unfinished test within{' '}
                     {resumeWindowHours} hours of starting it. That time has now
                     passed, so this test is closed.
                 </p>
-                <p className="mt-2 text-sm text-slate-600">
+                <p className="mt-2 text-sm text-muted-foreground">
                     Please contact Greats Language Center to receive a new
                     access code and take the test again.
                 </p>

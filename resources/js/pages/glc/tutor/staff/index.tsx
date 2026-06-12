@@ -1,3 +1,12 @@
+import { GlcDataTableCard } from '@/components/glc';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import GlcLayout from '@/layouts/glc-layout';
 import { Head, Link } from '@inertiajs/react';
 
@@ -18,50 +27,75 @@ export default function StaffTutorIndex({ students }: Props) {
         <GlcLayout title="Tutor Activity">
             <Head title="Tutor Activity" />
 
-            <p className="mb-4 text-sm text-slate-600">
+            <p className="mb-4 text-sm text-secondary-foreground">
                 Tutor usage per student: last active date and conversation
                 count. Open a student to read their conversations, see their
                 writing, and check anything that needs attention.
             </p>
 
             {students.length === 0 ? (
-                <p className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-500">
+                <p className="rounded-xl border border-border bg-card px-5 py-8 text-center text-sm text-muted-foreground">
                     No students to show.
                 </p>
             ) : (
-                <ul className="divide-y divide-slate-200 overflow-hidden rounded-lg border border-slate-200 bg-white">
-                    {students.map((student) => (
-                        <li key={student.id}>
-                            <Link
-                                href={`/staff/tutor/students/${student.id}`}
-                                className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-slate-50"
-                            >
-                                <div className="min-w-0">
-                                    <p className="truncate text-sm font-medium text-slate-900">
-                                        {student.name}
-                                    </p>
-                                    <p className="truncate text-xs text-slate-500">
-                                        {student.email}
-                                    </p>
-                                </div>
-                                <div className="shrink-0 text-right">
-                                    <p className="text-sm text-slate-700">
+                <GlcDataTableCard>
+                    <Table>
+                        <TableHeader>
+                            <TableRow className="bg-muted/50 hover:bg-muted/50">
+                                <TableHead className="text-xs uppercase">
+                                    Student
+                                </TableHead>
+                                <TableHead className="text-xs uppercase">
+                                    Conversations
+                                </TableHead>
+                                <TableHead className="text-xs uppercase">
+                                    Last active
+                                </TableHead>
+                                <TableHead className="text-xs uppercase">
+                                    <span className="sr-only">Actions</span>
+                                </TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {students.map((student) => (
+                                <TableRow
+                                    key={student.id}
+                                    className="hover:bg-accent/50"
+                                >
+                                    <TableCell>
+                                        <p className="font-medium text-mono">
+                                            {student.name}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            {student.email}
+                                        </p>
+                                    </TableCell>
+                                    <TableCell className="text-secondary-foreground">
                                         {student.conversation_count}{' '}
-                                        conversation
                                         {student.conversation_count === 1
-                                            ? ''
-                                            : 's'}
-                                    </p>
-                                    <p className="text-xs text-slate-400">
+                                            ? 'conversation'
+                                            : 'conversations'}
+                                    </TableCell>
+                                    <TableCell className="text-sm text-muted-foreground">
                                         {student.last_active_at
-                                            ? `Last active ${new Date(student.last_active_at).toLocaleDateString()}`
+                                            ? new Date(
+                                                  student.last_active_at,
+                                              ).toLocaleDateString()
                                             : 'Never active'}
-                                    </p>
-                                </div>
-                            </Link>
-                        </li>
-                    ))}
-                </ul>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <Link
+                                            href={`/staff/tutor/students/${student.id}`}
+                                            className="text-sm font-medium text-primary hover:underline"
+                                        >
+                                            Open
+                                        </Link>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </GlcDataTableCard>
             )}
         </GlcLayout>
     );

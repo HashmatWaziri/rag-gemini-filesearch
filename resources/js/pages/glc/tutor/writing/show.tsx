@@ -15,7 +15,7 @@ export default function WritingShow({ submission }: Props) {
 
             <Link
                 href="/tutor/writing"
-                className="mb-4 inline-block text-sm font-medium text-emerald-700 hover:underline"
+                className="mb-4 inline-block text-sm font-medium text-primary hover:underline"
             >
                 Back to writing correction
             </Link>
@@ -26,7 +26,7 @@ export default function WritingShow({ submission }: Props) {
                 <div className="mt-4">
                     <Link
                         href="/tutor/writing"
-                        className="text-sm font-medium text-emerald-700 hover:underline"
+                        className="text-sm font-medium text-primary hover:underline"
                     >
                         Submit it again
                     </Link>

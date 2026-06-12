@@ -121,10 +121,10 @@ export default function SectionShell({
             title={`${progress.currentLabel} - Placement Test`}
             wide
         >
-            <div className="mb-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="mb-4 rounded-xl border border-border bg-card p-4 shadow-sm">
                 <div className="flex items-center justify-between gap-3">
                     <div>
-                        <p className="text-xs font-medium text-slate-500">
+                        <p className="text-xs font-medium text-muted-foreground">
                             Section {progress.currentIndex} of {progress.total}
                         </p>
                         <h1 className="text-lg font-semibold">
@@ -134,8 +134,8 @@ export default function SectionShell({
                     <div
                         className={`rounded-lg px-3 py-1.5 text-right font-mono text-lg font-semibold tabular-nums ${
                             lowTime
-                                ? 'bg-red-50 text-red-700'
-                                : 'bg-slate-100 text-slate-700'
+                                ? 'bg-destructive/10 text-destructive'
+                                : 'bg-muted text-foreground'
                         }`}
                         aria-label="Time remaining"
                     >
@@ -153,13 +153,13 @@ export default function SectionShell({
                             <div
                                 className={`h-1.5 rounded-full ${
                                     section.status === 'completed'
-                                        ? 'bg-emerald-500'
+                                        ? 'bg-primary'
                                         : section.value === progress.current
-                                          ? 'bg-emerald-300'
-                                          : 'bg-slate-200'
+                                          ? 'bg-primary/40'
+                                          : 'bg-muted'
                                 }`}
                             />
-                            <p className="mt-1 hidden truncate text-[10px] text-slate-500 sm:block">
+                            <p className="mt-1 hidden truncate text-[10px] text-muted-foreground sm:block">
                                 {section.label}
                             </p>
                         </li>
@@ -167,7 +167,9 @@ export default function SectionShell({
                 </ol>
 
                 <div className="mt-2 flex min-h-4 items-center justify-between">
-                    <p className="text-xs text-slate-400">{SAVE_LABEL[saveState]}</p>
+                    <p className="text-xs text-muted-foreground">
+                        {SAVE_LABEL[saveState]}
+                    </p>
                 </div>
             </div>
 

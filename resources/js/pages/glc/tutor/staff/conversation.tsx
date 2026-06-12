@@ -32,25 +32,25 @@ export default function StaffTutorConversation({
 
             <Link
                 href={`/staff/tutor/students/${student.id}`}
-                className="mb-4 inline-block text-sm font-medium text-emerald-700 hover:underline"
+                className="mb-4 inline-block text-sm font-medium text-primary hover:underline"
             >
                 Back to {student.name}
             </Link>
 
             {conversation.summary && (
-                <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
-                    <p className="mb-1 text-xs font-semibold tracking-wide text-slate-500 uppercase">
+                <div className="mb-4 rounded-lg border border-border bg-muted/50 p-4">
+                    <p className="mb-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                         Summary of earlier messages
                     </p>
-                    <p className="text-sm whitespace-pre-wrap text-slate-700">
+                    <p className="text-sm whitespace-pre-wrap text-secondary-foreground">
                         {conversation.summary}
                     </p>
                 </div>
             )}
 
-            <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
+            <div className="space-y-3 rounded-lg border border-border bg-card p-4">
                 {messages.length === 0 && (
-                    <p className="py-6 text-center text-sm text-slate-400">
+                    <p className="py-6 text-center text-sm text-muted-foreground">
                         No messages in this conversation.
                     </p>
                 )}
@@ -63,8 +63,8 @@ export default function StaffTutorConversation({
                         <div
                             className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm whitespace-pre-wrap sm:max-w-[75%] ${
                                 message.role === 'user'
-                                    ? 'rounded-br-sm bg-emerald-600 text-white'
-                                    : 'rounded-bl-sm bg-slate-100 text-slate-900'
+                                    ? 'rounded-br-sm bg-primary text-primary-foreground'
+                                    : 'rounded-bl-sm bg-muted text-foreground'
                             } ${message.rotated ? 'opacity-70' : ''}`}
                         >
                             {message.content}
@@ -73,8 +73,8 @@ export default function StaffTutorConversation({
                                     <span
                                         className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
                                             message.role === 'user'
-                                                ? 'bg-emerald-700 text-emerald-100'
-                                                : 'bg-slate-200 text-slate-600'
+                                                ? 'bg-primary/80 text-primary-foreground'
+                                                : 'bg-muted-foreground/20 text-secondary-foreground'
                                         }`}
                                     >
                                         Covered by the summary above
@@ -89,8 +89,8 @@ export default function StaffTutorConversation({
                                     <span
                                         className={`text-[10px] ${
                                             message.role === 'user'
-                                                ? 'text-emerald-100'
-                                                : 'text-slate-400'
+                                                ? 'text-primary-foreground/70'
+                                                : 'text-muted-foreground'
                                         }`}
                                     >
                                         {new Date(

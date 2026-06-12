@@ -89,14 +89,14 @@ export default function Writing({
             saveState={saveState}
         >
             {prompt && (
-                <div className="rounded-lg border border-slate-200 bg-white p-4">
+                <div className="rounded-lg border border-border bg-card p-4">
                     {prompt.title && (
                         <h2 className="mb-1 font-semibold">{prompt.title}</h2>
                     )}
-                    <p className="text-sm leading-relaxed text-slate-700">
+                    <p className="text-sm leading-relaxed text-foreground">
                         {prompt.body}
                     </p>
-                    <p className="mt-2 text-xs text-slate-500">
+                    <p className="mt-2 text-xs text-muted-foreground">
                         Write between {minWords} and {maxWords} words.
                     </p>
                 </div>
@@ -119,7 +119,7 @@ export default function Writing({
                     onPaste={onPaste}
                     onBlur={() => void persist()}
                     rows={14}
-                    className="w-full rounded-lg border border-slate-300 p-3 text-base leading-relaxed focus:border-emerald-500 focus:ring-emerald-500"
+                    className="w-full rounded-lg border border-input bg-background p-3 text-base leading-relaxed focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
                     placeholder="Write your essay here..."
                     aria-label="Essay"
                 />
@@ -127,16 +127,16 @@ export default function Writing({
                     <span
                         className={
                             belowMin
-                                ? 'text-slate-500'
+                                ? 'text-muted-foreground'
                                 : aboveMax
                                   ? 'text-amber-600'
-                                  : 'text-emerald-600'
+                                  : 'text-primary'
                         }
                     >
                         {wordCount} {wordCount === 1 ? 'word' : 'words'}
                     </span>
                     {belowMin && (
-                        <span className="text-slate-500">
+                        <span className="text-muted-foreground">
                             At least {minWords} words required
                         </span>
                     )}

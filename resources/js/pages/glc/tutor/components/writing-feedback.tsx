@@ -51,8 +51,8 @@ export const DIMENSIONS: Record<
     },
     task_completion: {
         label: 'Task Completion',
-        mark: 'bg-emerald-100 decoration-emerald-400',
-        dot: 'bg-emerald-400',
+        mark: 'bg-primary/10 decoration-primary',
+        dot: 'bg-primary',
     },
 };
 
@@ -66,7 +66,7 @@ function ScoreDots({ score }: { score: number }) {
                 <span
                     key={step}
                     className={`h-2.5 w-2.5 rounded-full ${
-                        step <= score ? 'bg-emerald-600' : 'bg-slate-200'
+                        step <= score ? 'bg-primary' : 'bg-muted'
                     }`}
                 />
             ))}
@@ -127,7 +127,7 @@ function HighlightedText({
     );
 
     return (
-        <p className="text-sm leading-7 whitespace-pre-wrap text-slate-800">
+        <p className="text-sm leading-7 whitespace-pre-wrap text-foreground">
             {segments.map((segment, index) =>
                 segment.highlight ? (
                     <mark
@@ -135,7 +135,7 @@ function HighlightedText({
                         title={`${DIMENSIONS[segment.highlight.type]?.label ?? segment.highlight.type}: ${segment.highlight.comment}`}
                         className={`cursor-help rounded px-0.5 underline decoration-2 underline-offset-4 ${
                             DIMENSIONS[segment.highlight.type]?.mark ??
-                            'bg-slate-100'
+                            'bg-muted'
                         }`}
                     >
                         {segment.text}
@@ -169,7 +169,7 @@ export default function WritingFeedback({
 
     if (submission.status !== 'completed' || !submission.feedback) {
         return (
-            <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-500">
+            <div className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
                 This writing is still being checked. Please refresh in a moment.
             </div>
         );
@@ -178,10 +178,10 @@ export default function WritingFeedback({
     return (
         <div className="space-y-6">
             <section>
-                <h3 className="mb-2 text-sm font-semibold tracking-wide text-slate-500 uppercase">
+                <h3 className="mb-2 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
                     Your text with highlights
                 </h3>
-                <div className="rounded-lg border border-slate-200 bg-white p-4">
+                <div className="rounded-lg border border-border bg-card p-4">
                     <HighlightedText
                         text={submission.text}
                         highlights={submission.highlights}
@@ -191,7 +191,7 @@ export default function WritingFeedback({
                     {Object.entries(DIMENSIONS).map(([key, meta]) => (
                         <span
                             key={key}
-                            className="flex items-center gap-1.5 text-xs text-slate-600"
+                            className="flex items-center gap-1.5 text-xs text-secondary-foreground"
                         >
                             <span
                                 className={`h-2.5 w-2.5 rounded-full ${meta.dot}`}
@@ -205,16 +205,16 @@ export default function WritingFeedback({
                         {submission.highlights.map((highlight, index) => (
                             <li
                                 key={index}
-                                className="flex items-start gap-2 text-xs text-slate-600"
+                                className="flex items-start gap-2 text-xs text-secondary-foreground"
                             >
                                 <span
                                     className={`mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full ${
                                         DIMENSIONS[highlight.type]?.dot ??
-                                        'bg-slate-300'
+                                        'bg-muted-foreground/50'
                                     }`}
                                 />
                                 <span>
-                                    <span className="font-medium text-slate-800">
+                                    <span className="font-medium text-foreground">
                                         &quot;
                                         {submission.text.slice(
                                             highlight.start,
@@ -231,10 +231,10 @@ export default function WritingFeedback({
             </section>
 
             <section>
-                <h3 className="mb-2 text-sm font-semibold tracking-wide text-slate-500 uppercase">
+                <h3 className="mb-2 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
                     Feedback by area
                 </h3>
-                <ul className="divide-y divide-slate-200 overflow-hidden rounded-lg border border-slate-200 bg-white">
+                <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
                     {Object.entries(DIMENSIONS).map(([key, meta]) => {
                         const feedback = submission.feedback?.dimensions[key];
 
@@ -245,13 +245,13 @@ export default function WritingFeedback({
                         return (
                             <li key={key} className="px-4 py-3">
                                 <div className="flex items-center justify-between gap-3">
-                                    <span className="text-sm font-medium text-slate-900">
+                                    <span className="text-sm font-medium text-foreground">
                                         {meta.label}
                                     </span>
                                     <ScoreDots score={feedback.score} />
                                 </div>
                                 {feedback.comment && (
-                                    <p className="mt-1 text-sm text-slate-600">
+                                    <p className="mt-1 text-sm text-secondary-foreground">
                                         {feedback.comment}
                                     </p>
                                 )}
@@ -263,10 +263,10 @@ export default function WritingFeedback({
 
             {submission.feedback.summary && (
                 <section>
-                    <h3 className="mb-2 text-sm font-semibold tracking-wide text-slate-500 uppercase">
+                    <h3 className="mb-2 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
                         Overall summary
                     </h3>
-                    <p className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+                    <p className="rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm text-primary">
                         {submission.feedback.summary}
                     </p>
                 </section>

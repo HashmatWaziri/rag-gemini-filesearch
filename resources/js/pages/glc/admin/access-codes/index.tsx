@@ -1,19 +1,34 @@
+import { GlcDataTableCard, GlcSearchInput } from '@/components/glc';
+import { Button } from '@/components/ui/button';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import GlcLayout from '@/layouts/glc-layout';
 import { Head, router, useForm } from '@inertiajs/react';
 import { type FormEvent, useState } from 'react';
 import {
     Badge,
-    buttonPrimaryClass,
-    buttonSecondaryClass,
     ConfirmDialog,
     Field,
-    inputClass,
     Modal,
     type Option,
     Pagination,
     type Paginator,
     StatusBanner,
 } from '../components';
+import { Input } from '@/components/ui/input';
 
 interface AccessCode {
     id: number;
@@ -111,90 +126,110 @@ export default function AccessCodesIndex({
         <GlcLayout title="Access Codes">
             <Head title="Access Codes" />
 
-            <p className="-mt-2 mb-4 text-sm text-slate-600">
+            <p className="-mt-2 mb-4 text-sm text-secondary-foreground">
                 Single-use codes that let one candidate take the placement test.
                 Share a code with a candidate to invite them.
             </p>
 
             <StatusBanner message={status} />
 
-            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <form
-                    onSubmit={(e) => {
-                        e.preventDefault();
-                        applyFilters();
-                    }}
-                    className="flex flex-1 flex-col gap-2 sm:flex-row"
-                >
-                    <input
-                        type="search"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Search code"
-                        aria-label="Search codes"
-                        className={`${inputClass} sm:max-w-xs`}
-                    />
-                    <select
-                        value={filters.status ?? ''}
-                        onChange={(e) =>
-                            applyFilters({
-                                status: e.target.value || undefined,
-                            })
-                        }
-                        aria-label="Filter by status"
-                        className={`${inputClass} sm:max-w-44`}
+            <GlcDataTableCard
+                filters={
+                    <form
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            applyFilters();
+                        }}
+                        className="flex flex-wrap items-center gap-2.5"
                     >
-                        <option value="">All statuses</option>
-                        {statuses.map((option) => (
-                            <option key={option.value} value={option.value}>
-                                {option.label}
-                            </option>
-                        ))}
-                    </select>
-                    <button type="submit" className={buttonSecondaryClass}>
-                        Search
-                    </button>
-                </form>
-
-                <button
-                    type="button"
-                    onClick={() => setCreateOpen(true)}
-                    className={buttonPrimaryClass}
-                >
-                    New codes
-                </button>
-            </div>
-
-            <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-                <table className="w-full min-w-[720px] text-left text-sm">
-                    <thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-500 uppercase">
-                        <tr>
-                            <th className="px-4 py-3">Code</th>
-                            <th className="px-4 py-3">Status</th>
-                            <th className="px-4 py-3">Expires</th>
-                            <th className="px-4 py-3">Note</th>
-                            <th className="px-4 py-3">Issued by</th>
-                            <th className="px-4 py-3">Attempts</th>
-                            <th className="px-4 py-3" />
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
+                        <GlcSearchInput
+                            value={search}
+                            onValueChange={setSearch}
+                            placeholder="Search code"
+                            aria-label="Search codes"
+                            inputClassName="sm:w-52"
+                        />
+                        <Select
+                            value={filters.status ?? 'all'}
+                            onValueChange={(value) =>
+                                applyFilters({
+                                    status: value === 'all' ? undefined : value,
+                                })
+                            }
+                        >
+                            <SelectTrigger
+                                className="w-40"
+                                aria-label="Filter by status"
+                            >
+                                <SelectValue placeholder="All statuses" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All statuses</SelectItem>
+                                {statuses.map((option) => (
+                                    <SelectItem
+                                        key={option.value}
+                                        value={option.value}
+                                    >
+                                        {option.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <Button type="submit" variant="outline">
+                            Search
+                        </Button>
+                    </form>
+                }
+                actions={
+                    <Button type="button" onClick={() => setCreateOpen(true)}>
+                        New codes
+                    </Button>
+                }
+                footer={<Pagination paginator={codes} />}
+            >
+                <Table>
+                    <TableHeader>
+                        <TableRow className="bg-muted/50 hover:bg-muted/50">
+                            <TableHead className="text-xs uppercase">
+                                Code
+                            </TableHead>
+                            <TableHead className="text-xs uppercase">
+                                Status
+                            </TableHead>
+                            <TableHead className="text-xs uppercase">
+                                Expires
+                            </TableHead>
+                            <TableHead className="text-xs uppercase">
+                                Note
+                            </TableHead>
+                            <TableHead className="text-xs uppercase">
+                                Issued by
+                            </TableHead>
+                            <TableHead className="text-xs uppercase">
+                                Attempts
+                            </TableHead>
+                            <TableHead className="text-xs uppercase">
+                                <span className="sr-only">Actions</span>
+                            </TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
                         {codes.data.length === 0 && (
-                            <tr>
-                                <td
+                            <TableRow>
+                                <TableCell
                                     colSpan={7}
-                                    className="px-4 py-8 text-center text-slate-500"
+                                    className="py-8 text-center text-muted-foreground"
                                 >
                                     No access codes found.
-                                </td>
-                            </tr>
+                                </TableCell>
+                            </TableRow>
                         )}
                         {codes.data.map((code) => (
-                            <tr key={code.id}>
-                                <td className="px-4 py-3 font-mono text-sm font-semibold tracking-wide text-slate-900">
+                            <TableRow key={code.id}>
+                                <TableCell className="font-mono text-sm font-semibold tracking-wide text-mono">
                                     {code.code}
-                                </td>
-                                <td className="px-4 py-3">
+                                </TableCell>
+                                <TableCell>
                                     <div className="flex flex-wrap gap-1">
                                         <Badge tone={statusTone(code.status)}>
                                             {code.status_label}
@@ -206,37 +241,35 @@ export default function AccessCodesIndex({
                                                 </Badge>
                                             )}
                                     </div>
-                                </td>
-                                <td className="px-4 py-3 text-slate-600">
+                                </TableCell>
+                                <TableCell className="text-secondary-foreground">
                                     {formatDate(code.expires_at)}
-                                </td>
-                                <td className="max-w-40 truncate px-4 py-3 text-slate-600">
+                                </TableCell>
+                                <TableCell className="max-w-40 truncate text-secondary-foreground">
                                     {code.note ?? '-'}
-                                </td>
-                                <td className="px-4 py-3 text-slate-600">
+                                </TableCell>
+                                <TableCell className="text-secondary-foreground">
                                     {code.issuer_name ?? '-'}
-                                </td>
-                                <td className="px-4 py-3 text-slate-600">
+                                </TableCell>
+                                <TableCell className="text-secondary-foreground">
                                     {code.attempts_count}
-                                </td>
-                                <td className="px-4 py-3 text-right">
+                                </TableCell>
+                                <TableCell className="text-right">
                                     {code.can_revoke && (
                                         <button
                                             type="button"
                                             onClick={() => setRevoking(code)}
-                                            className="text-sm font-medium text-red-600 hover:underline"
+                                            className="text-sm font-medium text-destructive hover:underline"
                                         >
                                             Revoke
                                         </button>
                                     )}
-                                </td>
-                            </tr>
+                                </TableCell>
+                            </TableRow>
                         ))}
-                    </tbody>
-                </table>
-            </div>
-
-            <Pagination paginator={codes} />
+                    </TableBody>
+                </Table>
+            </GlcDataTableCard>
 
             <Modal
                 open={createOpen}
@@ -250,7 +283,7 @@ export default function AccessCodesIndex({
                         error={createForm.errors.quantity}
                         hint="Create 1-100 codes in one batch."
                     >
-                        <input
+                        <Input
                             id="quantity"
                             type="number"
                             min={1}
@@ -259,7 +292,6 @@ export default function AccessCodesIndex({
                             onChange={(e) =>
                                 createForm.setData('quantity', e.target.value)
                             }
-                            className={inputClass}
                             required
                         />
                     </Field>
@@ -269,14 +301,13 @@ export default function AccessCodesIndex({
                         htmlFor="expires_at"
                         error={createForm.errors.expires_at}
                     >
-                        <input
+                        <Input
                             id="expires_at"
                             type="datetime-local"
                             value={createForm.data.expires_at}
                             onChange={(e) =>
                                 createForm.setData('expires_at', e.target.value)
                             }
-                            className={inputClass}
                         />
                     </Field>
 
@@ -286,7 +317,7 @@ export default function AccessCodesIndex({
                         error={createForm.errors.note}
                         hint="Internal note, e.g. intake batch or candidate name."
                     >
-                        <input
+                        <Input
                             id="note"
                             type="text"
                             maxLength={255}
@@ -294,25 +325,23 @@ export default function AccessCodesIndex({
                             onChange={(e) =>
                                 createForm.setData('note', e.target.value)
                             }
-                            className={inputClass}
                         />
                     </Field>
 
                     <div className="flex justify-end gap-2">
-                        <button
+                        <Button
                             type="button"
+                            variant="outline"
                             onClick={() => setCreateOpen(false)}
-                            className={buttonSecondaryClass}
                         >
                             Cancel
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                             type="submit"
                             disabled={createForm.processing}
-                            className={buttonPrimaryClass}
                         >
                             Create
-                        </button>
+                        </Button>
                     </div>
                 </form>
             </Modal>

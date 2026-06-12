@@ -47,13 +47,13 @@ export default function Reading({
 
                     return (
                         <section key={passage.id}>
-                            <article className="rounded-lg border border-slate-200 bg-white p-4">
+                            <article className="rounded-lg border border-border bg-card p-4">
                                 {passage.title && (
                                     <h2 className="mb-2 font-semibold">
                                         {passage.title}
                                     </h2>
                                 )}
-                                <div className="text-sm leading-relaxed whitespace-pre-line text-slate-700">
+                                <div className="text-sm leading-relaxed whitespace-pre-line text-foreground">
                                     {passage.body}
                                 </div>
                             </article>

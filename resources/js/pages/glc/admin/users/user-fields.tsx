@@ -1,4 +1,12 @@
-import { Field, inputClass, type Option } from '../components';
+import { Input } from '@/components/ui/input';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { Field, type Option } from '../components';
 
 export interface UserFormData {
     name: string;
@@ -50,12 +58,11 @@ export function UserFields({
                 htmlFor={`${idPrefix}-name`}
                 error={errors.name}
             >
-                <input
+                <Input
                     id={`${idPrefix}-name`}
                     type="text"
                     value={data.name}
                     onChange={(e) => setData('name', e.target.value)}
-                    className={inputClass}
                     required
                 />
             </Field>
@@ -65,12 +72,11 @@ export function UserFields({
                 htmlFor={`${idPrefix}-email`}
                 error={errors.email}
             >
-                <input
+                <Input
                     id={`${idPrefix}-email`}
                     type="email"
                     value={data.email}
                     onChange={(e) => setData('email', e.target.value)}
-                    className={inputClass}
                     required
                 />
             </Field>
@@ -81,12 +87,11 @@ export function UserFields({
                 error={errors.password}
                 hint="Minimum 12 characters."
             >
-                <input
+                <Input
                     id={`${idPrefix}-password`}
                     type="password"
                     value={data.password}
                     onChange={(e) => setData('password', e.target.value)}
-                    className={inputClass}
                     autoComplete="new-password"
                     required={creating}
                 />
@@ -99,20 +104,22 @@ export function UserFields({
                     error={errors.role}
                     hint="Each account has exactly one role."
                 >
-                    <select
-                        id={`${idPrefix}-role`}
-                        value={data.role}
-                        onChange={(e) => setData('role', e.target.value)}
-                        className={inputClass}
+                    <Select
+                        value={data.role || undefined}
+                        onValueChange={(value) => setData('role', value)}
                         required
                     >
-                        <option value="">Select a role</option>
-                        {roles.map((role) => (
-                            <option key={role.value} value={role.value}>
-                                {role.label}
-                            </option>
-                        ))}
-                    </select>
+                        <SelectTrigger id={`${idPrefix}-role`}>
+                            <SelectValue placeholder="Select a role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {roles.map((role) => (
+                                <SelectItem key={role.value} value={role.value}>
+                                    {role.label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 </Field>
 
                 <Field
@@ -121,14 +128,13 @@ export function UserFields({
                     error={errors.age}
                     hint="Guardian details required for ages 12-17."
                 >
-                    <input
+                    <Input
                         id={`${idPrefix}-age`}
                         type="number"
                         min={5}
                         max={100}
                         value={data.age}
                         onChange={(e) => setData('age', e.target.value)}
-                        className={inputClass}
                     />
                 </Field>
             </div>
@@ -146,14 +152,13 @@ export function UserFields({
                         htmlFor={`${idPrefix}-guardian-name`}
                         error={errors.guardian_name}
                     >
-                        <input
+                        <Input
                             id={`${idPrefix}-guardian-name`}
                             type="text"
                             value={data.guardian_name}
                             onChange={(e) =>
                                 setData('guardian_name', e.target.value)
                             }
-                            className={inputClass}
                         />
                     </Field>
 
@@ -162,14 +167,13 @@ export function UserFields({
                         htmlFor={`${idPrefix}-guardian-email`}
                         error={errors.guardian_email}
                     >
-                        <input
+                        <Input
                             id={`${idPrefix}-guardian-email`}
                             type="email"
                             value={data.guardian_email}
                             onChange={(e) =>
                                 setData('guardian_email', e.target.value)
                             }
-                            className={inputClass}
                         />
                     </Field>
                 </div>

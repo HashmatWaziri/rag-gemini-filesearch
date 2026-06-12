@@ -45,7 +45,7 @@ export default function DeviceCheck({ recordingMaxSeconds }: DeviceCheckProps) {
         <CandidateShell title="Audio Setup">
             <Card>
                 <h1 className="text-lg font-semibold">Audio setup</h1>
-                <p className="mt-1 text-sm text-slate-600">
+                <p className="mt-1 text-sm text-muted-foreground">
                     The test plays audio (Listening) and records your voice
                     (Speaking). Let&apos;s make sure both work before you start.
                 </p>
@@ -56,13 +56,13 @@ export default function DeviceCheck({ recordingMaxSeconds }: DeviceCheckProps) {
                             <div
                                 className={`h-1.5 rounded-full ${
                                     index < stepIndex
-                                        ? 'bg-emerald-500'
+                                        ? 'bg-primary'
                                         : index === stepIndex
-                                          ? 'bg-emerald-300'
-                                          : 'bg-slate-200'
+                                          ? 'bg-primary/40'
+                                          : 'bg-muted'
                                 }`}
                             />
-                            <p className="mt-1 truncate text-[10px] text-slate-500">
+                            <p className="mt-1 truncate text-[10px] text-muted-foreground">
                                 {index + 1}. {entry.label}
                             </p>
                         </li>
@@ -207,7 +207,7 @@ function SpeakerStep({ onConfirm }: { onConfirm: () => void }) {
 
             {canSelectOutput ? (
                 <label className="block text-sm">
-                    <span className="mb-1 block text-slate-600">
+                    <span className="mb-1 block text-muted-foreground">
                         Output device (speakers / headphones)
                     </span>
                     <select
@@ -216,7 +216,7 @@ function SpeakerStep({ onConfirm }: { onConfirm: () => void }) {
                             setOutputId(event.target.value);
                             setPlayState('idle');
                         }}
-                        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                        className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
                     >
                         <option value="">System default</option>
                         {outputs.map((device) => (
@@ -230,7 +230,7 @@ function SpeakerStep({ onConfirm }: { onConfirm: () => void }) {
                     </select>
                 </label>
             ) : (
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted-foreground">
                     Your browser chooses the output device automatically. Use
                     your device&apos;s volume and sound settings if you need to
                     switch speakers or headphones.
@@ -240,7 +240,7 @@ function SpeakerStep({ onConfirm }: { onConfirm: () => void }) {
             <button
                 type="button"
                 onClick={() => void playTone()}
-                className="w-full rounded-lg border border-emerald-600 px-4 py-2.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
+                className="w-full rounded-lg border border-primary px-4 py-2.5 text-sm font-semibold text-primary hover:bg-primary/5"
             >
                 {playState === 'playing'
                     ? 'Playing...'
@@ -249,7 +249,7 @@ function SpeakerStep({ onConfirm }: { onConfirm: () => void }) {
                       : 'Play test sound'}
             </button>
 
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-destructive">{error}</p>}
 
             {cannotHear && (
                 <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
@@ -279,7 +279,7 @@ function SpeakerStep({ onConfirm }: { onConfirm: () => void }) {
             <button
                 type="button"
                 onClick={() => setCannotHear(true)}
-                className="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600"
+                className="w-full rounded-lg border border-input bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-accent"
             >
                 I can&apos;t hear anything
             </button>
@@ -399,7 +399,7 @@ function MicrophoneStep({
 
             {inputs.length > 0 && (
                 <label className="block text-sm">
-                    <span className="mb-1 block text-slate-600">
+                    <span className="mb-1 block text-muted-foreground">
                         Input device (microphone)
                     </span>
                     <select
@@ -411,7 +411,7 @@ function MicrophoneStep({
                                 void startMeter(event.target.value);
                             }
                         }}
-                        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                        className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
                     >
                         <option value="">System default</option>
                         {inputs.map((device) => (
@@ -430,7 +430,7 @@ function MicrophoneStep({
                 <button
                     type="button"
                     onClick={() => void startMeter(inputId)}
-                    className="w-full rounded-lg border border-emerald-600 px-4 py-2.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
+                    className="w-full rounded-lg border border-primary px-4 py-2.5 text-sm font-semibold text-primary hover:bg-primary/5"
                 >
                     Enable my microphone
                 </button>
@@ -438,18 +438,18 @@ function MicrophoneStep({
 
             {listening && (
                 <div>
-                    <p className="text-sm text-slate-600">
+                    <p className="text-sm text-muted-foreground">
                         Say something like{' '}
                         <span className="font-medium">
                             &quot;Testing, one two three&quot;
                         </span>{' '}
                         - the bar should move while you speak.
                     </p>
-                    <div className="mt-2 h-3 overflow-hidden rounded-full bg-slate-200">
+                    <div className="mt-2 h-3 overflow-hidden rounded-full bg-muted">
                         <div
                             className={`h-full rounded-full transition-[width] duration-75 ${
                                 voiceDetected
-                                    ? 'bg-emerald-500'
+                                    ? 'bg-primary'
                                     : 'bg-amber-400'
                             }`}
                             style={{
@@ -457,7 +457,7 @@ function MicrophoneStep({
                             }}
                         />
                     </div>
-                    <p className="mt-1 text-xs text-slate-500">
+                    <p className="mt-1 text-xs text-muted-foreground">
                         {voiceDetected
                             ? 'Your microphone is picking up sound.'
                             : 'Waiting for sound... speak a little louder or move closer to the microphone.'}
@@ -465,7 +465,7 @@ function MicrophoneStep({
                 </div>
             )}
 
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-destructive">{error}</p>}
 
             <PrimaryButton
                 type="button"
@@ -480,7 +480,7 @@ function MicrophoneStep({
                     stopMeter();
                     onBack();
                 }}
-                className="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600"
+                className="w-full rounded-lg border border-input bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-accent"
             >
                 Back to speaker check
             </button>
@@ -689,7 +689,7 @@ function RecordingStep({
     return (
         <div className="space-y-3">
             <h2 className="font-semibold">Step 3: Test your setup</h2>
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-muted-foreground">
                 Record yourself for up to {maxSeconds} seconds - for example,
                 say your name and why you are taking this test. We will show you
                 what we heard.
@@ -704,7 +704,7 @@ function RecordingStep({
                 </div>
             )}
 
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-destructive">{error}</p>}
 
             {phase.kind === 'idle' && (
                 <PrimaryButton
@@ -721,14 +721,14 @@ function RecordingStep({
                         <span className="h-3 w-3 animate-pulse rounded-full bg-red-500" />
                         0:{String(phase.elapsed).padStart(2, '0')}
                     </p>
-                    <p className="mt-1 text-xs text-slate-500">
+                    <p className="mt-1 text-xs text-muted-foreground">
                         Recording... stops automatically at {maxSeconds}{' '}
                         seconds.
                     </p>
                     <button
                         type="button"
                         onClick={() => stopRecording(phase.elapsed)}
-                        className="mt-3 w-full rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700"
+                        className="mt-3 w-full rounded-lg bg-destructive px-4 py-2.5 text-sm font-semibold text-destructive-foreground hover:bg-destructive/90"
                     >
                         Stop recording
                     </button>
@@ -736,13 +736,13 @@ function RecordingStep({
             )}
 
             {phase.kind === 'checking' && (
-                <p className="text-center text-sm text-slate-500">
+                <p className="text-center text-sm text-muted-foreground">
                     Checking recording quality...
                 </p>
             )}
 
             {phase.kind === 'transcribing' && (
-                <p className="text-center text-sm text-slate-500">
+                <p className="text-center text-sm text-muted-foreground">
                     Analyzing your recording...
                 </p>
             )}
@@ -750,16 +750,16 @@ function RecordingStep({
             {phase.kind === 'result' && (
                 <div className="space-y-3">
                     {phase.transcript !== null ? (
-                        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
-                            <p className="text-xs font-semibold tracking-wide text-emerald-700 uppercase">
+                        <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+                            <p className="text-xs font-semibold tracking-wide text-primary uppercase">
                                 Here&apos;s what we heard
                             </p>
-                            <p className="mt-1 text-sm text-emerald-900">
+                            <p className="mt-1 text-sm text-foreground">
                                 &ldquo;{phase.transcript}&rdquo;
                             </p>
                         </div>
                     ) : (
-                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+                        <div className="rounded-lg border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
                             Automatic transcription is not available right now.
                             Play your recording below - if you can hear yourself
                             clearly, your setup is ready.
@@ -780,7 +780,7 @@ function RecordingStep({
                                     void transcribe(blob);
                                 }
                             }}
-                            className="w-full rounded-lg border border-emerald-600 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
+                            className="w-full rounded-lg border border-primary px-4 py-2 text-sm font-semibold text-primary hover:bg-primary/5"
                         >
                             Try the analysis again
                         </button>
@@ -800,7 +800,7 @@ function RecordingStep({
                     <button
                         type="button"
                         onClick={reset}
-                        className="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600"
+                        className="w-full rounded-lg border border-input bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-accent"
                     >
                         Record again
                     </button>
@@ -811,7 +811,7 @@ function RecordingStep({
                 <button
                     type="button"
                     onClick={onBack}
-                    className="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600"
+                    className="w-full rounded-lg border border-input bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-accent"
                 >
                     Back to microphone check
                 </button>

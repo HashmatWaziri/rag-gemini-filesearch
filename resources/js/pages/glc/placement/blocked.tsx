@@ -11,7 +11,7 @@ export default function Blocked({ minimumAge }: BlockedProps) {
                 <h1 className="text-lg font-semibold">
                     We cannot start your test
                 </h1>
-                <p className="mt-2 text-sm text-slate-600">
+                <p className="mt-2 text-sm text-muted-foreground">
                     This placement test is for candidates aged {minimumAge} and
                     above. Please contact Greats Language Center directly and
                     our team will help you find the right option.

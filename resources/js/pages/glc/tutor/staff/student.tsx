@@ -54,21 +54,21 @@ export default function StaffTutorStudent({
 
             <Link
                 href="/staff/tutor"
-                className="mb-4 inline-block text-sm font-medium text-emerald-700 hover:underline"
+                className="mb-4 inline-block text-sm font-medium text-primary hover:underline"
             >
                 Back to Tutor Activity
             </Link>
 
             <div className="mb-6 grid grid-cols-2 gap-3">
-                <div className="rounded-lg border border-slate-200 bg-white p-4">
-                    <p className="text-xs text-slate-500">Conversations</p>
-                    <p className="text-xl font-semibold text-slate-900">
+                <div className="rounded-lg border border-border bg-card p-4">
+                    <p className="text-xs text-muted-foreground">Conversations</p>
+                    <p className="text-xl font-semibold text-foreground">
                         {activity.conversation_count}
                     </p>
                 </div>
-                <div className="rounded-lg border border-slate-200 bg-white p-4">
-                    <p className="text-xs text-slate-500">Last active</p>
-                    <p className="text-sm font-semibold text-slate-900">
+                <div className="rounded-lg border border-border bg-card p-4">
+                    <p className="text-xs text-muted-foreground">Last active</p>
+                    <p className="text-sm font-semibold text-foreground">
                         {activity.last_active_at
                             ? new Date(
                                   activity.last_active_at,
@@ -79,32 +79,32 @@ export default function StaffTutorStudent({
             </div>
 
             <section className="mb-6">
-                <h2 className="mb-2 text-sm font-semibold tracking-wide text-slate-500 uppercase">
+                <h2 className="mb-2 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
                     Conversations
                 </h2>
                 {conversations.length === 0 ? (
-                    <p className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-500">
+                    <p className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
                         No conversations.
                     </p>
                 ) : (
-                    <ul className="divide-y divide-slate-200 overflow-hidden rounded-lg border border-slate-200 bg-white">
+                    <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
                         {conversations.map((conversation) => (
                             <li key={conversation.id}>
                                 <Link
                                     href={`/staff/tutor/conversations/${conversation.id}`}
-                                    className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-slate-50"
+                                    className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-accent"
                                 >
                                     <div className="min-w-0">
-                                        <p className="truncate text-sm font-medium text-slate-900">
+                                        <p className="truncate text-sm font-medium text-foreground">
                                             {conversation.title ??
                                                 'Untitled conversation'}
                                         </p>
-                                        <p className="text-xs text-slate-500">
+                                        <p className="text-xs text-muted-foreground">
                                             {conversation.message_count}{' '}
                                             messages
                                         </p>
                                     </div>
-                                    <span className="shrink-0 text-xs text-slate-400">
+                                    <span className="shrink-0 text-xs text-muted-foreground">
                                         {formatDateTime(
                                             conversation.last_activity_at,
                                         )}
@@ -117,25 +117,25 @@ export default function StaffTutorStudent({
             </section>
 
             <section className="mb-6">
-                <h2 className="mb-2 text-sm font-semibold tracking-wide text-slate-500 uppercase">
+                <h2 className="mb-2 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
                     Writing submissions
                 </h2>
                 {writingSubmissions.length === 0 ? (
-                    <p className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-500">
+                    <p className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
                         No writing submissions.
                     </p>
                 ) : (
-                    <ul className="divide-y divide-slate-200 overflow-hidden rounded-lg border border-slate-200 bg-white">
+                    <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
                         {writingSubmissions.map((submission) => (
                             <li key={submission.id}>
                                 <Link
                                     href={`/staff/tutor/writing/${submission.id}`}
-                                    className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-slate-50"
+                                    className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-accent"
                                 >
-                                    <p className="min-w-0 truncate text-sm text-slate-900">
+                                    <p className="min-w-0 truncate text-sm text-foreground">
                                         {submission.excerpt}
                                     </p>
-                                    <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
+                                    <span className="shrink-0 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
                                         {SUBMISSION_STATUS_LABELS[
                                             submission.status
                                         ] ?? submission.status}
@@ -148,27 +148,27 @@ export default function StaffTutorStudent({
             </section>
 
             <section>
-                <h2 className="mb-2 text-sm font-semibold tracking-wide text-slate-500 uppercase">
+                <h2 className="mb-2 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
                     Needs attention
                 </h2>
                 {violations.length === 0 ? (
-                    <p className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-500">
+                    <p className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
                         Nothing needs attention.
                     </p>
                 ) : (
-                    <ul className="divide-y divide-slate-200 overflow-hidden rounded-lg border border-slate-200 bg-white">
+                    <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
                         {violations.map((violation) => (
                             <li key={violation.id} className="px-4 py-3">
                                 <div className="flex items-center justify-between gap-3">
                                     <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700">
                                         {violation.category_label}
                                     </span>
-                                    <span className="text-xs text-slate-400">
+                                    <span className="text-xs text-muted-foreground">
                                         {formatDateTime(violation.occurred_at)}
                                     </span>
                                 </div>
                                 {violation.excerpt && (
-                                    <p className="mt-1.5 text-sm text-slate-600">
+                                    <p className="mt-1.5 text-sm text-secondary-foreground">
                                         &quot;{violation.excerpt}&quot;
                                     </p>
                                 )}

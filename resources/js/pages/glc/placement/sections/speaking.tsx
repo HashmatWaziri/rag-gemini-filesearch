@@ -214,14 +214,14 @@ export default function Speaking({
     return (
         <SectionShell progress={progress} timer={timer} config={config}>
             {prompt && (
-                <div className="rounded-lg border border-slate-200 bg-white p-4">
+                <div className="rounded-lg border border-border bg-card p-4">
                     {prompt.title && (
                         <h2 className="mb-1 font-semibold">{prompt.title}</h2>
                     )}
-                    <p className="text-sm leading-relaxed text-slate-700">
+                    <p className="text-sm leading-relaxed text-foreground">
                         {prompt.body}
                     </p>
-                    <p className="mt-2 text-xs text-slate-500">
+                    <p className="mt-2 text-xs text-muted-foreground">
                         Speak for up to {Math.floor(maxDuration / 60)} minutes.
                         You have up to {maxAttempts} recording attempts - failed
                         quality checks do not count.
@@ -229,13 +229,13 @@ export default function Speaking({
                 </div>
             )}
 
-            <div className="mt-4 rounded-lg border border-slate-200 bg-white p-4">
+            <div className="mt-4 rounded-lg border border-border bg-card p-4">
                 <div className="flex items-center justify-between text-sm">
                     <span className="font-medium">
                         Attempts used: {attemptsUsed} / {maxAttempts}
                     </span>
                     {hasRecording && (
-                        <span className="font-medium text-emerald-600">
+                        <span className="font-medium text-primary">
                             Recording saved
                         </span>
                     )}
@@ -252,7 +252,7 @@ export default function Speaking({
 
                 {micError && (
                     <div
-                        className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+                        className="mt-3 rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive"
                         role="alert"
                     >
                         {micError}
@@ -265,14 +265,14 @@ export default function Speaking({
                             <span className="h-3 w-3 animate-pulse rounded-full bg-red-500" />
                             {formatElapsed}
                         </p>
-                        <p className="mt-1 text-xs text-slate-500">
+                        <p className="mt-1 text-xs text-muted-foreground">
                             Recording... speak clearly. Stops automatically at{' '}
                             {Math.floor(maxDuration / 60)} minutes.
                         </p>
                         <button
                             type="button"
                             onClick={stopRecording}
-                            className="mt-3 w-full rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700"
+                            className="mt-3 w-full rounded-lg bg-destructive px-4 py-2.5 text-sm font-semibold text-destructive-foreground hover:bg-destructive/90"
                         >
                             Stop recording
                         </button>
@@ -280,14 +280,14 @@ export default function Speaking({
                 )}
 
                 {phase === 'analyzing' && (
-                    <p className="mt-4 text-center text-sm text-slate-500">
+                    <p className="mt-4 text-center text-sm text-muted-foreground">
                         Checking recording quality...
                     </p>
                 )}
 
                 {phase === 'preview' && (
                     <div className="mt-4 space-y-3">
-                        <p className="text-sm text-emerald-700">
+                        <p className="text-sm text-primary">
                             Quality check passed. Listen back, then save this
                             recording or record again.
                         </p>
@@ -299,7 +299,7 @@ export default function Speaking({
                             />
                         )}
                         {uploadError && (
-                            <p className="text-sm text-red-600">
+                            <p className="text-sm text-destructive">
                                 {uploadError}
                             </p>
                         )}
@@ -312,7 +312,7 @@ export default function Speaking({
                         <button
                             type="button"
                             onClick={discardPreview}
-                            className="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600"
+                            className="w-full rounded-lg border border-input bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-accent"
                         >
                             Discard and record again
                         </button>
@@ -320,7 +320,7 @@ export default function Speaking({
                 )}
 
                 {phase === 'uploading' && (
-                    <p className="mt-4 text-center text-sm text-slate-500">
+                    <p className="mt-4 text-center text-sm text-muted-foreground">
                         Uploading your recording...
                     </p>
                 )}
@@ -339,7 +339,7 @@ export default function Speaking({
                 )}
 
                 {attemptsRemaining === 0 && !hasRecording && (
-                    <p className="mt-3 text-sm text-red-600">
+                    <p className="mt-3 text-sm text-destructive">
                         You have used all recording attempts. Contact GLC if you
                         were unable to submit a recording.
                     </p>
@@ -367,7 +367,7 @@ export default function Speaking({
                         : 'Submit my placement test'}
                 </PrimaryButton>
                 {!hasRecording && (
-                    <p className="mt-2 text-center text-xs text-slate-500">
+                    <p className="mt-2 text-center text-xs text-muted-foreground">
                         Save a recording to enable submission.
                     </p>
                 )}

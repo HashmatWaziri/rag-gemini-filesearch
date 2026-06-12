@@ -16,7 +16,7 @@ export default function StaffTutorWriting({ student, submission }: Props) {
 
             <Link
                 href={`/staff/tutor/students/${student.id}`}
-                className="mb-4 inline-block text-sm font-medium text-emerald-700 hover:underline"
+                className="mb-4 inline-block text-sm font-medium text-primary hover:underline"
             >
                 Back to {student.name}
             </Link>

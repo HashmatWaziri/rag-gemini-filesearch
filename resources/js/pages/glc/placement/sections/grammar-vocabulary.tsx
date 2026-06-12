@@ -28,7 +28,7 @@ export default function GrammarVocabulary({
             config={config}
             saveState={saveState}
         >
-            <p className="mb-4 text-sm text-slate-600">
+            <p className="mb-4 text-sm text-muted-foreground">
                 Choose the best option for each item. Your answers are saved
                 automatically.
             </p>
@@ -40,7 +40,7 @@ export default function GrammarVocabulary({
                 highlightUnanswered={highlightUnanswered}
             />
 
-            <div className="mt-6 rounded-lg border border-sky-200 bg-sky-50 p-3 text-sm text-sky-800">
+            <div className="mt-6 rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm text-primary">
                 <p className="font-semibold">Next up: Listening</p>
                 <p>
                     The first clip starts playing automatically about{' '}

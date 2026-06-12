@@ -88,20 +88,6 @@ export const emptySelection: HierarchySelection = {
     course_lesson_id: '',
 };
 
-export const inputClass =
-    'w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500';
-
-export const labelClass = 'mb-1 block text-xs font-medium text-slate-600';
-
-export const primaryButtonClass =
-    'rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50';
-
-export const secondaryButtonClass =
-    'rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50';
-
-export const dangerButtonClass =
-    'rounded-md border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50';
-
 export const documentStateFilterOptions: [DocumentState, string][] = [
     ['draft', 'Draft'],
     ['publishing', 'Being prepared'],
@@ -109,15 +95,3 @@ export const documentStateFilterOptions: [DocumentState, string][] = [
     ['publish_failed', "Couldn't be published"],
     ['archived', 'Archived'],
 ];
-
-const stateBadgeColors: Record<DocumentState, string> = {
-    draft: 'bg-slate-100 text-slate-700',
-    publishing: 'bg-blue-100 text-blue-700',
-    published: 'bg-emerald-100 text-emerald-700',
-    publish_failed: 'bg-red-100 text-red-700',
-    archived: 'bg-amber-100 text-amber-700',
-};
-
-export function stateBadgeClass(state: DocumentState): string {
-    return `inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${stateBadgeColors[state] ?? 'bg-slate-100 text-slate-600'}`;
-}

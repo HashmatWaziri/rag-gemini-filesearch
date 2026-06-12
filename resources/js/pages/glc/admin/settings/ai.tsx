@@ -1,3 +1,9 @@
+import {
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 import GlcLayout from '@/layouts/glc-layout';
 import keys from '@/routes/admin/settings/ai/keys';
 import selection from '@/routes/admin/settings/ai/selection';
@@ -123,10 +129,10 @@ function ModelRow({
 }) {
     return (
         <li
-            className={`space-y-1.5 px-3 py-3 ${active ? 'bg-emerald-50/60' : ''}`}
+            className={`space-y-1.5 px-3 py-3 ${active ? 'bg-primary/10' : ''}`}
         >
             <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-medium text-slate-900">
+                <span className="text-sm font-medium text-mono">
                     {model.label}
                 </span>
                 <Badge tone={TIER_TONES[model.tier] ?? 'slate'}>
@@ -134,21 +140,21 @@ function ModelRow({
                 </Badge>
                 {active && <Badge tone="green">Currently active</Badge>}
             </div>
-            <p className="text-sm text-slate-700">
+            <p className="text-sm text-secondary-foreground">
                 {pricingLine(model)}
-                <span className="text-slate-500">
+                <span className="text-muted-foreground">
                     {' '}
                     · est. {money(estimatedCandidateCost(model))} per candidate
                     ({estimateBasis(model)})
                 </span>
             </p>
-            <p className="text-xs text-slate-500">{model.notes}</p>
+            <p className="text-xs text-muted-foreground">{model.notes}</p>
             {!active && (
                 <button
                     type="button"
                     onClick={onSelect}
                     disabled={selecting}
-                    className="text-sm font-medium text-emerald-700 hover:text-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="text-sm font-medium text-primary hover:text-primary/80 disabled:cursor-not-allowed disabled:opacity-50"
                     aria-label={`Use ${model.label} for ${task} (${providerKey}/${modelKey})`}
                 >
                     {selecting ? 'Saving…' : 'Use this model'}
@@ -178,81 +184,81 @@ function TaskSection({ task, config }: { task: string; config: TaskConfig }) {
     const activeProvider = config.providers[config.selection.provider];
 
     return (
-        <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-5">
-            <div>
-                <h2 className="text-base font-semibold text-slate-900">
-                    {config.label}
-                </h2>
-                <p className="mt-1 text-sm text-slate-600">
+        <Card className="py-4">
+            <CardHeader>
+                <CardTitle className="text-base">{config.label}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <p className="text-sm text-secondary-foreground">
                     Currently using{' '}
-                    <span className="font-medium text-slate-900">
+                    <span className="font-medium text-mono">
                         {activeProvider?.models[config.selection.model]
                             ?.label ?? config.selection.model}
                     </span>{' '}
                     from {activeProvider?.label ?? config.selection.provider}.
                 </p>
-            </div>
 
-            {!config.configured && (
-                <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                    The selected provider (
-                    {activeProvider?.label ?? config.selection.provider}) has no
-                    usable API key. Add one in the API keys panel below, or pick
-                    a provider that already has a key.
-                </div>
-            )}
-
-            <div className="space-y-4">
-                {Object.entries(config.providers).map(
-                    ([providerKey, provider]) => (
-                        <div
-                            key={providerKey}
-                            className="rounded-md border border-slate-200"
-                        >
-                            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2">
-                                <span className="text-sm font-semibold text-slate-800">
-                                    {provider.label}
-                                </span>
-                                <a
-                                    href={provider.pricing_url}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="text-xs font-medium text-emerald-700 underline hover:text-emerald-600"
-                                >
-                                    Vendor pricing page
-                                </a>
-                            </div>
-                            <ul className="divide-y divide-slate-100">
-                                {Object.entries(provider.models).map(
-                                    ([modelKey, model]) => (
-                                        <ModelRow
-                                            key={modelKey}
-                                            task={task}
-                                            providerKey={providerKey}
-                                            modelKey={modelKey}
-                                            model={model}
-                                            active={
-                                                config.selection.provider ===
-                                                    providerKey &&
-                                                config.selection.model ===
-                                                    modelKey
-                                            }
-                                            selecting={
-                                                selectingKey ===
-                                                `${providerKey}/${modelKey}`
-                                            }
-                                            onSelect={() =>
-                                                select(providerKey, modelKey)
-                                            }
-                                        />
-                                    ),
-                                )}
-                            </ul>
-                        </div>
-                    ),
+                {!config.configured && (
+                    <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                        The selected provider (
+                        {activeProvider?.label ?? config.selection.provider}) has no
+                        usable API key. Add one in the API keys panel below, or pick
+                        a provider that already has a key.
+                    </div>
                 )}
-            </div>
-        </section>
+
+                <div className="space-y-4">
+                    {Object.entries(config.providers).map(
+                        ([providerKey, provider]) => (
+                            <div
+                                key={providerKey}
+                                className="rounded-md border border-border"
+                            >
+                                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-muted/50 px-3 py-2">
+                                    <span className="text-sm font-semibold text-mono">
+                                        {provider.label}
+                                    </span>
+                                    <a
+                                        href={provider.pricing_url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="text-xs font-medium text-primary underline hover:text-primary/80"
+                                    >
+                                        Vendor pricing page
+                                    </a>
+                                </div>
+                                <ul className="divide-y divide-border">
+                                    {Object.entries(provider.models).map(
+                                        ([modelKey, model]) => (
+                                            <ModelRow
+                                                key={modelKey}
+                                                task={task}
+                                                providerKey={providerKey}
+                                                modelKey={modelKey}
+                                                model={model}
+                                                active={
+                                                    config.selection.provider ===
+                                                        providerKey &&
+                                                    config.selection.model ===
+                                                        modelKey
+                                                }
+                                                selecting={
+                                                    selectingKey ===
+                                                    `${providerKey}/${modelKey}`
+                                                }
+                                                onSelect={() =>
+                                                    select(providerKey, modelKey)
+                                                }
+                                            />
+                                        ),
+                                    )}
+                                </ul>
+                            </div>
+                        ),
+                    )}
+                </div>
+            </CardContent>
+        </Card>
     );
 }
 
@@ -286,7 +292,7 @@ function CredentialPanelRow({ row }: { row: CredentialRow }) {
     return (
         <li className="space-y-2 px-3 py-3">
             <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-medium text-slate-900">
+                <span className="text-sm font-medium text-mono">
                     {row.provider_labels.join(' · ')}
                 </span>
                 {row.status.stored ? (
@@ -329,7 +335,7 @@ function CredentialPanelRow({ row }: { row: CredentialRow }) {
                 )}
             </form>
             {form.errors.api_key && (
-                <p className="text-xs text-red-600">{form.errors.api_key}</p>
+                <p className="text-xs text-destructive">{form.errors.api_key}</p>
             )}
         </li>
     );
@@ -348,7 +354,7 @@ export default function AiModelSettings({
             <StatusBanner message={status} />
 
             <div className="space-y-6">
-                <p className="text-sm text-slate-600">
+                <p className="text-sm text-secondary-foreground">
                     Choose which AI provider and model power each placement test
                     task, and manage provider API keys. Prices are USD,
                     retrieved from official vendor pricing pages on{' '}
@@ -356,14 +362,14 @@ export default function AiModelSettings({
                     judge against are managed on the{' '}
                     <Link
                         href={writingGuidelines.edit.url()}
-                        className="font-medium text-emerald-700 underline hover:text-emerald-600"
+                        className="font-medium text-primary underline hover:text-primary/80"
                     >
                         Writing evaluation guidelines
                     </Link>{' '}
                     and{' '}
                     <Link
                         href={speakingGuidelines.edit.url()}
-                        className="font-medium text-emerald-700 underline hover:text-emerald-600"
+                        className="font-medium text-primary underline hover:text-primary/80"
                     >
                         Speaking evaluation guidelines
                     </Link>{' '}
@@ -374,28 +380,28 @@ export default function AiModelSettings({
                     <TaskSection key={task} task={task} config={config} />
                 ))}
 
-                <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-5">
-                    <div>
-                        <h2 className="text-base font-semibold text-slate-900">
-                            API keys
-                        </h2>
-                        <p className="mt-1 text-sm text-slate-600">
+                <Card className="py-4">
+                    <CardHeader>
+                        <CardTitle className="text-base">API keys</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <p className="text-sm text-secondary-foreground">
                             Keys are encrypted before they are stored and are
                             never shown again — only the last four characters.
                             Leave a provider blank to keep using the server
                             environment key, when one is configured.
                         </p>
-                    </div>
 
-                    <ul className="divide-y divide-slate-100 rounded-md border border-slate-200">
-                        {credentials.map((row) => (
-                            <CredentialPanelRow
-                                key={row.credential}
-                                row={row}
-                            />
-                        ))}
-                    </ul>
-                </section>
+                        <ul className="divide-y divide-border rounded-md border border-border">
+                            {credentials.map((row) => (
+                                <CredentialPanelRow
+                                    key={row.credential}
+                                    row={row}
+                                />
+                            ))}
+                        </ul>
+                    </CardContent>
+                </Card>
             </div>
         </GlcLayout>
     );

@@ -73,7 +73,9 @@ export default function FinishSection({
                 message={(form.errors as Record<string, string>).words}
             />
             {disabled && disabledReason && (
-                <p className="text-sm text-slate-500">{disabledReason}</p>
+                <p className="text-sm text-muted-foreground">
+                    {disabledReason}
+                </p>
             )}
             <PrimaryButton
                 type="button"
@@ -93,7 +95,7 @@ export default function FinishSection({
                         setConfirming(false);
                         onReviewUnanswered?.();
                     }}
-                    className="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600"
+                    className="w-full rounded-lg border border-input bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-accent"
                 >
                     Go back to my answers
                 </button>

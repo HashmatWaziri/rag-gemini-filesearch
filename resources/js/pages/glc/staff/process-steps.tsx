@@ -290,7 +290,7 @@ function StepMarker({
         return (
             <span
                 aria-hidden
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white"
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground"
             >
                 ✓
             </span>
@@ -302,8 +302,8 @@ function StepMarker({
             aria-hidden
             className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
                 state === 'current'
-                    ? 'bg-blue-600 text-white ring-2 ring-blue-200'
-                    : 'bg-slate-100 text-slate-400'
+                    ? 'bg-primary text-primary-foreground ring-2 ring-primary/20'
+                    : 'bg-muted text-muted-foreground'
             }`}
         >
             {position}
@@ -319,11 +319,11 @@ export function ProcessSteps({ input }: { input: PipelineInput }) {
     const steps = derivePipeline(input);
 
     return (
-        <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <h2 className="text-sm font-semibold text-slate-800">
+        <section className="rounded-lg border border-border bg-card p-4 shadow-sm">
+            <h2 className="text-sm font-semibold text-mono">
                 Where this test is in the process
             </h2>
-            <p className="mt-0.5 text-xs text-slate-500">
+            <p className="mt-0.5 text-xs text-muted-foreground">
                 Each step shows who is responsible for it.
             </p>
 
@@ -336,7 +336,7 @@ export function ProcessSteps({ input }: { input: PipelineInput }) {
                         {index < steps.length - 1 && (
                             <span
                                 aria-hidden
-                                className="absolute top-6 left-3 h-full w-px bg-slate-200"
+                                className="absolute top-6 left-3 h-full w-px bg-border"
                             />
                         )}
                         <StepMarker state={step.state} position={index + 1} />
@@ -345,10 +345,10 @@ export function ProcessSteps({ input }: { input: PipelineInput }) {
                                 <span
                                     className={`text-sm ${
                                         step.state === 'current'
-                                            ? 'font-semibold text-slate-900'
+                                            ? 'font-semibold text-foreground'
                                             : step.state === 'done'
-                                              ? 'font-medium text-slate-700'
-                                              : 'text-slate-400'
+                                              ? 'font-medium text-secondary-foreground'
+                                              : 'text-muted-foreground'
                                     }`}
                                 >
                                     {step.title}
@@ -367,7 +367,7 @@ export function ProcessSteps({ input }: { input: PipelineInput }) {
                                 )}
                             </div>
                             {step.note && (
-                                <p className="mt-0.5 text-xs text-slate-500">
+                                <p className="mt-0.5 text-xs text-muted-foreground">
                                     {step.note}
                                 </p>
                             )}
@@ -382,7 +382,7 @@ export function ProcessSteps({ input }: { input: PipelineInput }) {
             </ol>
 
             {input.status === 'sent' && (
-                <p className="mt-3 flex items-center gap-2 rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                <p className="mt-3 flex items-center gap-2 rounded-md bg-primary/10 px-3 py-2 text-sm text-primary">
                     <span aria-hidden className="font-bold">
                         ✓
                     </span>

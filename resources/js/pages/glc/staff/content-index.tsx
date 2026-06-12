@@ -1,6 +1,9 @@
+import { GlcSettingsSidebarLayout } from '@/components/glc';
 import GlcLayout from '@/layouts/glc-layout';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Textarea } from '@/components/ui/textarea';
 import {
     Badge,
     btnDanger,
@@ -84,7 +87,7 @@ function QuestionForm({
     };
 
     return (
-        <div className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
+        <div className="space-y-2 rounded-md border border-border bg-muted/50 p-3">
             <Field label="Question" error={form.errors.body}>
                 <input
                     className={inputCls}
@@ -93,29 +96,32 @@ function QuestionForm({
                 />
             </Field>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {form.data.options.map((option, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                        <input
-                            type="radio"
-                            name={`correct-${item?.id ?? 'new'}-${parentId ?? section}`}
-                            checked={form.data.correct_option === index}
-                            onChange={() =>
-                                form.setData('correct_option', index)
-                            }
-                            title="Correct option"
-                        />
-                        <input
-                            className={inputCls}
-                            placeholder={`Option ${index + 1}`}
-                            value={option}
-                            onChange={(e) => {
-                                const next = [...form.data.options];
-                                next[index] = e.target.value;
-                                form.setData('options', next);
-                            }}
-                        />
-                    </div>
-                ))}
+                <RadioGroup
+                    value={String(form.data.correct_option)}
+                    onValueChange={(value) =>
+                        form.setData('correct_option', Number(value))
+                    }
+                    className="contents"
+                >
+                    {form.data.options.map((option, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                            <RadioGroupItem
+                                value={String(index)}
+                                id={`correct-${item?.id ?? 'new'}-${parentId ?? section}-${index}`}
+                            />
+                            <input
+                                className={inputCls}
+                                placeholder={`Option ${index + 1}`}
+                                value={option}
+                                onChange={(e) => {
+                                    const next = [...form.data.options];
+                                    next[index] = e.target.value;
+                                    form.setData('options', next);
+                                }}
+                            />
+                        </div>
+                    ))}
+                </RadioGroup>
             </div>
             {(form.errors as Record<string, string>)['options'] && (
                 <p className="text-xs text-red-600">
@@ -211,7 +217,7 @@ function PassageEditor({ passage }: { passage: ContentItem }) {
                 </button>
             </div>
 
-            <h3 className="mt-4 mb-2 text-xs font-semibold tracking-wide text-slate-500 uppercase">
+            <h3 className="mt-4 mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 Questions ({passage.children.length})
             </h3>
             <div className="space-y-3">
@@ -356,7 +362,7 @@ function ClipEditor({ clip }: { clip: ContentItem }) {
                 </button>
             </div>
 
-            <h3 className="mt-4 mb-2 text-xs font-semibold tracking-wide text-slate-500 uppercase">
+            <h3 className="mt-4 mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 Questions ({clip.children.length})
             </h3>
             <div className="space-y-3">
@@ -566,7 +572,7 @@ function PdfImportPanel() {
 
     return (
         <Card title="Import placement content from PDF">
-            <p className="mb-3 text-xs text-slate-500">
+            <p className="mb-3 text-xs text-muted-foreground">
                 Upload a PDF, review the extracted text below, then confirm to
                 create a reading passage from it. Nothing becomes active before
                 you confirm.
@@ -590,7 +596,7 @@ function PdfImportPanel() {
             {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
 
             {preview !== null && (
-                <div className="mt-4 space-y-2 border-t border-slate-200 pt-3">
+                <div className="mt-4 space-y-2 border-t border-border pt-3">
                     <Badge tone="amber">
                         Preview — review before creating content
                     </Badge>
@@ -652,29 +658,20 @@ export default function ContentIndex() {
         <GlcLayout title="Placement Test Content">
             <Head title="Placement Test Content" />
 
-            <p className="mb-4 text-sm text-slate-500">
+            <p className="mb-4 text-sm text-muted-foreground">
                 One fixed form, same items and order for every candidate. Only
                 active items appear in the test.
             </p>
 
-            <div className="mb-4 flex flex-wrap gap-1 border-b border-slate-200 pb-2">
-                {TABS.map(({ key, label }) => (
-                    <button
-                        key={key}
-                        type="button"
-                        onClick={() => setTab(key)}
-                        className={`rounded-md px-3 py-1.5 text-sm font-medium ${
-                            tab === key
-                                ? 'bg-emerald-600 text-white'
-                                : 'text-slate-600 hover:bg-slate-100'
-                        }`}
-                    >
-                        {label}
-                    </button>
-                ))}
-            </div>
-
-            <div className="space-y-4">
+            <GlcSettingsSidebarLayout
+                items={TABS.map(({ key, label }) => ({
+                    id: key,
+                    label,
+                    active: tab === key,
+                }))}
+                onSelect={(id) => setTab(id)}
+            >
+            <div className="space-y-5 lg:space-y-7.5">
                 {tab === 'reading' && (
                     <>
                         {sections.reading
@@ -702,7 +699,7 @@ export default function ContentIndex() {
                                     item={question}
                                 />
                             ))}
-                            <h3 className="pt-2 text-xs font-semibold tracking-wide text-slate-500 uppercase">
+                            <h3 className="pt-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                                 Add question
                             </h3>
                             <QuestionForm
@@ -751,6 +748,7 @@ export default function ContentIndex() {
 
                 {tab === 'pdf' && <PdfImportPanel />}
             </div>
+            </GlcSettingsSidebarLayout>
         </GlcLayout>
     );
 }

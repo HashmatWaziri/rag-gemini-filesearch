@@ -1,19 +1,38 @@
+import { GlcDataTableCard } from '@/components/glc';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import GlcLayout from '@/layouts/glc-layout';
 import { Head, Link, router } from '@inertiajs/react';
+import { LinkPagination } from '../admin/components';
 import HierarchyManager from './components/hierarchy-manager';
 import HierarchyPicker from './components/hierarchy-picker';
 import {
     documentStateFilterOptions,
     emptySelection,
-    inputClass,
-    labelClass,
-    stateBadgeClass,
     type BulkReportRow,
     type DocumentRow,
     type Paginated,
     type TreeCourse,
     type UploadConfig,
 } from './components/types';
+import {
+    inputClass,
+    labelClass,
+    stateBadgeClass,
+} from './components/ui';
 import UploadPanel from './components/upload-panel';
 
 interface Filters {
@@ -71,27 +90,27 @@ export default function CurriculumIndex({
 
             <div className="space-y-6">
                 {status && (
-                    <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                    <div className="rounded-md border border-primary/20 bg-primary/10 px-4 py-3 text-sm text-primary">
                         {status}
                     </div>
                 )}
 
                 {bulkReport && bulkReport.length > 0 && (
-                    <section className="rounded-lg border border-slate-200 bg-white p-4">
-                        <h2 className="mb-2 text-sm font-semibold text-slate-800">
+                    <section className="rounded-lg border border-border bg-card p-4">
+                        <h2 className="mb-2 text-sm font-semibold text-mono">
                             Bulk upload report
                         </h2>
-                        <ul className="divide-y divide-slate-100">
+                        <ul className="divide-y divide-border">
                             {bulkReport.map((row) => (
                                 <li
                                     key={row.filename}
                                     className="flex flex-col gap-1 py-2 sm:flex-row sm:items-center sm:justify-between"
                                 >
-                                    <span className="truncate text-sm text-slate-700">
+                                    <span className="truncate text-sm text-secondary-foreground">
                                         {row.filename}
                                     </span>
                                     {row.success ? (
-                                        <span className="inline-flex w-fit items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                                        <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                                             Uploaded as draft
                                         </span>
                                     ) : (
@@ -107,56 +126,67 @@ export default function CurriculumIndex({
 
                 <UploadPanel tree={tree} upload={upload} />
 
-                <section className="rounded-lg border border-slate-200 bg-white p-4">
-                    <h2 className="mb-3 text-sm font-semibold text-slate-800">
-                        Documents
-                    </h2>
-
-                    <div className="mb-4 space-y-3">
-                        <HierarchyPicker
-                            tree={tree}
-                            value={{
-                                course_id: currentFilters.course_id,
-                                course_level_id: currentFilters.course_level_id,
-                                course_unit_id: currentFilters.course_unit_id,
-                                course_lesson_id:
-                                    currentFilters.course_lesson_id,
-                            }}
-                            onChange={(value) =>
-                                applyFilters({
-                                    ...currentFilters,
-                                    ...value,
-                                })
-                            }
-                            allowEmpty
-                        />
-                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                            <div>
-                                <label className={labelClass}>Status</label>
-                                <select
-                                    className={inputClass}
-                                    value={currentFilters.state}
-                                    onChange={(e) =>
-                                        applyFilters({
-                                            ...currentFilters,
-                                            state: e.target.value,
-                                        })
-                                    }
-                                >
-                                    <option value="">All statuses</option>
-                                    {documentStateFilterOptions.map(
-                                        ([value, label]) => (
-                                            <option key={value} value={value}>
-                                                {label}
-                                            </option>
-                                        ),
-                                    )}
-                                </select>
-                            </div>
-                            <div className="flex items-end lg:col-span-3">
+                <GlcDataTableCard
+                    filters={
+                        <div className="flex w-full flex-col gap-3">
+                            <HierarchyPicker
+                                tree={tree}
+                                value={{
+                                    course_id: currentFilters.course_id,
+                                    course_level_id:
+                                        currentFilters.course_level_id,
+                                    course_unit_id: currentFilters.course_unit_id,
+                                    course_lesson_id:
+                                        currentFilters.course_lesson_id,
+                                }}
+                                onChange={(value) =>
+                                    applyFilters({
+                                        ...currentFilters,
+                                        ...value,
+                                    })
+                                }
+                                allowEmpty
+                            />
+                            <div className="flex flex-wrap items-end gap-3">
+                                <div className="w-full sm:w-48">
+                                    <label className={labelClass}>Status</label>
+                                    <Select
+                                        value={
+                                            currentFilters.state || '__all__'
+                                        }
+                                        onValueChange={(value) =>
+                                            applyFilters({
+                                                ...currentFilters,
+                                                state:
+                                                    value === '__all__'
+                                                        ? ''
+                                                        : value,
+                                            })
+                                        }
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="All statuses" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="__all__">
+                                                All statuses
+                                            </SelectItem>
+                                            {documentStateFilterOptions.map(
+                                                ([value, label]) => (
+                                                    <SelectItem
+                                                        key={value}
+                                                        value={value}
+                                                    >
+                                                        {label}
+                                                    </SelectItem>
+                                                ),
+                                            )}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                                 <button
                                     type="button"
-                                    className="text-sm font-medium text-slate-500 underline-offset-2 hover:underline"
+                                    className="text-sm font-medium text-muted-foreground underline-offset-2 hover:underline"
                                     onClick={() =>
                                         applyFilters({
                                             ...emptySelection,
@@ -168,106 +198,82 @@ export default function CurriculumIndex({
                                 </button>
                             </div>
                         </div>
-                    </div>
-
-                    <div className="overflow-x-auto">
-                        <table className="w-full min-w-[640px] text-left text-sm">
-                            <thead>
-                                <tr className="border-b border-slate-200 text-xs tracking-wide text-slate-500 uppercase">
-                                    <th className="px-2 py-2">Title</th>
-                                    <th className="px-2 py-2">Path</th>
-                                    <th className="px-2 py-2">Format</th>
-                                    <th className="px-2 py-2">Status</th>
-                                    <th className="px-2 py-2">Version</th>
-                                    <th className="px-2 py-2">Updated</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {documents.data.map((doc) => (
-                                    <tr
-                                        key={doc.id}
-                                        className="hover:bg-slate-50"
-                                    >
-                                        <td className="px-2 py-2">
-                                            <Link
-                                                href={`/staff/curriculum/documents/${doc.id}`}
-                                                className="font-medium text-emerald-700 hover:underline"
-                                            >
-                                                {doc.title}
-                                            </Link>
-                                        </td>
-                                        <td className="px-2 py-2 text-xs text-slate-500">
-                                            {doc.course} / {doc.level} /{' '}
-                                            {doc.unit}
-                                            {doc.lesson
-                                                ? ` / ${doc.lesson}`
-                                                : ''}
-                                        </td>
-                                        <td className="px-2 py-2 text-xs text-slate-500 uppercase">
-                                            {doc.format}
-                                        </td>
-                                        <td className="px-2 py-2">
-                                            <span
-                                                className={stateBadgeClass(
-                                                    doc.state,
-                                                )}
-                                            >
-                                                {doc.state_label}
-                                            </span>
-                                        </td>
-                                        <td className="px-2 py-2 text-slate-600">
-                                            v{doc.version}
-                                        </td>
-                                        <td className="px-2 py-2 text-xs text-slate-500">
-                                            {doc.updated_at}
-                                        </td>
-                                    </tr>
-                                ))}
-                                {documents.data.length === 0 && (
-                                    <tr>
-                                        <td
-                                            colSpan={6}
-                                            className="px-2 py-6 text-center text-sm text-slate-400"
+                    }
+                    footer={
+                        documents.links.length > 3 ? (
+                            <LinkPagination paginator={documents} />
+                        ) : undefined
+                    }
+                >
+                    <Table>
+                        <TableHeader>
+                            <TableRow className="bg-muted/50 hover:bg-muted/50">
+                                <TableHead className="text-xs uppercase">
+                                    Title
+                                </TableHead>
+                                <TableHead className="text-xs uppercase">
+                                    Path
+                                </TableHead>
+                                <TableHead className="text-xs uppercase">
+                                    Format
+                                </TableHead>
+                                <TableHead className="text-xs uppercase">
+                                    Status
+                                </TableHead>
+                                <TableHead className="text-xs uppercase">
+                                    Version
+                                </TableHead>
+                                <TableHead className="text-xs uppercase">
+                                    Updated
+                                </TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {documents.data.map((doc) => (
+                                <TableRow key={doc.id}>
+                                    <TableCell>
+                                        <Link
+                                            href={`/staff/curriculum/documents/${doc.id}`}
+                                            className="font-medium text-primary hover:underline"
                                         >
-                                            No documents match the current
-                                            filters.
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    {documents.links.length > 3 && (
-                        <nav className="mt-4 flex flex-wrap gap-1">
-                            {documents.links.map((link, index) =>
-                                link.url ? (
-                                    <Link
-                                        key={index}
-                                        href={link.url}
-                                        preserveScroll
-                                        className={`rounded px-2.5 py-1 text-xs font-medium ${
-                                            link.active
-                                                ? 'bg-emerald-600 text-white'
-                                                : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
-                                        }`}
-                                        dangerouslySetInnerHTML={{
-                                            __html: link.label,
-                                        }}
-                                    />
-                                ) : (
-                                    <span
-                                        key={index}
-                                        className="rounded px-2.5 py-1 text-xs text-slate-300"
-                                        dangerouslySetInnerHTML={{
-                                            __html: link.label,
-                                        }}
-                                    />
-                                ),
+                                            {doc.title}
+                                        </Link>
+                                    </TableCell>
+                                    <TableCell className="text-xs text-muted-foreground">
+                                        {doc.course} / {doc.level} / {doc.unit}
+                                        {doc.lesson ? ` / ${doc.lesson}` : ''}
+                                    </TableCell>
+                                    <TableCell className="text-xs text-muted-foreground uppercase">
+                                        {doc.format}
+                                    </TableCell>
+                                    <TableCell>
+                                        <span
+                                            className={stateBadgeClass(doc.state)}
+                                        >
+                                            {doc.state_label}
+                                        </span>
+                                    </TableCell>
+                                    <TableCell className="text-secondary-foreground">
+                                        v{doc.version}
+                                    </TableCell>
+                                    <TableCell className="text-xs text-muted-foreground">
+                                        {doc.updated_at}
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                            {documents.data.length === 0 && (
+                                <TableRow>
+                                    <TableCell
+                                        colSpan={6}
+                                        className="py-6 text-center text-sm text-muted-foreground"
+                                    >
+                                        No documents match the current filters.
+                                    </TableCell>
+                                </TableRow>
                             )}
-                        </nav>
-                    )}
-                </section>
+                        </TableBody>
+                    </Table>
+                </GlcDataTableCard>
 
                 <HierarchyManager tree={tree} />
             </div>

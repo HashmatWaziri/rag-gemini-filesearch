@@ -261,7 +261,7 @@ function ClipBlock({
         playback.kind === 'done' || playback.kind === 'playing';
 
     return (
-        <section className="rounded-lg border border-slate-200 bg-white p-4">
+        <section className="rounded-lg border border-border bg-card p-4">
             <div className="flex items-center justify-between gap-3">
                 <h2 className="font-semibold">
                     Clip {index + 1}
@@ -272,22 +272,24 @@ function ClipBlock({
                         type="button"
                         onClick={playManually}
                         disabled={lockPlay}
-                        className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                        className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-xs hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         Play once
                     </button>
                 )}
                 {playback.kind === 'loading' && (
-                    <span className="text-sm text-slate-500">Loading...</span>
+                    <span className="text-sm text-muted-foreground">
+                        Loading...
+                    </span>
                 )}
                 {playback.kind === 'playing' && (
-                    <span className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-700">
-                        <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-600" />
+                    <span className="inline-flex items-center gap-1.5 text-sm font-medium text-primary">
+                        <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
                         Playing - listen carefully
                     </span>
                 )}
                 {playback.kind === 'done' && (
-                    <span className="text-sm font-medium text-slate-400">
+                    <span className="text-sm font-medium text-muted-foreground">
                         Played
                     </span>
                 )}
@@ -295,21 +297,21 @@ function ClipBlock({
 
             {countdown !== null && (
                 <div
-                    className="mt-3 rounded-lg border border-emerald-300 bg-emerald-50 p-3"
+                    className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-3"
                     role="status"
                 >
-                    <p className="text-sm font-semibold text-emerald-800">
+                    <p className="text-sm font-semibold text-primary">
                         Get ready - this clip starts in {countdown}{' '}
                         {countdown === 1 ? 'second' : 'seconds'}.
                     </p>
-                    <p className="mt-0.5 text-xs text-emerald-700">
+                    <p className="mt-0.5 text-xs text-primary">
                         It plays only once. Put your sound on now.
                     </p>
                     <button
                         type="button"
                         onClick={startNow}
                         disabled={lockPlay}
-                        className="mt-2 rounded-lg bg-emerald-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                        className="mt-2 rounded-lg bg-primary px-4 py-1.5 text-sm font-semibold text-primary-foreground shadow-xs hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         I&apos;m ready - start now
                     </button>
@@ -331,17 +333,19 @@ function ClipBlock({
                     <button
                         type="button"
                         onClick={() => void resumeBlocked()}
-                        className="mt-2 rounded-lg bg-emerald-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700"
+                        className="mt-2 rounded-lg bg-primary px-4 py-1.5 text-sm font-semibold text-primary-foreground shadow-xs hover:bg-primary/90"
                     >
                         Start listening now
                     </button>
                 </div>
             )}
 
-            {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+            {error && (
+                <p className="mt-2 text-sm text-destructive">{error}</p>
+            )}
 
             {!questionsEnabled && (
-                <p className="mt-2 text-xs text-slate-500">
+                <p className="mt-2 text-xs text-muted-foreground">
                     The questions unlock when the clip plays.
                 </p>
             )}

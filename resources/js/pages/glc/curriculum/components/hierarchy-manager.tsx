@@ -1,6 +1,7 @@
 import { router } from '@inertiajs/react';
 import { useState } from 'react';
-import { inputClass, type TreeCourse } from './types';
+import { type TreeCourse } from './types';
+import { inputClass } from './ui';
 
 interface HierarchyManagerProps {
     tree: TreeCourse[];
@@ -21,8 +22,8 @@ interface ItemRowProps {
 const itemButtonClass = (selected: boolean) =>
     `flex-1 truncate rounded px-2 py-1 text-left text-sm ${
         selected
-            ? 'bg-emerald-50 font-medium text-emerald-700'
-            : 'text-slate-700 hover:bg-slate-50'
+            ? 'bg-primary/10 font-medium text-primary'
+            : 'text-secondary-foreground hover:bg-accent'
     }`;
 
 function ItemRow({
@@ -79,14 +80,14 @@ function ItemRow({
                 <button
                     type="button"
                     onClick={save}
-                    className="rounded px-1.5 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50"
+                    className="rounded px-1.5 py-1 text-xs font-medium text-primary hover:bg-primary/10"
                 >
                     Save
                 </button>
                 <button
                     type="button"
                     onClick={() => setEditing(false)}
-                    className="rounded px-1.5 py-1 text-xs text-slate-500 hover:bg-slate-100"
+                    className="rounded px-1.5 py-1 text-xs text-muted-foreground hover:bg-accent"
                 >
                     Cancel
                 </button>
@@ -106,14 +107,14 @@ function ItemRow({
             <button
                 type="button"
                 onClick={() => setEditing(true)}
-                className="rounded px-1.5 py-1 text-xs text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                className="rounded px-1.5 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-secondary-foreground"
             >
                 Edit
             </button>
             <button
                 type="button"
                 onClick={remove}
-                className="rounded px-1.5 py-1 text-xs text-slate-400 hover:bg-red-50 hover:text-red-600"
+                className="rounded px-1.5 py-1 text-xs text-muted-foreground hover:bg-red-50 hover:text-red-600"
             >
                 Delete
             </button>
@@ -132,7 +133,7 @@ function AddRow({ placeholder, onAdd, disabled, disabledHint }: AddRowProps) {
     const [name, setName] = useState('');
 
     if (disabled) {
-        return <p className="mt-2 text-xs text-slate-400">{disabledHint}</p>;
+        return <p className="mt-2 text-xs text-muted-foreground">{disabledHint}</p>;
     }
 
     return (
@@ -155,7 +156,7 @@ function AddRow({ placeholder, onAdd, disabled, disabledHint }: AddRowProps) {
             />
             <button
                 type="submit"
-                className="rounded-md border border-emerald-200 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50"
+                className="rounded-md border border-primary/20 px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10"
             >
                 Add
             </button>
@@ -180,16 +181,16 @@ export default function HierarchyManager({ tree }: HierarchyManagerProps) {
     const post = (url: string, data: Record<string, string | number>) =>
         router.post(url, data, { preserveScroll: true });
 
-    const columnClass = 'rounded-md border border-slate-200 bg-slate-50/50 p-2';
+    const columnClass = 'rounded-md border border-border bg-muted/50 p-2';
     const headingClass =
-        'mb-1 px-2 text-xs font-semibold uppercase tracking-wide text-slate-500';
+        'mb-1 px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground';
 
     return (
-        <section className="rounded-lg border border-slate-200 bg-white p-4">
-            <h2 className="mb-1 text-sm font-semibold text-slate-800">
+        <section className="rounded-lg border border-border bg-card p-4">
+            <h2 className="mb-1 text-sm font-semibold text-mono">
                 Course hierarchy
             </h2>
-            <p className="mb-3 text-xs text-slate-500">
+            <p className="mb-3 text-xs text-muted-foreground">
                 Manage courses, levels, units, and lessons. Select an item to
                 manage what sits under it. Deleting an item removes everything
                 beneath it, including tagged documents.
@@ -216,7 +217,7 @@ export default function HierarchyManager({ tree }: HierarchyManagerProps) {
                         />
                     ))}
                     {tree.length === 0 && (
-                        <p className="px-2 py-1 text-xs text-slate-400">
+                        <p className="px-2 py-1 text-xs text-muted-foreground">
                             No courses yet.
                         </p>
                     )}

@@ -1,6 +1,18 @@
+import { GlcDataTableCard, GlcSearchInput } from '@/components/glc';
 import GlcLayout from '@/layouts/glc-layout';
+import { cn } from '@/lib/utils';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { LinkPagination } from '../admin/components';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import {
     ATTENTION_LABELS,
     nextStepHint,
@@ -53,16 +65,16 @@ interface PageProps {
 const STATUS_DOT: Record<ReviewStatus, string> = {
     pending: 'bg-amber-500',
     in_review: 'bg-blue-500',
-    approved: 'bg-emerald-500',
-    sent: 'bg-slate-400',
+    approved: 'bg-primary',
+    sent: 'bg-muted-foreground',
 };
 
 function StatusPill({ status }: { status: ReviewStatus }) {
     return (
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-0.5 text-xs font-medium text-slate-700">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-2.5 py-0.5 text-xs font-medium text-secondary-foreground">
             <span
                 aria-hidden
-                className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[status] ?? 'bg-slate-400'}`}
+                className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[status] ?? 'bg-muted-foreground'}`}
             />
             {REVIEW_STATUS_LABELS[status] ?? status}
         </span>
@@ -97,7 +109,7 @@ function AgeCue({ submittedAt }: { submittedAt: string | null }) {
     }
 
     const tones = {
-        slate: 'text-slate-400',
+        slate: 'text-muted-foreground',
         amber: 'text-amber-600',
         red: 'text-red-600 font-medium',
     } as const;
@@ -199,23 +211,22 @@ export default function ReviewIndex() {
     };
 
     const filterField = (active: boolean) =>
-        active ? `${inputCls} border-emerald-400 bg-emerald-50/40` : inputCls;
+        active ? `${inputCls} border-primary/40 bg-primary/10` : inputCls;
 
     return (
         <GlcLayout title="Placement Tests">
             <Head title="Placement Tests" />
 
-            <p className="-mt-3 mb-4 text-sm text-slate-500">
+            <p className="-mt-3 mb-4 text-sm text-muted-foreground">
                 Placement tests waiting for GLC review and result delivery.
             </p>
 
-            <section
-                aria-label="Filters"
-                className="mb-4 rounded-xl border border-slate-200 bg-white p-3 shadow-sm"
-            >
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+            <GlcDataTableCard
+                filters={
+                    <div className="flex w-full flex-col gap-3">
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
                     <label className="block">
-                        <span className="mb-1 block text-[11px] font-medium tracking-wide text-slate-500 uppercase">
+                        <span className="mb-1 block text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
                             Status
                         </span>
                         <select
@@ -241,7 +252,7 @@ export default function ReviewIndex() {
                         </select>
                     </label>
                     <label className="block">
-                        <span className="mb-1 block text-[11px] font-medium tracking-wide text-slate-500 uppercase">
+                        <span className="mb-1 block text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
                             Reviewer
                         </span>
                         <select
@@ -266,7 +277,7 @@ export default function ReviewIndex() {
                         </select>
                     </label>
                     <label className="block">
-                        <span className="mb-1 block text-[11px] font-medium tracking-wide text-slate-500 uppercase">
+                        <span className="mb-1 block text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
                             Needs attention
                         </span>
                         <select
@@ -286,7 +297,7 @@ export default function ReviewIndex() {
                         </select>
                     </label>
                     <label className="block">
-                        <span className="mb-1 block text-[11px] font-medium tracking-wide text-slate-500 uppercase">
+                        <span className="mb-1 block text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
                             Submitted from
                         </span>
                         <input
@@ -299,7 +310,7 @@ export default function ReviewIndex() {
                         />
                     </label>
                     <label className="block">
-                        <span className="mb-1 block text-[11px] font-medium tracking-wide text-slate-500 uppercase">
+                        <span className="mb-1 block text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
                             Submitted to
                         </span>
                         <input
@@ -312,72 +323,82 @@ export default function ReviewIndex() {
                         />
                     </label>
                     <label className="block">
-                        <span className="mb-1 block text-[11px] font-medium tracking-wide text-slate-500 uppercase">
+                        <span className="mb-1 block text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
                             Search
                         </span>
-                        <input
-                            className={filterField(form.search !== '')}
-                            placeholder="Name or email…"
+                        <GlcSearchInput
                             value={form.search}
-                            onChange={(e) =>
-                                setForm({ ...form, search: e.target.value })
+                            onValueChange={(value) =>
+                                setForm({ ...form, search: value })
                             }
+                            placeholder="Name or email…"
+                            inputClassName={cn(
+                                'w-full',
+                                form.search !== '' &&
+                                    'border-primary/40 bg-primary/10',
+                            )}
                             onKeyDown={(e) =>
                                 e.key === 'Enter' && applyFilters()
                             }
                         />
                     </label>
                 </div>
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <button
-                        type="button"
-                        className={btnPrimary}
-                        onClick={applyFilters}
-                    >
-                        Apply filters
-                    </button>
-                    {hasActiveFilters && (
-                        <>
-                            <button
-                                type="button"
-                                className={btnSecondary}
-                                onClick={clearFilters}
-                            >
-                                Clear
-                            </button>
-                            <span className="text-xs text-emerald-700">
-                                {activeFilterCount}{' '}
-                                {activeFilterCount === 1 ? 'filter' : 'filters'}{' '}
-                                active
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Button type="button" onClick={applyFilters}>
+                                Apply filters
+                            </Button>
+                            {hasActiveFilters && (
+                                <>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={clearFilters}
+                                    >
+                                        Clear
+                                    </Button>
+                                    <span className="text-xs text-primary">
+                                        {activeFilterCount}{' '}
+                                        {activeFilterCount === 1
+                                            ? 'filter'
+                                            : 'filters'}{' '}
+                                        active
+                                    </span>
+                                </>
+                            )}
+                            <span className="ml-auto text-xs text-muted-foreground">
+                                {reviews.total}{' '}
+                                {reviews.total === 1 ? 'test' : 'tests'}
                             </span>
-                        </>
-                    )}
-                    <span className="ml-auto text-xs text-slate-400">
-                        {reviews.total} {reviews.total === 1 ? 'test' : 'tests'}
-                    </span>
-                </div>
-            </section>
-
+                        </div>
+                    </div>
+                }
+                footer={
+                    reviews.data.length > 0 ? (
+                        <LinkPagination paginator={reviews} />
+                    ) : undefined
+                }
+            >
             {reviews.data.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center">
-                    <p className="text-sm font-medium text-slate-600">
+                <div className="rounded-xl border border-dashed border-input bg-card px-6 py-12 text-center">
+                    <p className="text-sm font-medium text-secondary-foreground">
                         {hasActiveFilters
                             ? 'No placement tests match these filters.'
                             : 'No placement tests to review yet.'}
                     </p>
-                    <p className="mt-1 text-xs text-slate-400">
+                    <p className="mt-1 text-xs text-muted-foreground">
                         {hasActiveFilters
                             ? 'Try widening the filters or clearing them.'
                             : 'New submissions appear here as soon as candidates finish the test.'}
                     </p>
                     {hasActiveFilters && (
-                        <button
+                        <Button
                             type="button"
-                            className={`${btnSecondary} mt-4`}
+                            variant="outline"
+                            className="mt-4"
                             onClick={clearFilters}
                         >
                             Clear all filters
-                        </button>
+                        </Button>
                     )}
                 </div>
             ) : (
@@ -394,14 +415,14 @@ export default function ReviewIndex() {
                             return (
                                 <li
                                     key={review.id}
-                                    className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+                                    className="rounded-xl border border-border bg-card p-4 shadow-sm"
                                 >
                                     <div className="flex items-start justify-between gap-2">
                                         <div className="min-w-0">
-                                            <p className="truncate font-medium text-slate-900">
+                                            <p className="truncate font-medium text-foreground">
                                                 {review.candidate_name}
                                             </p>
-                                            <p className="truncate text-xs text-slate-500">
+                                            <p className="truncate text-xs text-muted-foreground">
                                                 {review.candidate_email} · age{' '}
                                                 {review.candidate_age}
                                             </p>
@@ -422,7 +443,7 @@ export default function ReviewIndex() {
                                             <ScoreBars
                                                 scores={review.section_scores}
                                             />
-                                            <p className="mt-1 text-xs text-slate-500">
+                                            <p className="mt-1 text-xs text-muted-foreground">
                                                 {review.suggested_level
                                                     ? `Suggested: ${review.suggested_level}`
                                                     : 'No suggestion yet'}
@@ -436,8 +457,8 @@ export default function ReviewIndex() {
                                     <p
                                         className={`mt-2 text-xs ${
                                             hint.done
-                                                ? 'inline-flex items-center gap-1 font-medium text-emerald-700'
-                                                : 'text-slate-500'
+                                                ? 'inline-flex items-center gap-1 font-medium text-primary'
+                                                : 'text-muted-foreground'
                                         }`}
                                     >
                                         {hint.done && (
@@ -451,34 +472,34 @@ export default function ReviewIndex() {
                     </ul>
 
                     {/* Desktop: table */}
-                    <div className="hidden overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm md:block">
-                        <table className="w-full min-w-[860px] text-left text-sm">
-                            <thead className="border-b border-slate-200 bg-slate-50 text-[11px] tracking-wide text-slate-500 uppercase">
-                                <tr>
-                                    <th scope="col" className="px-3 py-2.5">
+                    <div className="hidden md:block">
+                        <Table>
+                            <TableHeader>
+                                <TableRow className="bg-muted/50 hover:bg-muted/50">
+                                    <TableHead className="text-[11px] tracking-wide uppercase">
                                         Candidate
-                                    </th>
-                                    <th scope="col" className="px-3 py-2.5">
+                                    </TableHead>
+                                    <TableHead className="text-[11px] tracking-wide uppercase">
                                         Submitted
-                                    </th>
-                                    <th scope="col" className="px-3 py-2.5">
+                                    </TableHead>
+                                    <TableHead className="text-[11px] tracking-wide uppercase">
                                         Status
-                                    </th>
-                                    <th scope="col" className="px-3 py-2.5">
+                                    </TableHead>
+                                    <TableHead className="text-[11px] tracking-wide uppercase">
                                         Sections
-                                    </th>
-                                    <th scope="col" className="px-3 py-2.5">
+                                    </TableHead>
+                                    <TableHead className="text-[11px] tracking-wide uppercase">
                                         Suggested level
-                                    </th>
-                                    <th scope="col" className="px-3 py-2.5">
+                                    </TableHead>
+                                    <TableHead className="text-[11px] tracking-wide uppercase">
                                         Reviewer
-                                    </th>
-                                    <th scope="col" className="px-3 py-2.5">
+                                    </TableHead>
+                                    <TableHead className="text-[11px] tracking-wide uppercase">
                                         <span className="sr-only">Actions</span>
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
+                                    </TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
                                 {reviews.data.map((review) => {
                                     const hint = nextStepHint({
                                         status: review.status,
@@ -488,12 +509,12 @@ export default function ReviewIndex() {
                                     });
 
                                     return (
-                                        <tr
+                                        <TableRow
                                             key={review.id}
-                                            className="border-b border-slate-100 transition-colors last:border-b-0 hover:bg-slate-50/70"
+                                            className="hover:bg-accent/50"
                                         >
-                                            <td className="px-3 py-3">
-                                                <div className="flex items-center gap-1.5 font-medium text-slate-800">
+                                            <TableCell>
+                                                <div className="flex items-center gap-1.5 font-medium text-mono">
                                                     <span>
                                                         {review.candidate_name}
                                                     </span>
@@ -503,7 +524,7 @@ export default function ReviewIndex() {
                                                         </Badge>
                                                     )}
                                                 </div>
-                                                <div className="text-xs text-slate-500">
+                                                <div className="text-xs text-muted-foreground">
                                                     {review.candidate_email} ·
                                                     age {review.candidate_age}
                                                 </div>
@@ -512,9 +533,9 @@ export default function ReviewIndex() {
                                                         review={review}
                                                     />
                                                 </div>
-                                            </td>
-                                            <td className="px-3 py-3 align-top whitespace-nowrap">
-                                                <span className="block text-xs text-slate-600">
+                                            </TableCell>
+                                            <TableCell className="align-top whitespace-nowrap">
+                                                <span className="block text-xs text-secondary-foreground">
                                                     {review.submitted_at ?? '—'}
                                                 </span>
                                                 <AgeCue
@@ -522,16 +543,16 @@ export default function ReviewIndex() {
                                                         review.submitted_at
                                                     }
                                                 />
-                                            </td>
-                                            <td className="px-3 py-3 align-top">
+                                            </TableCell>
+                                            <TableCell className="align-top">
                                                 <StatusPill
                                                     status={review.status}
                                                 />
                                                 <p
                                                     className={`mt-1.5 text-xs ${
                                                         hint.done
-                                                            ? 'inline-flex items-center gap-1 font-medium text-emerald-700'
-                                                            : 'text-slate-500'
+                                                            ? 'inline-flex items-center gap-1 font-medium text-primary'
+                                                            : 'text-muted-foreground'
                                                     }`}
                                                 >
                                                     {hint.done && (
@@ -539,15 +560,15 @@ export default function ReviewIndex() {
                                                     )}
                                                     {hint.label}
                                                 </p>
-                                            </td>
-                                            <td className="px-3 py-3 align-top">
+                                            </TableCell>
+                                            <TableCell className="align-top">
                                                 <ScoreBars
                                                     scores={
                                                         review.section_scores
                                                     }
                                                 />
-                                            </td>
-                                            <td className="px-3 py-3 align-top text-slate-700">
+                                            </TableCell>
+                                            <TableCell className="align-top text-secondary-foreground">
                                                 {review.suggested_level ?? '—'}
                                                 {review.variance_flagged && (
                                                     <p className="mt-0.5 text-[11px] text-red-600">
@@ -556,58 +577,29 @@ export default function ReviewIndex() {
                                                         }
                                                     </p>
                                                 )}
-                                            </td>
-                                            <td className="px-3 py-3 align-top text-xs text-slate-600">
+                                            </TableCell>
+                                            <TableCell className="align-top text-xs text-secondary-foreground">
                                                 {review.assignee ?? (
-                                                    <span className="text-slate-400">
+                                                    <span className="text-muted-foreground">
                                                         No reviewer yet
                                                     </span>
                                                 )}
-                                            </td>
-                                            <td className="px-3 py-3 align-top">
+                                            </TableCell>
+                                            <TableCell className="align-top">
                                                 <RowActions
                                                     review={review}
                                                     onStart={startReview}
                                                 />
-                                            </td>
-                                        </tr>
+                                            </TableCell>
+                                        </TableRow>
                                     );
                                 })}
-                            </tbody>
-                        </table>
+                            </TableBody>
+                        </Table>
                     </div>
                 </>
             )}
-
-            <nav
-                aria-label="Pagination"
-                className="mt-3 flex flex-wrap items-center gap-1"
-            >
-                {reviews.links.map((link, index) =>
-                    link.url ? (
-                        <Link
-                            key={index}
-                            href={link.url}
-                            preserveScroll
-                            className={`rounded-md px-2.5 py-1 text-xs ${
-                                link.active
-                                    ? 'bg-emerald-600 font-medium text-white'
-                                    : 'text-slate-600 hover:bg-slate-100'
-                            }`}
-                            dangerouslySetInnerHTML={{ __html: link.label }}
-                        />
-                    ) : (
-                        <span
-                            key={index}
-                            className="px-2.5 py-1 text-xs text-slate-300"
-                            dangerouslySetInnerHTML={{ __html: link.label }}
-                        />
-                    ),
-                )}
-                <span className="ml-auto text-xs text-slate-400">
-                    {reviews.total} total
-                </span>
-            </nav>
+            </GlcDataTableCard>
         </GlcLayout>
     );
 }

@@ -57,12 +57,12 @@ export default function TutorIndex({
         <GlcLayout title="AI Tutor">
             <Head title="AI Tutor" />
 
-            <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+            <div className="mb-4 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-primary">
                 <p className="font-medium">
                     Your course: {assignment.course} / {assignment.level} /{' '}
                     {assignment.unit}
                 </p>
-                <p className="mt-1 text-emerald-800">
+                <p className="mt-1 text-secondary-foreground">
                     The tutor replies in English only and helps with Reading,
                     Writing, Grammar, and Vocabulary from your study materials.
                 </p>
@@ -73,7 +73,7 @@ export default function TutorIndex({
                     <button
                         type="button"
                         onClick={() => router.post('/tutor/conversations')}
-                        className="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500"
+                        className="rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
                     >
                         Start a new conversation
                     </button>
@@ -85,39 +85,39 @@ export default function TutorIndex({
                 )}
                 <Link
                     href="/tutor/writing"
-                    className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-center text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                    className="rounded-lg border border-input bg-background px-4 py-2.5 text-center text-sm font-semibold text-foreground hover:bg-accent"
                 >
                     Writing correction
                 </Link>
             </div>
 
-            <h2 className="mb-2 text-sm font-semibold tracking-wide text-slate-500 uppercase">
+            <h2 className="mb-2 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
                 Previous conversations
             </h2>
 
             {conversations.length === 0 ? (
-                <p className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-500">
+                <p className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
                     No conversations yet. Start one to get help with your
                     lessons.
                 </p>
             ) : (
-                <ul className="divide-y divide-slate-200 overflow-hidden rounded-lg border border-slate-200 bg-white">
+                <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
                     {conversations.map((conversation) => (
                         <li key={conversation.id}>
                             <Link
                                 href={`/tutor/conversations/${conversation.id}`}
-                                className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-slate-50"
+                                className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-accent"
                             >
                                 <div className="min-w-0">
-                                    <p className="truncate text-sm font-medium text-slate-900">
+                                    <p className="truncate text-sm font-medium text-foreground">
                                         {conversation.title ??
                                             'New conversation'}
                                     </p>
-                                    <p className="text-xs text-slate-500">
+                                    <p className="text-xs text-muted-foreground">
                                         {conversation.message_count} messages
                                     </p>
                                 </div>
-                                <span className="shrink-0 text-xs text-slate-400">
+                                <span className="shrink-0 text-xs text-muted-foreground">
                                     {formatDate(conversation.last_activity_at)}
                                 </span>
                             </Link>

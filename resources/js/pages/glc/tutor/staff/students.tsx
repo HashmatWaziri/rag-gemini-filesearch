@@ -1,6 +1,30 @@
+import { GlcDataTableCard } from '@/components/glc';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import GlcLayout from '@/layouts/glc-layout';
 import { Head, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 
 interface UnitOption {
     id: number;
@@ -45,6 +69,8 @@ interface Props {
     canViewAll: boolean;
 }
 
+const SELECT_EMPTY = '__empty__';
+
 function ConsentBadge({
     consent,
 }: {
@@ -52,20 +78,16 @@ function ConsentBadge({
 }) {
     if (!consent.required) {
         return (
-            <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
+            <Badge variant="outline" className="text-muted-foreground">
                 Consent not required
-            </span>
+            </Badge>
         );
     }
 
     return consent.confirmed ? (
-        <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
-            Guardian consent confirmed
-        </span>
+        <Badge>Guardian consent confirmed</Badge>
     ) : (
-        <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700">
-            Guardian consent required
-        </span>
+        <Badge variant="destructive">Guardian consent required</Badge>
     );
 }
 
@@ -115,77 +137,81 @@ function AssignmentForm({
         );
     };
 
-    const selectClasses =
-        'w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm focus:border-emerald-500 focus:outline-none';
+    const empty = SELECT_EMPTY;
 
     return (
-        <div className="mt-3 grid gap-2 rounded-md border border-slate-200 bg-slate-50 p-3 sm:grid-cols-4">
-            <select
-                value={courseId}
-                onChange={(event) => {
-                    setCourseId(Number(event.target.value) || '');
+        <div className="mt-3 grid gap-2 rounded-md border border-border bg-muted/50 p-3 sm:grid-cols-4">
+            <Select
+                value={courseId ? String(courseId) : empty}
+                onValueChange={(value) => {
+                    setCourseId(value === empty ? '' : Number(value));
                     setLevelId('');
                     setUnitId('');
                 }}
-                className={selectClasses}
-                aria-label="Course"
             >
-                <option value="">Course...</option>
-                {courses.map((option) => (
-                    <option key={option.id} value={option.id}>
-                        {option.name}
-                    </option>
-                ))}
-            </select>
-            <select
-                value={levelId}
-                onChange={(event) => {
-                    setLevelId(Number(event.target.value) || '');
+                <SelectTrigger aria-label="Course">
+                    <SelectValue placeholder="Course..." />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value={empty}>Course...</SelectItem>
+                    {courses.map((option) => (
+                        <SelectItem key={option.id} value={String(option.id)}>
+                            {option.name}
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+            <Select
+                value={levelId ? String(levelId) : empty}
+                onValueChange={(value) => {
+                    setLevelId(value === empty ? '' : Number(value));
                     setUnitId('');
                 }}
                 disabled={!course}
-                className={selectClasses}
-                aria-label="Level"
             >
-                <option value="">Level...</option>
-                {course?.levels.map((option) => (
-                    <option key={option.id} value={option.id}>
-                        {option.name}
-                    </option>
-                ))}
-            </select>
-            <select
-                value={unitId}
-                onChange={(event) =>
-                    setUnitId(Number(event.target.value) || '')
+                <SelectTrigger aria-label="Level">
+                    <SelectValue placeholder="Level..." />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value={empty}>Level...</SelectItem>
+                    {course?.levels.map((option) => (
+                        <SelectItem key={option.id} value={String(option.id)}>
+                            {option.name}
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+            <Select
+                value={unitId ? String(unitId) : empty}
+                onValueChange={(value) =>
+                    setUnitId(value === empty ? '' : Number(value))
                 }
                 disabled={!level}
-                className={selectClasses}
-                aria-label="Unit"
             >
-                <option value="">Unit...</option>
-                {level?.units.map((option) => (
-                    <option key={option.id} value={option.id}>
-                        {option.name}
-                    </option>
-                ))}
-            </select>
+                <SelectTrigger aria-label="Unit">
+                    <SelectValue placeholder="Unit..." />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value={empty}>Unit...</SelectItem>
+                    {level?.units.map((option) => (
+                        <SelectItem key={option.id} value={String(option.id)}>
+                            {option.name}
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
             <div className="flex gap-2">
-                <button
+                <Button
                     type="button"
+                    className="flex-1"
                     onClick={save}
                     disabled={saving || !courseId || !levelId || !unitId}
-                    className="flex-1 rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
                 >
                     Save
-                </button>
-                <button
-                    type="button"
-                    onClick={onDone}
-                    className="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100"
-                >
+                </Button>
+                <Button type="button" variant="outline" onClick={onDone}>
                     Cancel
-                </button>
+                </Button>
             </div>
         </div>
     );
@@ -219,140 +245,195 @@ export default function StaffStudents({
         <GlcLayout title="My Students">
             <Head title="My Students" />
 
-            <p className="mb-4 text-sm text-slate-600">
+            <p className="mb-4 text-sm text-secondary-foreground">
                 {canViewAll
                     ? 'All enrolled students. Set each student\u2019s course, level, and unit so the AI Tutor uses the right materials.'
                     : 'Students linked to you. Set each student\u2019s course, level, and unit so the AI Tutor uses the right materials.'}
             </p>
 
             {linkableStudents.length > 0 && (
-                <div className="mb-6 flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-4 sm:flex-row sm:items-center">
-                    <label
-                        htmlFor="link-student"
-                        className="text-sm font-medium text-slate-700"
-                    >
-                        Link a student to me:
-                    </label>
-                    <select
-                        id="link-student"
-                        value={linkStudentId}
-                        onChange={(event) =>
-                            setLinkStudentId(Number(event.target.value) || '')
-                        }
-                        className="min-w-0 flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm focus:border-emerald-500 focus:outline-none"
-                    >
-                        <option value="">Choose a student...</option>
-                        {linkableStudents.map((student) => (
-                            <option key={student.id} value={student.id}>
-                                {student.name} ({student.email})
-                            </option>
-                        ))}
-                    </select>
-                    <button
-                        type="button"
-                        onClick={linkStudent}
-                        disabled={!linkStudentId}
-                        className="rounded-md bg-emerald-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
-                    >
-                        Link
-                    </button>
-                </div>
+                <Card className="mb-6">
+                    <CardHeader>
+                        <CardTitle className="text-base">
+                            Link a student
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <Select
+                            value={
+                                linkStudentId
+                                    ? String(linkStudentId)
+                                    : SELECT_EMPTY
+                            }
+                            onValueChange={(value) =>
+                                setLinkStudentId(
+                                    value === SELECT_EMPTY
+                                        ? ''
+                                        : Number(value),
+                                )
+                            }
+                        >
+                            <SelectTrigger
+                                id="link-student"
+                                className="min-w-0 flex-1"
+                            >
+                                <SelectValue placeholder="Choose a student..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value={SELECT_EMPTY}>
+                                    Choose a student...
+                                </SelectItem>
+                                {linkableStudents.map((student) => (
+                                    <SelectItem
+                                        key={student.id}
+                                        value={String(student.id)}
+                                    >
+                                        {student.name} ({student.email})
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <Button
+                            type="button"
+                            onClick={linkStudent}
+                            disabled={!linkStudentId}
+                        >
+                            Link
+                        </Button>
+                    </CardContent>
+                </Card>
             )}
 
             {students.length === 0 ? (
-                <p className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-500">
+                <p className="rounded-xl border border-border bg-card px-5 py-8 text-center text-sm text-muted-foreground">
                     No students yet. Link a student to get started.
                 </p>
             ) : (
-                <ul className="space-y-3">
-                    {students.map((student) => (
-                        <li
-                            key={student.id}
-                            className="rounded-lg border border-slate-200 bg-white p-4"
-                        >
-                            <div className="flex flex-wrap items-start justify-between gap-2">
-                                <div>
-                                    <p className="text-sm font-semibold text-slate-900">
-                                        {student.name}
-                                    </p>
-                                    <p className="text-xs text-slate-500">
-                                        {student.email}
-                                        {student.age !== null &&
-                                            ` (age ${student.age})`}
-                                    </p>
-                                </div>
-                                <ConsentBadge consent={student.consent} />
-                            </div>
-
-                            <div className="mt-3 flex flex-wrap items-center gap-2">
-                                {student.assignment ? (
-                                    <span className="rounded-md bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-800">
-                                        {student.assignment.course} /{' '}
-                                        {student.assignment.level} /{' '}
-                                        {student.assignment.unit}
-                                    </span>
-                                ) : (
-                                    <span className="rounded-md bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800">
-                                        No course set yet
-                                    </span>
-                                )}
-
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        setEditingId(
-                                            editingId === student.id
-                                                ? null
-                                                : student.id,
-                                        )
-                                    }
-                                    className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                                >
-                                    {student.assignment
-                                        ? 'Change course'
-                                        : 'Set course'}
-                                </button>
-
-                                {student.linked ? (
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            router.delete(
-                                                `/staff/students/${student.id}/link`,
-                                                { preserveScroll: true },
-                                            )
-                                        }
-                                        className="rounded-md border border-red-200 px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
-                                    >
-                                        Unlink from me
-                                    </button>
-                                ) : (
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            router.post(
-                                                `/staff/students/${student.id}/link`,
-                                                {},
-                                                { preserveScroll: true },
-                                            )
-                                        }
-                                        className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                                    >
-                                        Link to me
-                                    </button>
-                                )}
-                            </div>
-
-                            {editingId === student.id && (
-                                <AssignmentForm
-                                    student={student}
-                                    courses={courses}
-                                    onDone={() => setEditingId(null)}
-                                />
-                            )}
-                        </li>
-                    ))}
-                </ul>
+                <GlcDataTableCard>
+                    <Table>
+                        <TableHeader>
+                            <TableRow className="bg-muted/50 hover:bg-muted/50">
+                                <TableHead className="text-xs uppercase">
+                                    Student
+                                </TableHead>
+                                <TableHead className="text-xs uppercase">
+                                    Consent
+                                </TableHead>
+                                <TableHead className="text-xs uppercase">
+                                    Course assignment
+                                </TableHead>
+                                <TableHead className="text-xs uppercase">
+                                    <span className="sr-only">Actions</span>
+                                </TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {students.map((student) => (
+                                <Fragment key={student.id}>
+                                    <TableRow>
+                                        <TableCell className="align-top">
+                                            <p className="font-medium text-mono">
+                                                {student.name}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                                {student.email}
+                                                {student.age !== null &&
+                                                    ` · age ${student.age}`}
+                                            </p>
+                                        </TableCell>
+                                        <TableCell className="align-top">
+                                            <ConsentBadge
+                                                consent={student.consent}
+                                            />
+                                        </TableCell>
+                                        <TableCell className="align-top">
+                                            {student.assignment ? (
+                                                <span className="inline-flex rounded-md bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                                                    {student.assignment.course} /{' '}
+                                                    {student.assignment.level} /{' '}
+                                                    {student.assignment.unit}
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex rounded-md bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-700 dark:text-amber-400">
+                                                    No course set yet
+                                                </span>
+                                            )}
+                                        </TableCell>
+                                        <TableCell className="align-top">
+                                            <div className="flex flex-wrap justify-end gap-2">
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() =>
+                                                        setEditingId(
+                                                            editingId ===
+                                                                student.id
+                                                                ? null
+                                                                : student.id,
+                                                        )
+                                                    }
+                                                >
+                                                    {student.assignment
+                                                        ? 'Change course'
+                                                        : 'Set course'}
+                                                </Button>
+                                                {student.linked ? (
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="text-destructive hover:text-destructive"
+                                                        onClick={() =>
+                                                            router.delete(
+                                                                `/staff/students/${student.id}/link`,
+                                                                {
+                                                                    preserveScroll: true,
+                                                                },
+                                                            )
+                                                        }
+                                                    >
+                                                        Unlink
+                                                    </Button>
+                                                ) : (
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() =>
+                                                            router.post(
+                                                                `/staff/students/${student.id}/link`,
+                                                                {},
+                                                                {
+                                                                    preserveScroll: true,
+                                                                },
+                                                            )
+                                                        }
+                                                    >
+                                                        Link to me
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                    {editingId === student.id && (
+                                        <TableRow key={`${student.id}-edit`}>
+                                            <TableCell colSpan={4}>
+                                                <AssignmentForm
+                                                    student={student}
+                                                    courses={courses}
+                                                    onDone={() =>
+                                                        setEditingId(null)
+                                                    }
+                                                />
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </Fragment>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </GlcDataTableCard>
             )}
         </GlcLayout>
     );

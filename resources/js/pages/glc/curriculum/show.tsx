@@ -2,13 +2,15 @@ import GlcLayout from '@/layouts/glc-layout';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useState, type FormEvent } from 'react';
 import {
+    type DocumentState,
+} from './components/types';
+import {
     dangerButtonClass,
     inputClass,
     primaryButtonClass,
     secondaryButtonClass,
     stateBadgeClass,
-    type DocumentState,
-} from './components/types';
+} from './components/ui';
 
 interface DocumentDetail {
     id: number;
@@ -120,13 +122,13 @@ export default function CurriculumShow({
             <div className="space-y-6">
                 <Link
                     href="/staff/curriculum"
-                    className="text-sm font-medium text-emerald-700 hover:underline"
+                    className="text-sm font-medium text-primary hover:underline"
                 >
                     Back to curriculum
                 </Link>
 
                 {status && (
-                    <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                    <div className="rounded-md border border-primary/20 bg-primary/10 px-4 py-3 text-sm text-primary">
                         {status}
                     </div>
                 )}
@@ -137,7 +139,7 @@ export default function CurriculumShow({
                     </div>
                 )}
 
-                <section className="rounded-lg border border-slate-200 bg-white p-4">
+                <section className="rounded-lg border border-border bg-card p-4">
                     <div className="mb-3 flex flex-wrap items-center gap-2">
                         <span className={stateBadgeClass(document.state)}>
                             {document.state_label}
@@ -165,7 +167,7 @@ export default function CurriculumShow({
                     )}
 
                     {document.state === 'publishing' && (
-                        <p className="mb-3 text-xs text-slate-500">
+                        <p className="mb-3 text-xs text-muted-foreground">
                             This document is being prepared for the AI Tutor.
                             This usually takes a few minutes — refresh the page
                             to see the latest status.
@@ -175,10 +177,10 @@ export default function CurriculumShow({
                     <dl className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
                         {metadata.map(([label, value]) => (
                             <div key={label}>
-                                <dt className="text-xs font-medium tracking-wide text-slate-400 uppercase">
+                                <dt className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                                     {label}
                                 </dt>
-                                <dd className="text-sm text-slate-700">
+                                <dd className="text-sm text-secondary-foreground">
                                     {value}
                                 </dd>
                             </div>
@@ -186,26 +188,26 @@ export default function CurriculumShow({
                     </dl>
                 </section>
 
-                <section className="rounded-lg border border-slate-200 bg-white p-4">
-                    <h2 className="mb-2 text-sm font-semibold text-slate-800">
+                <section className="rounded-lg border border-border bg-card p-4">
+                    <h2 className="mb-2 text-sm font-semibold text-mono">
                         Text preview
                     </h2>
-                    <p className="mb-3 text-xs text-slate-500">
+                    <p className="mb-3 text-xs text-muted-foreground">
                         This is the text the AI Tutor will read from this
                         document. Check that it looks right before publishing.
                     </p>
-                    <pre className="max-h-96 overflow-auto rounded-md border border-slate-200 bg-slate-50 p-3 text-xs leading-relaxed whitespace-pre-wrap text-slate-700">
+                    <pre className="max-h-96 overflow-auto rounded-md border border-border bg-muted/50 p-3 text-xs leading-relaxed whitespace-pre-wrap text-secondary-foreground">
                         {document.extracted_text?.trim() ||
                             'No readable text was found in this file. Replace it with a readable PDF, Word, or text document before publishing.'}
                     </pre>
                 </section>
 
                 {document.status === 'draft' && (
-                    <section className="rounded-lg border border-emerald-200 bg-white p-4">
-                        <h2 className="mb-2 text-sm font-semibold text-slate-800">
+                    <section className="rounded-lg border border-primary/20 bg-card p-4">
+                        <h2 className="mb-2 text-sm font-semibold text-mono">
                             Publish to the AI Tutor
                         </h2>
-                        <p className="mb-3 text-xs text-slate-500">
+                        <p className="mb-3 text-xs text-muted-foreground">
                             Publishing makes this document available to the AI
                             Tutor for students working on this course, level,
                             and unit.
@@ -218,10 +220,10 @@ export default function CurriculumShow({
                             </p>
                         )}
                         <form onSubmit={submitPublish} className="space-y-3">
-                            <label className="flex items-start gap-2 text-sm text-slate-700">
+                            <label className="flex items-start gap-2 text-sm text-secondary-foreground">
                                 <input
                                     type="checkbox"
-                                    className="mt-0.5 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                                    className="mt-0.5 h-4 w-4 rounded border-input text-primary focus:ring-ring/50"
                                     checked={publishForm.data.preview_confirmed}
                                     onChange={(e) =>
                                         publishForm.setData(
@@ -259,8 +261,8 @@ export default function CurriculumShow({
                     </section>
                 )}
 
-                <section className="rounded-lg border border-slate-200 bg-white p-4">
-                    <h2 className="mb-3 text-sm font-semibold text-slate-800">
+                <section className="rounded-lg border border-border bg-card p-4">
+                    <h2 className="mb-3 text-sm font-semibold text-mono">
                         Manage
                     </h2>
                     <div className="flex flex-wrap items-center gap-2">
@@ -303,9 +305,9 @@ export default function CurriculumShow({
                     {showReplace && (
                         <form
                             onSubmit={submitReplace}
-                            className="mt-4 space-y-3 rounded-md border border-slate-200 bg-slate-50 p-3"
+                            className="mt-4 space-y-3 rounded-md border border-border bg-muted/50 p-3"
                         >
-                            <p className="text-xs text-slate-500">
+                            <p className="text-xs text-muted-foreground">
                                 Uploading a new file creates a new version and
                                 takes the document back to draft so you can
                                 check it. If a published version is live for

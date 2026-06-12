@@ -1,12 +1,26 @@
+import { GlcDataTableCard, GlcSearchInput } from '@/components/glc';
+import { Button } from '@/components/ui/button';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import GlcLayout from '@/layouts/glc-layout';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { type FormEvent, useState } from 'react';
 import {
     Badge,
-    buttonPrimaryClass,
-    buttonSecondaryClass,
     ConfirmDialog,
-    inputClass,
     Modal,
     type Option,
     Pagination,
@@ -131,8 +145,8 @@ export default function UsersIndex({
             <StatusBanner message={status} />
 
             {importResult && (
-                <div className="mb-4 rounded-md border border-slate-200 bg-white p-4 text-sm">
-                    <p className="font-medium text-slate-800">
+                <div className="mb-4 rounded-xl border border-border bg-card px-5 py-4 text-sm">
+                    <p className="font-medium text-mono">
                         Import finished: {importResult.created}{' '}
                         {importResult.created === 1 ? 'user' : 'users'} added,{' '}
                         {importResult.errors.length}{' '}
@@ -140,7 +154,7 @@ export default function UsersIndex({
                         problems.
                     </p>
                     {importResult.errors.length > 0 && (
-                        <ul className="mt-2 space-y-1 text-red-700">
+                        <ul className="mt-2 space-y-1 text-destructive">
                             {importResult.errors.map((error) => (
                                 <li key={`${error.row}-${error.message}`}>
                                     Row {error.row}: {error.message}
@@ -151,101 +165,119 @@ export default function UsersIndex({
                 </div>
             )}
 
-            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <form
-                    onSubmit={(e) => {
-                        e.preventDefault();
-                        applyFilters();
-                    }}
-                    className="flex flex-1 flex-col gap-2 sm:flex-row"
-                >
-                    <input
-                        type="search"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Search name or email"
-                        aria-label="Search users"
-                        className={`${inputClass} sm:max-w-xs`}
-                    />
-                    <select
-                        value={filters.role ?? ''}
-                        onChange={(e) =>
-                            applyFilters({ role: e.target.value || undefined })
-                        }
-                        aria-label="Filter by role"
-                        className={`${inputClass} sm:max-w-44`}
+            <GlcDataTableCard
+                filters={
+                    <form
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            applyFilters();
+                        }}
+                        className="flex flex-wrap items-center gap-2.5"
                     >
-                        <option value="">All roles</option>
-                        {roles.map((role) => (
-                            <option key={role.value} value={role.value}>
-                                {role.label}
-                            </option>
-                        ))}
-                    </select>
-                    <button type="submit" className={buttonSecondaryClass}>
-                        Search
-                    </button>
-                </form>
-
-                <div className="flex gap-2">
-                    <button
-                        type="button"
-                        onClick={() => setImportOpen(true)}
-                        className={buttonSecondaryClass}
-                    >
-                        Bulk import
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setCreateOpen(true)}
-                        className={buttonPrimaryClass}
-                    >
-                        New user
-                    </button>
-                </div>
-            </div>
-
-            <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-                <table className="w-full min-w-[640px] text-left text-sm">
-                    <thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-500 uppercase">
-                        <tr>
-                            <th className="px-4 py-3">Name</th>
-                            <th className="px-4 py-3">Role</th>
-                            <th className="px-4 py-3">Age</th>
-                            <th className="px-4 py-3">Guardian consent</th>
-                            <th className="px-4 py-3" />
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
+                        <GlcSearchInput
+                            value={search}
+                            onValueChange={setSearch}
+                            placeholder="Search name or email"
+                            aria-label="Search users"
+                            inputClassName="sm:w-52"
+                        />
+                        <Select
+                            value={filters.role ?? 'all'}
+                            onValueChange={(value) =>
+                                applyFilters({
+                                    role: value === 'all' ? undefined : value,
+                                })
+                            }
+                        >
+                            <SelectTrigger
+                                className="w-40"
+                                aria-label="Filter by role"
+                            >
+                                <SelectValue placeholder="All roles" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All roles</SelectItem>
+                                {roles.map((role) => (
+                                    <SelectItem
+                                        key={role.value}
+                                        value={role.value}
+                                    >
+                                        {role.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <Button type="submit" variant="outline">
+                            Search
+                        </Button>
+                    </form>
+                }
+                actions={
+                    <>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setImportOpen(true)}
+                        >
+                            Bulk import
+                        </Button>
+                        <Button type="button" onClick={() => setCreateOpen(true)}>
+                            New user
+                        </Button>
+                    </>
+                }
+                footer={<Pagination paginator={users} />}
+            >
+                <Table>
+                    <TableHeader>
+                        <TableRow className="bg-muted/50 hover:bg-muted/50">
+                            <TableHead className="text-xs uppercase">
+                                Name
+                            </TableHead>
+                            <TableHead className="text-xs uppercase">
+                                Role
+                            </TableHead>
+                            <TableHead className="text-xs uppercase">
+                                Age
+                            </TableHead>
+                            <TableHead className="text-xs uppercase">
+                                Guardian consent
+                            </TableHead>
+                            <TableHead className="text-xs uppercase">
+                                <span className="sr-only">Actions</span>
+                            </TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
                         {users.data.length === 0 && (
-                            <tr>
-                                <td
+                            <TableRow>
+                                <TableCell
                                     colSpan={5}
-                                    className="px-4 py-8 text-center text-slate-500"
+                                    className="py-8 text-center text-muted-foreground"
                                 >
                                     No users found.
-                                </td>
-                            </tr>
+                                </TableCell>
+                            </TableRow>
                         )}
                         {users.data.map((user) => (
-                            <tr key={user.id}>
-                                <td className="px-4 py-3">
-                                    <p className="font-medium text-slate-900">
+                            <TableRow key={user.id}>
+                                <TableCell>
+                                    <p className="font-medium text-mono">
                                         {user.name}
                                     </p>
-                                    <p className="text-xs text-slate-500">
+                                    <p className="text-xs text-muted-foreground">
                                         {user.email}
                                     </p>
-                                </td>
-                                <td className="px-4 py-3">
+                                </TableCell>
+                                <TableCell>
                                     <Badge tone={roleTone(user.role)}>
                                         {user.role_label ?? 'None'}
                                     </Badge>
-                                </td>
-                                <td className="px-4 py-3 text-slate-600">
+                                </TableCell>
+                                <TableCell className="text-secondary-foreground">
                                     {user.age ?? '-'}
-                                </td>
-                                <td className="px-4 py-3">
+                                </TableCell>
+                                <TableCell>
                                     {user.requires_guardian_consent ? (
                                         user.has_guardian_consent ? (
                                             <Badge tone="green">
@@ -255,35 +287,33 @@ export default function UsersIndex({
                                             <Badge tone="amber">Required</Badge>
                                         )
                                     ) : (
-                                        <span className="text-slate-400">
+                                        <span className="text-muted-foreground">
                                             -
                                         </span>
                                     )}
-                                </td>
-                                <td className="px-4 py-3">
+                                </TableCell>
+                                <TableCell>
                                     <div className="flex justify-end gap-2">
                                         <Link
                                             href={`/admin/users/${user.id}/edit`}
-                                            className="text-sm font-medium text-emerald-700 hover:underline"
+                                            className="text-sm font-medium text-primary hover:underline"
                                         >
                                             Edit
                                         </Link>
                                         <button
                                             type="button"
                                             onClick={() => setDeleting(user)}
-                                            className="text-sm font-medium text-red-600 hover:underline"
+                                            className="text-sm font-medium text-destructive hover:underline"
                                         >
                                             Delete
                                         </button>
                                     </div>
-                                </td>
-                            </tr>
+                                </TableCell>
+                            </TableRow>
                         ))}
-                    </tbody>
-                </table>
-            </div>
-
-            <Pagination paginator={users} />
+                    </TableBody>
+                </Table>
+            </GlcDataTableCard>
 
             <Modal
                 open={createOpen}
@@ -303,20 +333,16 @@ export default function UsersIndex({
                     <PrivacyNoticeSection text={privacyNotice} />
 
                     <div className="flex justify-end gap-2">
-                        <button
+                        <Button
                             type="button"
+                            variant="outline"
                             onClick={() => setCreateOpen(false)}
-                            className={buttonSecondaryClass}
                         >
                             Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={createForm.processing}
-                            className={buttonPrimaryClass}
-                        >
+                        </Button>
+                        <Button type="submit" disabled={createForm.processing}>
                             Create user
-                        </button>
+                        </Button>
                     </div>
                 </form>
             </Modal>
@@ -327,9 +353,9 @@ export default function UsersIndex({
                 onClose={() => setImportOpen(false)}
             >
                 <form onSubmit={submitImport} className="space-y-4">
-                    <p className="text-sm text-slate-600">
+                    <p className="text-sm text-secondary-foreground">
                         Upload a CSV with the columns{' '}
-                        <code className="rounded bg-slate-100 px-1 text-xs">
+                        <code className="rounded bg-accent px-1 text-xs">
                             name,email,password,role,age,guardian_name,guardian_email
                         </code>
                         . Each row is checked separately: rows that pass are
@@ -347,31 +373,30 @@ export default function UsersIndex({
                                 e.target.files?.[0] ?? null,
                             )
                         }
-                        className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-emerald-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-emerald-700"
+                        className="block w-full text-sm text-secondary-foreground file:mr-3 file:rounded-md file:border-0 file:bg-primary/10 file:px-3 file:py-2 file:text-sm file:font-medium file:text-primary"
                     />
                     {importForm.errors.file && (
-                        <p className="text-xs text-red-600">
+                        <p className="text-xs text-destructive">
                             {importForm.errors.file}
                         </p>
                     )}
 
                     <div className="flex justify-end gap-2">
-                        <button
+                        <Button
                             type="button"
+                            variant="outline"
                             onClick={() => setImportOpen(false)}
-                            className={buttonSecondaryClass}
                         >
                             Cancel
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                             type="submit"
                             disabled={
                                 importForm.processing || !importForm.data.file
                             }
-                            className={buttonPrimaryClass}
                         >
                             Import
-                        </button>
+                        </Button>
                     </div>
                 </form>
             </Modal>

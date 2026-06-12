@@ -1,3 +1,25 @@
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge as UiBadge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+    Pagination as UiPagination,
+    PaginationContent,
+    PaginationItem,
+    PaginationNext,
+    PaginationPrevious,
+} from '@/components/ui/pagination';
+import { buttonVariants } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { Link } from '@inertiajs/react';
 import { type ReactNode } from 'react';
 
@@ -18,16 +40,16 @@ export interface Option {
 }
 
 export const inputClass =
-    'w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500';
+    'flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-xs transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50';
 
 export const buttonPrimaryClass =
-    'inline-flex items-center justify-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50';
+    'inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50';
 
 export const buttonSecondaryClass =
-    'inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50';
+    'inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground shadow-xs hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50';
 
 export const buttonDangerClass =
-    'inline-flex items-center justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50';
+    'inline-flex h-9 items-center justify-center rounded-md bg-destructive px-4 py-2 text-sm font-medium text-white shadow-xs hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-50';
 
 export function StatusBanner({ message }: { message?: string | null }) {
     if (!message) {
@@ -35,9 +57,9 @@ export function StatusBanner({ message }: { message?: string | null }) {
     }
 
     return (
-        <div className="mb-4 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-            {message}
-        </div>
+        <Alert className="mb-4 border-primary/20 bg-primary/5 text-primary">
+            <AlertDescription>{message}</AlertDescription>
+        </Alert>
     );
 }
 
@@ -51,28 +73,28 @@ interface FieldProps {
 
 export function Field({ label, htmlFor, error, hint, children }: FieldProps) {
     return (
-        <div className="space-y-1">
-            <label
-                htmlFor={htmlFor}
-                className="block text-sm font-medium text-slate-700"
-            >
-                {label}
-            </label>
+        <div className="space-y-1.5">
+            <Label htmlFor={htmlFor}>{label}</Label>
             {children}
-            {hint && <p className="text-xs text-slate-500">{hint}</p>}
-            {error && <p className="text-xs text-red-600">{error}</p>}
+            {hint && (
+                <p className="text-xs text-muted-foreground">{hint}</p>
+            )}
+            {error && <p className="text-xs text-destructive">{error}</p>}
         </div>
     );
 }
 
 type BadgeTone = 'green' | 'amber' | 'red' | 'slate' | 'blue';
 
-const BADGE_TONES: Record<BadgeTone, string> = {
-    green: 'bg-emerald-100 text-emerald-800',
-    amber: 'bg-amber-100 text-amber-800',
-    red: 'bg-red-100 text-red-800',
-    slate: 'bg-slate-100 text-slate-700',
-    blue: 'bg-blue-100 text-blue-800',
+const BADGE_VARIANTS: Record<
+    BadgeTone,
+    'default' | 'secondary' | 'destructive' | 'outline'
+> = {
+    green: 'default',
+    amber: 'secondary',
+    red: 'destructive',
+    slate: 'outline',
+    blue: 'default',
 };
 
 export function Badge({
@@ -83,11 +105,9 @@ export function Badge({
     children: ReactNode;
 }) {
     return (
-        <span
-            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap ${BADGE_TONES[tone]}`}
-        >
+        <UiBadge variant={BADGE_VARIANTS[tone]} className="whitespace-nowrap">
             {children}
-        </span>
+        </UiBadge>
     );
 }
 
@@ -97,41 +117,97 @@ export function Pagination({ paginator }: { paginator: Paginator<unknown> }) {
     }
 
     return (
-        <div className="mt-4 flex items-center justify-between gap-3 text-sm text-slate-600">
-            <p>
-                Showing {paginator.from ?? 0}-{paginator.to ?? 0} of{' '}
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-secondary-foreground">
+                Showing {paginator.from ?? 0}–{paginator.to ?? 0} of{' '}
                 {paginator.total}
             </p>
-            <div className="flex gap-2">
-                {paginator.prev_page_url ? (
-                    <Link
-                        href={paginator.prev_page_url}
-                        preserveScroll
-                        preserveState
-                        className={buttonSecondaryClass}
-                    >
-                        Previous
-                    </Link>
-                ) : (
-                    <span className={`${buttonSecondaryClass} opacity-50`}>
-                        Previous
-                    </span>
-                )}
-                {paginator.next_page_url ? (
-                    <Link
-                        href={paginator.next_page_url}
-                        preserveScroll
-                        preserveState
-                        className={buttonSecondaryClass}
-                    >
-                        Next
-                    </Link>
-                ) : (
-                    <span className={`${buttonSecondaryClass} opacity-50`}>
-                        Next
-                    </span>
-                )}
-            </div>
+            <UiPagination className="mx-0 w-auto justify-end">
+                <PaginationContent>
+                    <PaginationItem>
+                        <PaginationPrevious
+                            href={paginator.prev_page_url}
+                            disabled={!paginator.prev_page_url}
+                        />
+                    </PaginationItem>
+                    <PaginationItem>
+                        <PaginationNext
+                            href={paginator.next_page_url}
+                            disabled={!paginator.next_page_url}
+                        />
+                    </PaginationItem>
+                </PaginationContent>
+            </UiPagination>
+        </div>
+    );
+}
+
+export interface PaginationLinkItem {
+    url: string | null;
+    label: string;
+    active: boolean;
+}
+
+export interface LinkPaginator {
+    links: PaginationLinkItem[];
+    total: number;
+}
+
+export function LinkPagination({
+    paginator,
+    className,
+}: {
+    paginator: LinkPaginator;
+    className?: string;
+}) {
+    if (paginator.total === 0) {
+        return null;
+    }
+
+    return (
+        <div className={cn('flex flex-wrap items-center gap-1', className)}>
+            <UiPagination className="mx-0 w-auto justify-start">
+                <PaginationContent>
+                    {paginator.links.map((link, index) => (
+                        <PaginationItem key={`${link.label}-${index}`}>
+                            {link.url ? (
+                                <Link
+                                    href={link.url}
+                                    preserveScroll
+                                    className={cn(
+                                        buttonVariants({
+                                            variant: link.active
+                                                ? 'default'
+                                                : 'outline',
+                                            size: 'icon',
+                                        }),
+                                        'min-w-9',
+                                    )}
+                                    dangerouslySetInnerHTML={{
+                                        __html: link.label,
+                                    }}
+                                />
+                            ) : (
+                                <span
+                                    className={cn(
+                                        buttonVariants({
+                                            variant: 'outline',
+                                            size: 'icon',
+                                        }),
+                                        'min-w-9 pointer-events-none opacity-50',
+                                    )}
+                                    dangerouslySetInnerHTML={{
+                                        __html: link.label,
+                                    }}
+                                />
+                            )}
+                        </PaginationItem>
+                    ))}
+                </PaginationContent>
+            </UiPagination>
+            <span className="ml-auto text-xs text-muted-foreground">
+                {paginator.total} total
+            </span>
         </div>
     );
 }
@@ -144,34 +220,15 @@ interface ModalProps {
 }
 
 export function Modal({ open, title, onClose, children }: ModalProps) {
-    if (!open) {
-        return null;
-    }
-
     return (
-        <div
-            className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 p-0 sm:items-center sm:p-4"
-            role="dialog"
-            aria-modal="true"
-            aria-label={title}
-        >
-            <div className="max-h-[90vh] w-full overflow-y-auto rounded-t-xl bg-white p-5 shadow-xl sm:max-w-lg sm:rounded-xl">
-                <div className="mb-4 flex items-start justify-between gap-3">
-                    <h2 className="text-lg font-semibold text-slate-900">
-                        {title}
-                    </h2>
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="rounded-md px-2 py-1 text-sm text-slate-500 hover:bg-slate-100"
-                        aria-label="Close"
-                    >
-                        Close
-                    </button>
-                </div>
+        <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+                <DialogHeader>
+                    <DialogTitle>{title}</DialogTitle>
+                </DialogHeader>
                 {children}
-            </div>
-        </div>
+            </DialogContent>
+        </Dialog>
     );
 }
 
@@ -196,56 +253,48 @@ export function ConfirmDialog({
     onConfirm,
     onCancel,
 }: ConfirmDialogProps) {
-    if (!open) {
-        return null;
-    }
-
     return (
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
-            role="alertdialog"
-            aria-modal="true"
-            aria-label={title}
-        >
-            <div className="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl">
-                <h2 className="text-base font-semibold text-slate-900">
-                    {title}
-                </h2>
-                <p className="mt-2 text-sm text-slate-600">{message}</p>
-                <div className="mt-4 flex justify-end gap-2">
-                    <button
+        <Dialog open={open} onOpenChange={(next) => !next && onCancel()}>
+            <DialogContent className="sm:max-w-sm">
+                <DialogHeader>
+                    <DialogTitle>{title}</DialogTitle>
+                    <DialogDescription>{message}</DialogDescription>
+                </DialogHeader>
+                <DialogFooter className="gap-2 sm:gap-0">
+                    <Button
                         type="button"
+                        variant="outline"
                         onClick={onCancel}
                         disabled={processing}
-                        className={buttonSecondaryClass}
                     >
                         Cancel
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                         type="button"
+                        variant={danger ? 'destructive' : 'default'}
                         onClick={onConfirm}
                         disabled={processing}
-                        className={
-                            danger ? buttonDangerClass : buttonPrimaryClass
-                        }
                     >
                         {confirmLabel}
-                    </button>
-                </div>
-            </div>
-        </div>
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     );
 }
 
 export function PrivacyNoticeSection({ text }: { text: string }) {
     return (
-        <section className="rounded-md border border-slate-200 bg-slate-50 p-4">
-            <h3 className="text-sm font-semibold text-slate-800">
+        <section className="rounded-lg border border-border bg-muted/50 p-4">
+            <h3 className="text-sm font-semibold text-mono">
                 Privacy Notice (PDPA)
             </h3>
-            <p className="mt-2 text-xs leading-relaxed text-slate-600">
+            <p className="mt-2 text-xs leading-relaxed text-secondary-foreground">
                 {text}
             </p>
         </section>
     );
 }
+
+// Re-export Input for pages that import it from here
+export { Input };

@@ -1,10 +1,19 @@
+import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import {
     emptySelection,
-    inputClass,
-    labelClass,
     type HierarchySelection,
     type TreeCourse,
 } from './types';
+import { labelClass } from './ui';
+
+const EMPTY = '__empty__';
 
 interface HierarchyPickerProps {
     tree: TreeCourse[];
@@ -37,29 +46,42 @@ export default function HierarchyPicker({
     const set = (patch: Partial<HierarchySelection>) =>
         onChange({ ...value, ...patch });
 
+    const courseValue = value.course_id || EMPTY;
+    const levelValue = value.course_level_id || EMPTY;
+    const unitValue = value.course_unit_id || EMPTY;
+    const lessonValue = value.course_lesson_id || EMPTY;
+
     return (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div>
-                <label className={labelClass}>Course</label>
-                <select
-                    className={inputClass}
-                    value={value.course_id}
-                    onChange={(e) =>
+                <Label className={labelClass}>Course</Label>
+                <Select
+                    value={courseValue}
+                    onValueChange={(next) =>
                         set({
                             ...emptySelection,
-                            course_id: e.target.value,
+                            course_id: next === EMPTY ? '' : next,
                         })
                     }
                 >
-                    <option value="">
-                        {allowEmpty ? 'All courses' : 'Select course'}
-                    </option>
-                    {tree.map((c) => (
-                        <option key={c.id} value={c.id}>
-                            {c.name}
-                        </option>
-                    ))}
-                </select>
+                    <SelectTrigger>
+                        <SelectValue
+                            placeholder={
+                                allowEmpty ? 'All courses' : 'Select course'
+                            }
+                        />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value={EMPTY}>
+                            {allowEmpty ? 'All courses' : 'Select course'}
+                        </SelectItem>
+                        {tree.map((c) => (
+                            <SelectItem key={c.id} value={String(c.id)}>
+                                {c.name}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
                 {errors.course_id && (
                     <p className="mt-1 text-xs text-red-600">
                         {errors.course_id}
@@ -68,28 +90,36 @@ export default function HierarchyPicker({
             </div>
 
             <div>
-                <label className={labelClass}>Level</label>
-                <select
-                    className={inputClass}
-                    value={value.course_level_id}
-                    onChange={(e) =>
+                <Label className={labelClass}>Level</Label>
+                <Select
+                    value={levelValue}
+                    onValueChange={(next) =>
                         set({
-                            course_level_id: e.target.value,
+                            course_level_id: next === EMPTY ? '' : next,
                             course_unit_id: '',
                             course_lesson_id: '',
                         })
                     }
                     disabled={!course}
                 >
-                    <option value="">
-                        {allowEmpty ? 'All levels' : 'Select level'}
-                    </option>
-                    {course?.levels.map((l) => (
-                        <option key={l.id} value={l.id}>
-                            {l.name}
-                        </option>
-                    ))}
-                </select>
+                    <SelectTrigger>
+                        <SelectValue
+                            placeholder={
+                                allowEmpty ? 'All levels' : 'Select level'
+                            }
+                        />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value={EMPTY}>
+                            {allowEmpty ? 'All levels' : 'Select level'}
+                        </SelectItem>
+                        {course?.levels.map((l) => (
+                            <SelectItem key={l.id} value={String(l.id)}>
+                                {l.name}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
                 {errors.course_level_id && (
                     <p className="mt-1 text-xs text-red-600">
                         {errors.course_level_id}
@@ -98,27 +128,35 @@ export default function HierarchyPicker({
             </div>
 
             <div>
-                <label className={labelClass}>Unit</label>
-                <select
-                    className={inputClass}
-                    value={value.course_unit_id}
-                    onChange={(e) =>
+                <Label className={labelClass}>Unit</Label>
+                <Select
+                    value={unitValue}
+                    onValueChange={(next) =>
                         set({
-                            course_unit_id: e.target.value,
+                            course_unit_id: next === EMPTY ? '' : next,
                             course_lesson_id: '',
                         })
                     }
                     disabled={!level}
                 >
-                    <option value="">
-                        {allowEmpty ? 'All units' : 'Select unit'}
-                    </option>
-                    {level?.units.map((u) => (
-                        <option key={u.id} value={u.id}>
-                            {u.name}
-                        </option>
-                    ))}
-                </select>
+                    <SelectTrigger>
+                        <SelectValue
+                            placeholder={
+                                allowEmpty ? 'All units' : 'Select unit'
+                            }
+                        />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value={EMPTY}>
+                            {allowEmpty ? 'All units' : 'Select unit'}
+                        </SelectItem>
+                        {level?.units.map((u) => (
+                            <SelectItem key={u.id} value={String(u.id)}>
+                                {u.name}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
                 {errors.course_unit_id && (
                     <p className="mt-1 text-xs text-red-600">
                         {errors.course_unit_id}
@@ -127,24 +165,40 @@ export default function HierarchyPicker({
             </div>
 
             <div>
-                <label className={labelClass}>
+                <Label className={labelClass}>
                     Lesson{allowEmpty ? '' : ' (optional)'}
-                </label>
-                <select
-                    className={inputClass}
-                    value={value.course_lesson_id}
-                    onChange={(e) => set({ course_lesson_id: e.target.value })}
+                </Label>
+                <Select
+                    value={lessonValue}
+                    onValueChange={(next) =>
+                        set({
+                            course_lesson_id: next === EMPTY ? '' : next,
+                        })
+                    }
                     disabled={!unit}
                 >
-                    <option value="">
-                        {allowEmpty ? 'All lessons' : 'No specific lesson'}
-                    </option>
-                    {unit?.lessons.map((l) => (
-                        <option key={l.id} value={l.id}>
-                            {l.name}
-                        </option>
-                    ))}
-                </select>
+                    <SelectTrigger>
+                        <SelectValue
+                            placeholder={
+                                allowEmpty
+                                    ? 'All lessons'
+                                    : 'No specific lesson'
+                            }
+                        />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value={EMPTY}>
+                            {allowEmpty
+                                ? 'All lessons'
+                                : 'No specific lesson'}
+                        </SelectItem>
+                        {unit?.lessons.map((l) => (
+                            <SelectItem key={l.id} value={String(l.id)}>
+                                {l.name}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
                 {errors.course_lesson_id && (
                     <p className="mt-1 text-xs text-red-600">
                         {errors.course_lesson_id}
