@@ -10,6 +10,7 @@ use App\Models\Glc\AuditLog;
 use App\Models\Glc\CurriculumDocument;
 use App\Models\Setting;
 use App\Models\User;
+use App\Services\Glc\Curriculum\CurriculumUploadService;
 use Illuminate\Http\Client\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
@@ -47,7 +48,7 @@ it('replaces a published document: version bump, back to draft, previous store e
         ->and($document->status)->toBe(CurriculumDocumentStatus::Draft)
         ->and($document->published_at)->toBeNull()
         ->and($document->original_filename)->toBe('updated-version.txt')
-        ->and($document->extracted_text)->toBe('Updated worksheet content v2.')
+        ->and($document->extracted_text)->toBeNull()
         ->and($document->gemini_document_name)->toBe('fileSearchStores/glc-store/documents/old-doc')
         ->and($document->index_status)->toBe(CurriculumIndexStatus::Pending)
         ->and($document->index_error)->toBeNull()
@@ -55,6 +56,15 @@ it('replaces a published document: version bump, back to draft, previous store e
         ->and(CurriculumDocument::query()->published()->count())->toBe(0);
 
     Storage::disk('local')->assertExists($document->file_path);
+
+    $versionPath = app(CurriculumUploadService::class)->versionedFilePath(
+        $document->course_id,
+        $document->id,
+        1,
+        'txt',
+    );
+
+    Storage::disk('local')->assertExists($versionPath);
     Storage::disk('local')->assertMissing('glc/curriculum/1/original.txt');
 
     Http::assertNothingSent();
@@ -164,7 +174,7 @@ it('replaces a draft document without touching the API', function (): void {
     $document->refresh();
 
     expect($document->version)->toBe(2)
-        ->and($document->extracted_text)->toBe('Draft v2.')
+        ->and($document->extracted_text)->toBeNull()
         ->and($document->status)->toBe(CurriculumDocumentStatus::Draft);
 });
 
@@ -197,11 +207,11 @@ it('rejects replacement files with unsupported extensions', function (): void {
     expect($document->refresh()->version)->toBe(1);
 });
 
-it('keeps the current version when replacement extraction fails', function (): void {
+it('accepts replacement files without local text extraction', function (): void {
     $document = CurriculumDocument::factory()->create([
         'file_path' => 'glc/curriculum/1/good.txt',
         'format' => 'txt',
-        'extracted_text' => 'Good content.',
+        'extracted_text' => null,
         'version' => 1,
     ]);
 
@@ -211,12 +221,22 @@ it('keeps the current version when replacement extraction fails', function (): v
         ->post(route('curriculum.documents.replace', $document), [
             'file' => UploadedFile::fake()->createWithContent('broken.pdf', 'not a real pdf'),
         ])
-        ->assertSessionHasErrors('file');
+        ->assertRedirect();
 
     $document->refresh();
 
-    expect($document->version)->toBe(1)
-        ->and($document->extracted_text)->toBe('Good content.');
+    expect($document->version)->toBe(2)
+        ->and($document->format)->toBe('pdf')
+        ->and($document->extracted_text)->toBeNull()
+        ->and(Storage::disk('local')->get($document->file_path))->toBe('not a real pdf');
 
-    Storage::disk('local')->assertExists('glc/curriculum/1/good.txt');
+    $versionPath = app(CurriculumUploadService::class)->versionedFilePath(
+        $document->course_id,
+        $document->id,
+        1,
+        'txt',
+    );
+
+    Storage::disk('local')->assertExists($versionPath);
+    Storage::disk('local')->assertMissing('glc/curriculum/1/good.txt');
 });

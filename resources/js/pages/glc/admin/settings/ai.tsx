@@ -356,7 +356,15 @@ export default function AiModelSettings({
             <div className="space-y-6">
                 <p className="text-sm text-secondary-foreground">
                     Choose which AI provider and model power each placement test
-                    task, and manage provider API keys. Prices are USD,
+                    task, and manage provider API keys.{' '}
+                    <Link
+                        href="/admin/settings/ai-cost"
+                        className="font-medium text-primary underline hover:text-primary/80"
+                    >
+                        AI cost controls
+                    </Link>{' '}
+                    set platform spend limits for tutor and placement workloads.
+                    Prices are USD,
                     retrieved from official vendor pricing pages on{' '}
                     {pricing_retrieved_at}. The rubrics the evaluation models
                     judge against are managed on the{' '}

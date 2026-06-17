@@ -12,6 +12,7 @@ use App\Models\Glc\PlacementAttempt;
 use App\Services\Glc\Admin\PlacementScoringSettings;
 use App\Services\Glc\Admin\SpeakingEvaluationGuidelines;
 use App\Services\Glc\Admin\WritingEvaluationGuidelines;
+use App\Services\Glc\Ai\GlcAiCostGuard;
 use App\Services\Glc\Ai\PlacementAiSettings;
 use Laravel\Ai\Responses\AgentResponse;
 use Laravel\Ai\Responses\StructuredAgentResponse;
@@ -26,11 +27,13 @@ final readonly class PlacementRecommendationService
         private SpeakingEvaluationGuidelines $speakingGuidelines,
         private ObjectiveContextBuilder $objectiveContext,
         private PlacementScoringSettings $scoringSettings,
+        private GlcAiCostGuard $costGuard,
     ) {}
 
     public function recommend(PlacementAttempt $attempt): PlacementAiRecommendation
     {
         try {
+            $this->costGuard->assertWithinLimits();
             $this->settings->hydrateProviderConfig();
             $selection = $this->settings->selection(PlacementAiSettings::TASK_WRITING);
 

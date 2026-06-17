@@ -10,6 +10,7 @@ use App\Models\Glc\TutorUsageDaily;
 use App\Models\Glc\TutorViolation;
 use App\Models\Glc\WritingSubmission;
 use App\Models\User;
+use App\Services\Glc\Ai\GlcAiCostGuard;
 use App\Services\Glc\Ai\PlacementAiSettings;
 use Illuminate\Support\Carbon;
 use Laravel\Ai\Responses\StructuredAgentResponse;
@@ -22,6 +23,7 @@ final class TutorProgressReportService
     public function __construct(
         private readonly PlacementAiSettings $aiSettings,
         private readonly TutorWeakAreaAnalyzer $weakAreas,
+        private readonly GlcAiCostGuard $costGuard,
     ) {}
 
     public function queue(User $staff, User $student, int $windowDays = 30): TutorProgressReport
@@ -58,6 +60,7 @@ final class TutorProgressReportService
         $windowDays = (int) (Carbon::parse($report->period_start)->diffInDays(Carbon::parse($report->period_end)) ?: 30);
 
         try {
+            $this->costGuard->assertWithinLimits();
             $this->aiSettings->hydrateProviderConfig();
             $selection = $this->aiSettings->selection(PlacementAiSettings::TASK_TUTOR_PROGRESS);
 

@@ -38,8 +38,12 @@ export function convertGlucoseValue(
  *
  */
 export function generateUUID(): string {
-    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-        return crypto.randomUUID();
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        try {
+            return crypto.randomUUID();
+        } catch {
+            // randomUUID is unavailable outside secure contexts (e.g. http://*.test).
+        }
     }
 
     // Browser with crypto.getRandomValues or Node.js with global crypto

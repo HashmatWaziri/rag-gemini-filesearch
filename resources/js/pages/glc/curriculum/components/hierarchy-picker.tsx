@@ -13,6 +13,8 @@ interface HierarchyPickerProps {
     onChange: (value: HierarchySelection) => void;
     /** Filter mode: every level may stay empty ("All ..."). */
     allowEmpty?: boolean;
+    /** Upload mode: lesson must be chosen (not clearable). */
+    requireLesson?: boolean;
     errors?: Partial<Record<keyof HierarchySelection, string>>;
 }
 
@@ -33,6 +35,7 @@ export default function HierarchyPicker({
     value,
     onChange,
     allowEmpty = false,
+    requireLesson = false,
     errors = {},
 }: HierarchyPickerProps) {
     const course = tree.find((c) => String(c.id) === value.course_id);
@@ -135,7 +138,12 @@ export default function HierarchyPicker({
 
             <div>
                 <Label className={labelClass}>
-                    Lesson{allowEmpty ? '' : ' (optional)'}
+                    Lesson
+                    {allowEmpty
+                        ? ''
+                        : requireLesson
+                          ? ' (required)'
+                          : ' (optional)'}
                 </Label>
                 <MetronicSelect
                     value={toSelectValue(value.course_lesson_id)}
@@ -146,10 +154,14 @@ export default function HierarchyPicker({
                     }
                     options={lessonOptions}
                     placeholder={
-                        allowEmpty ? 'All lessons' : 'No specific lesson'
+                        allowEmpty
+                            ? 'All lessons'
+                            : requireLesson
+                              ? 'Select lesson'
+                              : 'No specific lesson'
                     }
                     disabled={!unit}
-                    isClearable={!allowEmpty}
+                    isClearable={!allowEmpty && !requireLesson}
                     isSearchable={false}
                 />
                 {errors.course_lesson_id && (

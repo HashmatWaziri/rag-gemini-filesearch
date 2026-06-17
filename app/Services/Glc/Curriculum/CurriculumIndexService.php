@@ -212,7 +212,10 @@ final class CurriculumIndexService
             $metadata[] = ['key' => 'course_lesson_id', 'numericValue' => $document->course_lesson_id];
         }
 
+        $metadata[] = ['key' => 'document_id', 'numericValue' => $document->id];
+        $metadata[] = ['key' => 'version', 'numericValue' => $document->version];
         $metadata[] = ['key' => 'status', 'stringValue' => CurriculumDocumentStatus::Published->value];
+        $metadata[] = ['key' => 'material_kind', 'stringValue' => $document->material_kind->value];
 
         return $metadata;
     }

@@ -15,4 +15,5 @@ enum SettingKey: string
     case GlcSpeakingGuidelines = 'glc_speaking_guidelines';
     case GlcTutorOperationalSettings = 'glc_tutor_operational_settings';
     case GlcPlacementScoringSettings = 'glc_placement_scoring_settings';
+    case GlcAiCostSettings = 'glc_ai_cost_settings';
 }

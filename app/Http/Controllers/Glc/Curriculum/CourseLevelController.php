@@ -4,15 +4,21 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Glc\Curriculum;
 
+use App\Http\Controllers\Glc\Curriculum\Concerns\AuthorizesCurriculum;
 use App\Models\Glc\CourseLevel;
+use App\Services\Glc\Curriculum\CurriculumPermission;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 final readonly class CourseLevelController
 {
+    use AuthorizesCurriculum;
+
     public function store(Request $request): RedirectResponse
     {
+        $this->authorizeCurriculum($request, CurriculumPermission::Upload);
+
         $validated = $request->validate([
             'course_id' => ['required', 'integer', Rule::exists('courses', 'id')],
             'name' => ['required', 'string', 'max:255'],
@@ -30,6 +36,8 @@ final readonly class CourseLevelController
 
     public function update(Request $request, CourseLevel $level): RedirectResponse
     {
+        $this->authorizeCurriculum($request, CurriculumPermission::Upload);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'position' => ['nullable', 'integer', 'min:0'],
@@ -40,8 +48,10 @@ final readonly class CourseLevelController
         return back()->with('status', 'Level updated.');
     }
 
-    public function destroy(CourseLevel $level): RedirectResponse
+    public function destroy(Request $request, CourseLevel $level): RedirectResponse
     {
+        $this->authorizeCurriculum($request, CurriculumPermission::Upload);
+
         $level->delete();
 
         return back()->with('status', 'Level deleted, including its units, lessons, and documents.');

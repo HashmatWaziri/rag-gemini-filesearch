@@ -80,6 +80,9 @@ it('creates the store on first use, uploads, imports with contract metadata, and
             && $metadata->contains(fn (array $entry): bool => $entry === ['key' => 'course_level_id', 'numericValue' => $document->course_level_id])
             && $metadata->contains(fn (array $entry): bool => $entry === ['key' => 'course_unit_id', 'numericValue' => $document->course_unit_id])
             && $metadata->contains(fn (array $entry): bool => $entry === ['key' => 'status', 'stringValue' => 'published'])
+            && $metadata->contains(fn (array $entry): bool => $entry === ['key' => 'material_kind', 'stringValue' => $document->material_kind->value])
+            && $metadata->contains(fn (array $entry): bool => $entry === ['key' => 'document_id', 'numericValue' => $document->id])
+            && $metadata->contains(fn (array $entry): bool => $entry === ['key' => 'version', 'numericValue' => $document->version])
             && $metadata->doesntContain(fn (array $entry): bool => $entry['key'] === 'course_lesson_id');
     });
 });

@@ -103,4 +103,13 @@ final class AiUsage extends Model
     {
         $query->whereIn('agent', config()->array('plate.sub_agents', []));
     }
+
+    /**
+     * @param  Builder<AiUsage>  $query
+     */
+    #[Scope]
+    protected function glc(Builder $query): void
+    {
+        $query->whereIn('agent', config()->array('glc.ai_cost.agents', []));
+    }
 }

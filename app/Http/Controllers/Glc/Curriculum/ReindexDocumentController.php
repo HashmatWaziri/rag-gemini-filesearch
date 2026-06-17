@@ -6,16 +6,22 @@ namespace App\Http\Controllers\Glc\Curriculum;
 
 use App\Enums\Glc\CurriculumDocumentStatus;
 use App\Enums\Glc\CurriculumIndexStatus;
+use App\Http\Controllers\Glc\Curriculum\Concerns\AuthorizesCurriculum;
 use App\Jobs\Glc\Curriculum\IndexCurriculumDocumentJob;
 use App\Models\Glc\CurriculumDocument;
+use App\Services\Glc\Curriculum\CurriculumPermission;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
 final readonly class ReindexDocumentController
 {
+    use AuthorizesCurriculum;
+
     public function __invoke(Request $request, CurriculumDocument $document): RedirectResponse
     {
+        $this->authorizeCurriculum($request, CurriculumPermission::Reindex);
+
         if (! in_array($document->status, [CurriculumDocumentStatus::Published, CurriculumDocumentStatus::PublishFailed], true)) {
             throw ValidationException::withMessages([
                 'status' => 'This document is not published, so there is nothing to retry.',

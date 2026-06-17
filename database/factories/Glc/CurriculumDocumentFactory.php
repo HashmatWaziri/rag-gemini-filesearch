@@ -6,6 +6,7 @@ namespace Database\Factories\Glc;
 
 use App\Enums\Glc\CurriculumDocumentStatus;
 use App\Enums\Glc\CurriculumIndexStatus;
+use App\Enums\Glc\CurriculumMaterialKind;
 use App\Models\Glc\Course;
 use App\Models\Glc\CourseLevel;
 use App\Models\Glc\CourseUnit;
@@ -28,10 +29,11 @@ final class CurriculumDocumentFactory extends Factory
             'course_unit_id' => CourseUnit::factory(),
             'course_lesson_id' => null,
             'title' => fake()->sentence(3),
+            'material_kind' => fake()->randomElement(CurriculumMaterialKind::cases()),
             'original_filename' => 'worksheet.pdf',
             'file_path' => 'glc/curriculum/worksheet.pdf',
             'format' => 'pdf',
-            'extracted_text' => fake()->paragraphs(2, true),
+            'extracted_text' => null,
             'status' => CurriculumDocumentStatus::Draft,
             'version' => 1,
             'uploaded_by' => null,

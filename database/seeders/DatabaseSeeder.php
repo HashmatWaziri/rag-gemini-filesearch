@@ -15,5 +15,7 @@ final class DatabaseSeeder extends Seeder
         }
 
         $this->call(GlcPlacementContentSeeder::class);
+        $this->call(GlcCurriculumSeeder::class);
+        $this->call(GlcRolePermissionSeeder::class);
     }
 }

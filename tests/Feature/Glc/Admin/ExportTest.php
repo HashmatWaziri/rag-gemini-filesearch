@@ -153,7 +153,6 @@ it('exports the curriculum bundle with documents, hierarchy, and files manifest'
         ->and($row['version'])->toBe('1')
         ->and($row['created_at'])->toBe($document->created_at->toIso8601String())
         ->and($row['updated_at'])->toBe($document->updated_at->toIso8601String())
-        ->and($row['extracted_text_preview'])->toBe('Plural nouns add -s in most cases.')
         ->and($row['gemini_file_resource_name'])->toBe($document->gemini_file_name)
         ->and($row['gemini_sync_status'])->toBe('indexed');
 

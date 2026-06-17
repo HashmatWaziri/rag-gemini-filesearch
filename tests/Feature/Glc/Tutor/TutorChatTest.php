@@ -69,6 +69,7 @@ it('sends a message through the scoped retrieval pipeline and persists the reply
         'course_level_id' => $level->id,
         'course_unit_id' => $unit->id,
         'title' => 'Unit Worksheet',
+        'version' => 2,
     ]);
 
     fakeTutorCitations(['Unit Worksheet']);
@@ -82,6 +83,8 @@ it('sends a message through the scoped retrieval pipeline and persists the reply
 
     $messages = $conversation->messages()->orderBy('id')->get();
 
+    $document = CurriculumDocument::query()->where('title', 'Unit Worksheet')->sole();
+
     expect($messages)->toHaveCount(2)
         ->and($messages[0]->role)->toBe('user')
         ->and($messages[0]->content)->toBe('Explain the past simple tense please')
@@ -89,6 +92,11 @@ it('sends a message through the scoped retrieval pipeline and persists the reply
         ->and($messages[1]->content)->toBe('Past simple describes finished actions.')
         ->and($messages[1]->metadata)->toMatchArray([
             'citations' => [sprintf('Unit Worksheet (%s / %s / Unit-wide)', $course->name, $unit->name)],
+            'curriculum_sources' => [[
+                'document_id' => $document->id,
+                'version' => 2,
+                'title' => 'Unit Worksheet',
+            ]],
         ]);
 
     $conversation->refresh();
@@ -200,8 +208,8 @@ it('formats grounded citations as title with course, unit, and lesson or Unit-wi
         'course_unit_id' => $unit->id,
     ];
 
-    CurriculumDocument::factory()->published()->create([...$scope, 'course_lesson_id' => null, 'title' => 'Grammar Basics']);
-    CurriculumDocument::factory()->published()->create([...$scope, 'course_lesson_id' => $lesson->id, 'title' => 'Lesson 2 Worksheet']);
+    CurriculumDocument::factory()->published()->create([...$scope, 'course_lesson_id' => null, 'title' => 'Grammar Basics', 'version' => 1]);
+    CurriculumDocument::factory()->published()->create([...$scope, 'course_lesson_id' => $lesson->id, 'title' => 'Lesson 2 Worksheet', 'version' => 3]);
 
     Setting::set(SettingKey::GlcCurriculumStoreName, 'fileSearchStores/glc-test-store');
 
@@ -217,14 +225,67 @@ it('formats grounded citations as title with course, unit, and lesson or Unit-wi
         sprintf('Lesson 2 Worksheet (%s / %s / Past Simple)', $course->name, $unit->name),
     ];
 
+    $grammarDocument = CurriculumDocument::query()->where('title', 'Grammar Basics')->sole();
+    $worksheetDocument = CurriculumDocument::query()->where('title', 'Lesson 2 Worksheet')->sole();
+
     expect(data_get($conversation->messages()->where('role', 'assistant')->sole()->metadata, 'citations'))
-        ->toBe($expected);
+        ->toBe($expected)
+        ->and(data_get($conversation->messages()->where('role', 'assistant')->sole()->metadata, 'curriculum_sources'))
+        ->toBe([
+            [
+                'document_id' => $grammarDocument->id,
+                'version' => 1,
+                'title' => 'Grammar Basics',
+            ],
+            [
+                'document_id' => $worksheetDocument->id,
+                'version' => 3,
+                'title' => 'Lesson 2 Worksheet',
+            ],
+        ]);
 
     actingAs($student)
         ->get(route('tutor.conversations.show', $conversation))
         ->assertInertia(fn ($page) => $page
             ->where('messages.1.citations.0', $expected[0])
-            ->where('messages.1.citations.1', $expected[1]));
+            ->where('messages.1.citations.1', $expected[1])
+            ->where('messages.1.curriculum_sources.0.document_id', $grammarDocument->id)
+            ->where('messages.1.curriculum_sources.1.version', 3));
+});
+
+it('omits unmatched citation titles from curriculum_sources but keeps the formatted label', function (): void {
+    ['student' => $student, 'course' => $course, 'level' => $level, 'unit' => $unit] = TutorScenario::assignedStudent(withMaterials: false);
+
+    $scope = [
+        'course_id' => $course->id,
+        'course_level_id' => $level->id,
+        'course_unit_id' => $unit->id,
+    ];
+
+    CurriculumDocument::factory()->published()->create([...$scope, 'title' => 'Known Worksheet', 'version' => 1]);
+
+    Setting::set(SettingKey::GlcCurriculumStoreName, 'fileSearchStores/glc-test-store');
+
+    fakeTutorCitations(['Known Worksheet', 'Unknown From Gemini']);
+    fakeTutorAgent([['reply' => 'Grounded explanation.', 'violation' => null]]);
+
+    $conversation = TutorConversation::factory()->create(['user_id' => $student->id]);
+
+    actingAs($student)->post(route('tutor.messages.store', $conversation), ['message' => 'Explain please']);
+
+    $knownDocument = CurriculumDocument::query()->where('title', 'Known Worksheet')->sole();
+    $metadata = $conversation->messages()->where('role', 'assistant')->sole()->metadata;
+
+    expect(data_get($metadata, 'citations'))->toBe([
+        sprintf('Known Worksheet (%s / %s / Unit-wide)', $course->name, $unit->name),
+        sprintf('Unknown From Gemini (%s / %s / Unit-wide)', $course->name, $unit->name),
+    ])->and(data_get($metadata, 'curriculum_sources'))->toBe([
+        [
+            'document_id' => $knownDocument->id,
+            'version' => 1,
+            'title' => 'Known Worksheet',
+        ],
+    ]);
 });
 
 it('scopes the filter to the unit so unit-wide and lesson-specific documents are both retrievable', function (): void {

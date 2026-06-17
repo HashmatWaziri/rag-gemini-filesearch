@@ -7,24 +7,31 @@ namespace App\Http\Controllers\Glc\Curriculum;
 use App\Enums\Glc\AuditAction;
 use App\Enums\Glc\CurriculumDocumentStatus;
 use App\Enums\Glc\CurriculumIndexStatus;
+use App\Http\Controllers\Glc\Curriculum\Concerns\AuthorizesCurriculum;
 use App\Jobs\Glc\Curriculum\IndexCurriculumDocumentJob;
 use App\Models\Glc\CurriculumDocument;
 use App\Services\Glc\AuditLogger;
+use App\Services\Glc\Curriculum\CurriculumPermission;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 final readonly class PublishDocumentController
 {
+    use AuthorizesCurriculum;
+
     public function __construct(private AuditLogger $auditLogger) {}
 
     public function __invoke(Request $request, CurriculumDocument $document): RedirectResponse
     {
+        $this->authorizeCurriculum($request, CurriculumPermission::Publish);
+
         $request->validate([
             'preview_confirmed' => ['required', 'accepted'],
         ], [
-            'preview_confirmed.required' => 'Please check the text preview and confirm it looks right before publishing.',
-            'preview_confirmed.accepted' => 'Please check the text preview and confirm it looks right before publishing.',
+            'preview_confirmed.required' => 'Please confirm the file details before publishing.',
+            'preview_confirmed.accepted' => 'Please confirm the file details before publishing.',
         ]);
 
         if ($document->status !== CurriculumDocumentStatus::Draft) {
@@ -33,9 +40,9 @@ final readonly class PublishDocumentController
             ]);
         }
 
-        if (mb_trim((string) $document->extracted_text) === '') {
+        if (! Storage::disk('local')->exists($document->file_path)) {
             throw ValidationException::withMessages([
-                'status' => 'No readable text was found in this file, so the AI Tutor can\'t use it. Replace the file with a readable PDF, Word, or text document first.',
+                'status' => 'The stored file is missing. Replace the file, then publish again.',
             ]);
         }
 
@@ -52,6 +59,6 @@ final readonly class PublishDocumentController
 
         IndexCurriculumDocumentJob::dispatch($document);
 
-        return back()->with('status', 'Publishing started. This document will be available to the AI Tutor shortly.');
+        return back()->with('status', 'Publishing started. The file will be uploaded to the AI Tutor shortly.');
     }
 }

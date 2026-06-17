@@ -30,6 +30,11 @@ enum AuditAction: string
     case StudentAssigned = 'student_assigned';
     case DataExported = 'data_exported';
     case SettingsUpdated = 'settings_updated';
+    case PermissionsUpdated = 'permissions_updated';
+    case BackupCreated = 'backup_created';
+    case BackupDownloaded = 'backup_downloaded';
+    case BackupDeleted = 'backup_deleted';
+    case BackupRestored = 'backup_restored';
 
     public function label(): string
     {

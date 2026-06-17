@@ -10,6 +10,7 @@ use App\Enums\Glc\UserRole;
 use App\Models\Glc\StudentAssignment;
 use App\Models\Glc\TutorConversation;
 use App\Models\Glc\WritingSubmission;
+use App\Services\Glc\Admin\SyncUserSpatieRole;
 use Carbon\CarbonInterface;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -29,6 +30,7 @@ use Laravel\Cashier\Billable;
 use Laravel\Cashier\Subscription;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Sanctum\HasApiTokens;
+use Spatie\Permission\Traits\HasRoles;
 
 /**
  * @property-read int $id
@@ -86,7 +88,7 @@ final class User extends Authenticatable implements MustVerifyEmail
     /**
      * @use HasFactory<UserFactory>
      */
-    use Billable, HasApiTokens, HasFactory, Notifiable, Prunable, TwoFactorAuthenticatable;
+    use Billable, HasApiTokens, HasFactory, HasRoles, Notifiable, Prunable, TwoFactorAuthenticatable;
 
     /**
      * @var list<string>
@@ -339,6 +341,19 @@ final class User extends Authenticatable implements MustVerifyEmail
     public function writingSubmissions(): HasMany
     {
         return $this->hasMany(WritingSubmission::class)->latest();
+    }
+
+    protected static function booted(): void
+    {
+        self::saved(function (User $user): void {
+            if ($user->role === null) {
+                return;
+            }
+
+            if ($user->wasRecentlyCreated || $user->wasChanged('role')) {
+                app(SyncUserSpatieRole::class)->sync($user);
+            }
+        });
     }
 
     protected function getIsVerifiedAttribute(?bool $isVerified): bool

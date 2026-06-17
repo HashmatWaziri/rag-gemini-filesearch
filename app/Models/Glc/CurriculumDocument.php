@@ -6,6 +6,7 @@ namespace App\Models\Glc;
 
 use App\Enums\Glc\CurriculumDocumentStatus;
 use App\Enums\Glc\CurriculumIndexStatus;
+use App\Enums\Glc\CurriculumMaterialKind;
 use App\Models\User;
 use Carbon\CarbonInterface;
 use Database\Factories\Glc\CurriculumDocumentFactory;
@@ -22,6 +23,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property-read int $course_unit_id
  * @property-read int|null $course_lesson_id
  * @property-read string $title
+ * @property-read CurriculumMaterialKind $material_kind
  * @property-read string $original_filename
  * @property-read string $file_path
  * @property-read string $format
@@ -55,6 +57,7 @@ final class CurriculumDocument extends Model
     {
         return [
             'status' => CurriculumDocumentStatus::class,
+            'material_kind' => CurriculumMaterialKind::class,
             'index_status' => CurriculumIndexStatus::class,
             'version' => 'integer',
             'published_at' => 'datetime',

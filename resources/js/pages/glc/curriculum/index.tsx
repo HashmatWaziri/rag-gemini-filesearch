@@ -18,6 +18,7 @@ import {
     emptySelection,
     type BulkReportRow,
     type DocumentRow,
+    type MaterialKindOption,
     type Paginated,
     type TreeCourse,
     type UploadConfig,
@@ -34,6 +35,7 @@ interface Filters {
     course_level_id?: number | string | null;
     course_unit_id?: number | string | null;
     course_lesson_id?: number | string | null;
+    material_kind?: string | null;
     state?: string | null;
 }
 
@@ -41,6 +43,7 @@ interface CurriculumIndexProps {
     documents: Paginated<DocumentRow>;
     filters: Filters;
     tree: TreeCourse[];
+    materialKinds: MaterialKindOption[];
     upload: UploadConfig;
     bulkReport: BulkReportRow[] | null;
     status: string | null;
@@ -50,6 +53,7 @@ export default function CurriculumIndex({
     documents,
     filters,
     tree,
+    materialKinds,
     upload,
     bulkReport,
     status,
@@ -76,6 +80,7 @@ export default function CurriculumIndex({
             ? String(filters.course_lesson_id)
             : '',
         state: filters.state ?? '',
+        material_kind: filters.material_kind ? String(filters.material_kind) : '',
     };
 
     return (
@@ -118,7 +123,7 @@ export default function CurriculumIndex({
                     </section>
                 )}
 
-                <UploadPanel tree={tree} upload={upload} />
+                <UploadPanel tree={tree} upload={upload} materialKinds={materialKinds} />
 
                 <GlcDataTableCard
                     filters={
@@ -142,6 +147,35 @@ export default function CurriculumIndex({
                                 allowEmpty
                             />
                             <div className="flex flex-wrap items-end gap-3">
+                                <div className="w-full sm:w-48">
+                                    <label className={labelClass}>
+                                        Material type
+                                    </label>
+                                    <MetronicSelect
+                                        value={
+                                            currentFilters.material_kind ||
+                                            null
+                                        }
+                                        onChange={(value) =>
+                                            applyFilters({
+                                                ...currentFilters,
+                                                material_kind: value ?? '',
+                                            })
+                                        }
+                                        options={[
+                                            {
+                                                value: '',
+                                                label: 'All types',
+                                            },
+                                            ...materialKinds.map((kind) => ({
+                                                value: kind.value,
+                                                label: kind.label,
+                                            })),
+                                        ]}
+                                        placeholder="All types"
+                                        isSearchable={false}
+                                    />
+                                </div>
                                 <div className="w-full sm:w-48">
                                     <label className={labelClass}>Status</label>
                                     <MetronicSelect
@@ -175,6 +209,7 @@ export default function CurriculumIndex({
                                         applyFilters({
                                             ...emptySelection,
                                             state: '',
+                                            material_kind: '',
                                         })
                                     }
                                 >
@@ -194,6 +229,9 @@ export default function CurriculumIndex({
                             <TableRow className="bg-muted/50 hover:bg-muted/50">
                                 <TableHead className="text-xs uppercase">
                                     Title
+                                </TableHead>
+                                <TableHead className="text-xs uppercase">
+                                    Type
                                 </TableHead>
                                 <TableHead className="text-xs uppercase">
                                     Path
@@ -224,6 +262,9 @@ export default function CurriculumIndex({
                                         </Link>
                                     </TableCell>
                                     <TableCell className="text-xs text-muted-foreground">
+                                        {doc.material_kind_label}
+                                    </TableCell>
+                                    <TableCell className="text-xs text-muted-foreground">
                                         {doc.course} / {doc.level} / {doc.unit}
                                         {doc.lesson ? ` / ${doc.lesson}` : ''}
                                     </TableCell>
@@ -248,7 +289,7 @@ export default function CurriculumIndex({
                             {documents.data.length === 0 && (
                                 <TableRow>
                                     <TableCell
-                                        colSpan={6}
+                                        colSpan={7}
                                         className="py-6 text-center text-sm text-muted-foreground"
                                     >
                                         No documents match the current filters.

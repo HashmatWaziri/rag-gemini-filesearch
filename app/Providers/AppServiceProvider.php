@@ -22,6 +22,7 @@ use App\Services\PdfStudio\ChromiumExecutableResolver;
 use App\Services\PdfStudio\CustomDriverManager;
 use App\Services\Skills\NullSkillLoader;
 use App\Services\StripeService;
+use App\Support\Backup\SqliteFileCopyDumper;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -38,6 +39,7 @@ use Laravel\Ai\Events\AgentPrompted;
 use Laravel\Ai\Events\AgentStreamed;
 use Laravel\Cashier\Cashier;
 use PdfStudio\Laravel\Drivers\DriverManager;
+use Spatie\Backup\Tasks\Backup\DbDumperFactory;
 
 final class AppServiceProvider extends ServiceProvider
 {
@@ -61,9 +63,11 @@ final class AppServiceProvider extends ServiceProvider
         $this->bootCashierDefaults();
         $this->bootUrlDefaults();
         $this->bootPlacementRateLimits();
+        $this->bootCurriculumRateLimits();
         $this->configureDates();
         $this->registerEventListeners();
         $this->registerPdfStudioChromiumBinaryResolver();
+        $this->registerBackupSqliteDumper();
     }
 
     private function bootModelsDefaults(): void
@@ -116,6 +120,16 @@ final class AppServiceProvider extends ServiceProvider
         RateLimiter::for('placement-integrity', fn (Request $request): Limit => Limit::perMinute(120)->by($request->ip()));
     }
 
+    private function bootCurriculumRateLimits(): void
+    {
+        RateLimiter::for('curriculum-upload', function (Request $request): Limit {
+            $max = config()->integer('glc.curriculum.uploads_per_minute');
+            $key = $request->user()?->id ?? $request->ip();
+
+            return Limit::perMinute($max)->by('curriculum-upload:'.$key);
+        });
+    }
+
     private function configureDates(): void
     {
         Date::use(CarbonImmutable::class);
@@ -139,5 +153,10 @@ final class AppServiceProvider extends ServiceProvider
                 config(['pdf-studio.drivers.chromium.binary' => $resolved]);
             }
         });
+    }
+
+    private function registerBackupSqliteDumper(): void
+    {
+        DbDumperFactory::extend('sqlite', fn (): SqliteFileCopyDumper => new SqliteFileCopyDumper);
     }
 }

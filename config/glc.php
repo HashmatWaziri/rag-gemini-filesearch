@@ -97,6 +97,8 @@ return [
         'allowed_extensions' => ['pdf', 'docx', 'txt'],
         'max_file_size_kb' => 20480,
         'max_bulk_files' => 20,
+        'max_documents_per_lesson' => 30,
+        'uploads_per_minute' => 10,
         'store_display_name' => 'GLC Curriculum Store',
     ],
 
@@ -124,5 +126,36 @@ return [
         // Phase 1C gate: max 2 direct-answer failures out of 50 (5%).
         'question_count' => 50,
         'max_failures' => 2,
+    ],
+
+    'ai_cost' => [
+        // Display multiplier (Altani-style credits = USD × multiplier).
+        'credit_multiplier' => 1_000,
+
+        // Preflight estimate (USD) before each GLC AI call when enforcing limits.
+        'preflight_estimate_usd' => 0.01,
+
+        'enforcement_enabled' => env('GLC_AI_COST_ENFORCEMENT', true),
+
+        'rolling' => [
+            'limit_usd' => 25.00,
+            'period_hours' => 24,
+        ],
+
+        'weekly' => [
+            'limit_usd' => 100.00,
+            'period_days' => 7,
+        ],
+
+        // Agent classes counted toward GLC platform spend.
+        'agents' => [
+            App\Services\Glc\Tutor\GlcTutorAgent::class,
+            App\Services\Glc\Tutor\TutorWritingCorrectionAgent::class,
+            App\Services\Glc\Tutor\TutorProgressSummaryAgent::class,
+            App\Services\Glc\Tutor\TutorConversationSummarizerAgent::class,
+            App\Services\Glc\Review\WritingEvaluationAgent::class,
+            App\Services\Glc\Review\SpeakingEvaluationAgent::class,
+            App\Services\Glc\Review\PlacementRecommendationAgent::class,
+        ],
     ],
 ];

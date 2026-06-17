@@ -31,9 +31,16 @@ export type DocumentState =
     | 'publish_failed'
     | 'archived';
 
+export interface MaterialKindOption {
+    value: string;
+    label: string;
+}
+
 export interface DocumentRow {
     id: number;
     title: string;
+    material_kind: string;
+    material_kind_label: string;
     course: string;
     level: string;
     unit: string;
@@ -66,12 +73,29 @@ export interface BulkReportRow {
     success: boolean;
     error: string | null;
     document_id: number | null;
+    material_kind?: string;
+}
+
+export interface LessonMaterialRow {
+    id: string;
+    material_kind: string;
+    title: string;
+    file: File | null;
 }
 
 export interface UploadConfig {
     allowedExtensions: string[];
     maxFileSizeKb: number;
     maxBulkFiles: number;
+    maxDocumentsPerLesson: number;
+}
+
+export interface LessonUploadCapacity {
+    existing_count: number;
+    max_per_lesson: number;
+    max_per_request: number;
+    remaining_slots: number;
+    max_rows: number;
 }
 
 export interface HierarchySelection {

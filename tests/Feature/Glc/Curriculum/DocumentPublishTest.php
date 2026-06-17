@@ -25,7 +25,7 @@ function glcCurriculumDraftDocument(): CurriculumDocument
         'file_path' => 'glc/curriculum/1/draft.txt',
         'original_filename' => 'draft.txt',
         'format' => 'txt',
-        'extracted_text' => 'Draft body text.',
+        'extracted_text' => null,
     ]);
 
     Storage::disk('local')->put($document->file_path, 'Draft body text.');
@@ -68,6 +68,19 @@ it('publishes a draft after preview confirmation, audits, and queues indexing', 
     expect($audit->actor_id)->toBe($this->supervisor->id)
         ->and($audit->subject_id)->toBe($document->id)
         ->and($audit->subject_type)->toBe(CurriculumDocument::class);
+});
+
+it('rejects publishing when the stored file is missing', function (): void {
+    Queue::fake();
+    $document = glcCurriculumDraftDocument();
+    Storage::disk('local')->delete($document->file_path);
+
+    $this->actingAs($this->supervisor)
+        ->postJson(route('curriculum.documents.publish', $document), ['preview_confirmed' => true])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('status');
+
+    Queue::assertNothingPushed();
 });
 
 it('rejects publishing a document that is not a draft', function (): void {

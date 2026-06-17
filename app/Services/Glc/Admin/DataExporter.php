@@ -23,7 +23,6 @@ use App\Models\Glc\TutorViolation;
 use App\Models\Glc\WritingSubmission;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Str;
 use RuntimeException;
 use ZipArchive;
 
@@ -95,9 +94,6 @@ final class DataExporter
             'version' => $document->version,
             'created_at' => $document->created_at->toIso8601String(),
             'updated_at' => $document->updated_at->toIso8601String(),
-            'extracted_text_preview' => $document->extracted_text === null
-                ? null
-                : Str::limit($document->extracted_text, 500),
             'gemini_file_resource_name' => $document->gemini_file_name,
             'gemini_sync_status' => $document->index_status->value,
         ])->all();

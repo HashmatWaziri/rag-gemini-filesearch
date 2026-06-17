@@ -7,6 +7,7 @@ namespace App\Services\Glc\Tutor;
 use App\Models\Glc\TutorConversation;
 use App\Models\Glc\TutorMessage;
 use App\Services\Glc\Admin\TutorOperationalSettings;
+use App\Services\Glc\Ai\GlcAiCostGuard;
 use App\Services\Glc\Ai\PlacementAiSettings;
 use Laravel\Ai\Responses\StructuredAgentResponse;
 use Throwable;
@@ -16,6 +17,7 @@ final class ConversationRotator
     public function __construct(
         private readonly PlacementAiSettings $aiSettings,
         private readonly TutorOperationalSettings $operationalSettings,
+        private readonly GlcAiCostGuard $costGuard,
     ) {}
 
     public function rotate(TutorConversation $conversation): void
@@ -64,6 +66,7 @@ final class ConversationRotator
         }
 
         try {
+            $this->costGuard->assertWithinLimits();
             $this->aiSettings->hydrateProviderConfig();
             $selection = $this->aiSettings->selection(PlacementAiSettings::TASK_TUTOR_CHAT);
 

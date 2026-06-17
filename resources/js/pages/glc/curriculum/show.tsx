@@ -12,9 +12,19 @@ import {
     stateBadgeClass,
 } from './components/ui';
 
+interface DocumentVersion {
+    version: number;
+    original_filename: string;
+    published_at: string | null;
+    created_at: string | null;
+    can_restore: boolean;
+}
+
 interface DocumentDetail {
     id: number;
     title: string;
+    material_kind: string;
+    material_kind_label: string;
     course: string;
     level: string;
     unit: string;
@@ -27,7 +37,8 @@ interface DocumentDetail {
     state: DocumentState;
     state_label: string;
     version: number;
-    extracted_text: string | null;
+    has_stored_file: boolean;
+    file_size_label: string | null;
     uploaded_by: string | null;
     published_at: string | null;
     archived_at: string | null;
@@ -37,13 +48,23 @@ interface DocumentDetail {
 
 interface CurriculumShowProps {
     document: DocumentDetail;
+    versions: DocumentVersion[];
     canDelete: boolean;
+    canPublish: boolean;
+    canReplace: boolean;
+    canArchive: boolean;
+    canReindex: boolean;
     status: string | null;
 }
 
 export default function CurriculumShow({
     document,
+    versions,
     canDelete,
+    canPublish,
+    canReplace,
+    canArchive,
+    canReindex,
     status,
 }: CurriculumShowProps) {
     const { errors } = usePage().props as { errors: Record<string, string> };
@@ -53,7 +74,7 @@ export default function CurriculumShow({
     const [showReplace, setShowReplace] = useState(false);
 
     const baseUrl = `/staff/curriculum/documents/${document.id}`;
-    const hasPreviewText = Boolean(document.extracted_text?.trim());
+    const fileReadyToPublish = document.has_stored_file;
 
     const submitPublish = (e: FormEvent) => {
         e.preventDefault();
@@ -95,13 +116,29 @@ export default function CurriculumShow({
         }
     };
 
+    const restoreVersion = (version: number) => {
+        if (
+            confirm(
+                `Restore version ${version}? A new draft version will be created from that file. If a published version is live for students, it stays available until you publish the restored one.`,
+            )
+        ) {
+            router.post(
+                `${baseUrl}/versions/${version}/restore`,
+                {},
+                { preserveScroll: true },
+            );
+        }
+    };
+
     const metadata: [string, string][] = [
         ['Course', document.course],
         ['Level', document.level],
         ['Unit', document.unit],
         ['Lesson', document.lesson ?? 'Whole unit'],
+        ['Material type', document.material_kind_label],
         ['Format', document.format.toUpperCase()],
         ['Original filename', document.original_filename],
+        ['File size', document.file_size_label ?? 'Unknown'],
         ['Version', `v${document.version}`],
         ['Uploaded by', document.uploaded_by ?? 'Unknown'],
         ['Uploaded at', document.created_at ?? '-'],
@@ -149,9 +186,9 @@ export default function CurriculumShow({
                     {document.state === 'publish_failed' && (
                         <div className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
                             <p>
-                                Something went wrong while making this document
-                                available to the AI Tutor. Use "Try again" below
-                                — if it keeps failing, contact support.
+                                Something went wrong while uploading this file
+                                to the AI Tutor. Use "Try again" below — if it
+                                keeps failing, contact support.
                             </p>
                             {document.index_error && (
                                 <details className="mt-1">
@@ -168,9 +205,9 @@ export default function CurriculumShow({
 
                     {document.state === 'publishing' && (
                         <p className="mb-3 text-xs text-muted-foreground">
-                            This document is being prepared for the AI Tutor.
-                            This usually takes a few minutes — refresh the page
-                            to see the latest status.
+                            This file is being uploaded to the AI Tutor File
+                            Search store. This usually takes a few minutes —
+                            refresh the page to see the latest status.
                         </p>
                     )}
 
@@ -190,35 +227,31 @@ export default function CurriculumShow({
 
                 <section className="rounded-lg border border-border bg-card p-4">
                     <h2 className="mb-2 text-sm font-semibold text-mono">
-                        Text preview
+                        File for the AI Tutor
                     </h2>
                     <p className="mb-3 text-xs text-muted-foreground">
-                        This is the text the AI Tutor will read from this
-                        document. Check that it looks right before publishing.
+                        Publishing uploads this file to the Gemini File Search
+                        store. Gemini reads and indexes the document directly —
+                        text is not extracted on this server first.
                     </p>
-                    <pre className="max-h-96 overflow-auto rounded-md border border-border bg-muted/50 p-3 text-xs leading-relaxed whitespace-pre-wrap text-secondary-foreground">
-                        {document.extracted_text?.trim() ||
-                            'No readable text was found in this file. Replace it with a readable PDF, Word, or text document before publishing.'}
-                    </pre>
+                    {!fileReadyToPublish && (
+                        <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                            The stored file is missing. Replace the file before
+                            publishing.
+                        </p>
+                    )}
                 </section>
 
-                {document.status === 'draft' && (
+                {document.status === 'draft' && canPublish && (
                     <section className="rounded-lg border border-primary/20 bg-card p-4">
                         <h2 className="mb-2 text-sm font-semibold text-mono">
                             Publish to the AI Tutor
                         </h2>
                         <p className="mb-3 text-xs text-muted-foreground">
-                            Publishing makes this document available to the AI
-                            Tutor for students working on this course, level,
-                            and unit.
+                            Publishing uploads the file to File Search and makes
+                            it available to students working on this course,
+                            level, and unit.
                         </p>
-                        {!hasPreviewText && (
-                            <p className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                                This document can't be published yet because no
-                                readable text was found in the file. Replace the
-                                file first.
-                            </p>
-                        )}
                         <form onSubmit={submitPublish} className="space-y-3">
                             <label className="flex items-start gap-2 text-sm text-secondary-foreground">
                                 <input
@@ -233,8 +266,8 @@ export default function CurriculumShow({
                                     }
                                 />
                                 <span>
-                                    I have checked the text preview above and it
-                                    looks right.
+                                    I have checked the file details above and
+                                    want to upload it to the AI Tutor.
                                 </span>
                             </label>
                             {(publishForm.errors.preview_confirmed ||
@@ -250,7 +283,7 @@ export default function CurriculumShow({
                                 disabled={
                                     publishForm.processing ||
                                     !publishForm.data.preview_confirmed ||
-                                    !hasPreviewText
+                                    !fileReadyToPublish
                                 }
                             >
                                 {publishForm.processing
@@ -261,12 +294,57 @@ export default function CurriculumShow({
                     </section>
                 )}
 
+                {versions.length > 0 && (
+                    <section className="rounded-lg border border-border bg-card p-4">
+                        <h2 className="mb-2 text-sm font-semibold text-mono">
+                            Version history
+                        </h2>
+                        <p className="mb-3 text-xs text-muted-foreground">
+                            Previous file versions are kept when you replace a
+                            document. Restore an older version to create a new
+                            draft from that file.
+                        </p>
+                        <ul className="divide-y divide-border rounded-md border border-border">
+                            {versions.map((entry) => (
+                                <li
+                                    key={entry.version}
+                                    className="flex flex-wrap items-center justify-between gap-3 px-3 py-2 text-sm"
+                                >
+                                    <div>
+                                        <p className="font-medium text-secondary-foreground">
+                                            v{entry.version} —{' '}
+                                            {entry.original_filename}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            Saved {entry.created_at ?? '-'}
+                                            {entry.published_at
+                                                ? ` · Published ${entry.published_at}`
+                                                : ''}
+                                        </p>
+                                    </div>
+                                    {entry.can_restore && (
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                restoreVersion(entry.version)
+                                            }
+                                            className={secondaryButtonClass}
+                                        >
+                                            Restore
+                                        </button>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
+                    </section>
+                )}
+
                 <section className="rounded-lg border border-border bg-card p-4">
                     <h2 className="mb-3 text-sm font-semibold text-mono">
                         Manage
                     </h2>
                     <div className="flex flex-wrap items-center gap-2">
-                        {document.status === 'published' && (
+                        {document.status === 'published' && canArchive && (
                             <button
                                 type="button"
                                 onClick={archive}
@@ -275,7 +353,7 @@ export default function CurriculumShow({
                                 Archive
                             </button>
                         )}
-                        {canTryAgain && (
+                        {canTryAgain && canReindex && (
                             <button
                                 type="button"
                                 onClick={tryAgain}
@@ -284,13 +362,15 @@ export default function CurriculumShow({
                                 Try again
                             </button>
                         )}
-                        <button
-                            type="button"
-                            onClick={() => setShowReplace(!showReplace)}
-                            className={secondaryButtonClass}
-                        >
-                            Replace file
-                        </button>
+                        {canReplace && (
+                            <button
+                                type="button"
+                                onClick={() => setShowReplace(!showReplace)}
+                                className={secondaryButtonClass}
+                            >
+                                Replace file
+                            </button>
+                        )}
                         {canDelete && (
                             <button
                                 type="button"
@@ -302,7 +382,7 @@ export default function CurriculumShow({
                         )}
                     </div>
 
-                    {showReplace && (
+                    {showReplace && canReplace && (
                         <form
                             onSubmit={submitReplace}
                             className="mt-4 space-y-3 rounded-md border border-border bg-muted/50 p-3"
@@ -310,7 +390,7 @@ export default function CurriculumShow({
                             <p className="text-xs text-muted-foreground">
                                 Uploading a new file creates a new version and
                                 takes the document back to draft so you can
-                                check it. If a published version is live for
+                                review it. If a published version is live for
                                 students, it stays available to the AI Tutor
                                 until you publish the new one.
                             </p>

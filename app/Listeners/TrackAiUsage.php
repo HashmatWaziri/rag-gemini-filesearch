@@ -70,6 +70,14 @@ final readonly class TrackAiUsage
             $reflection = new ReflectionClass($agent);
 
             // @codeCoverageIgnoreStart
+            if ($reflection->hasProperty('student')) {
+                $property = $reflection->getProperty('student');
+                $user = $property->getValue($agent);
+                if ($user instanceof User) {
+                    return $user;
+                }
+            }
+
             if ($reflection->hasProperty('conversationUser')) {
                 $property = $reflection->getProperty('conversationUser');
                 $user = $property->getValue($agent);

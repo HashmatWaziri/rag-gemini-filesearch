@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Services\Glc\Tutor;
 
 use App\Enums\Glc\WritingDimension;
+use App\Exceptions\Glc\GlcAiCostLimitExceededException;
 use App\Models\Glc\WritingSubmission;
+use App\Services\Glc\Ai\GlcAiCostGuard;
 use App\Services\Glc\Ai\PlacementAiSettings;
 use Laravel\Ai\Responses\StructuredAgentResponse;
 use Throwable;
@@ -14,7 +16,10 @@ final class WritingCorrectionService
 {
     public const FAILURE_MESSAGE = 'We could not evaluate your writing right now. Please try submitting it again later.';
 
-    public function __construct(private readonly PlacementAiSettings $aiSettings) {}
+    public function __construct(
+        private readonly PlacementAiSettings $aiSettings,
+        private readonly GlcAiCostGuard $costGuard,
+    ) {}
 
     public function evaluate(WritingSubmission $submission): void
     {
@@ -25,6 +30,7 @@ final class WritingCorrectionService
         }
 
         try {
+            $this->costGuard->assertWithinLimits();
             $this->aiSettings->hydrateProviderConfig();
             $selection = $this->aiSettings->selection(PlacementAiSettings::TASK_TUTOR_WRITING);
 
@@ -59,6 +65,11 @@ final class WritingCorrectionService
                 'highlights' => $this->normalizeHighlights($decoded, mb_strlen($submission->text)),
                 'status' => 'completed',
                 'error' => null,
+            ]);
+        } catch (GlcAiCostLimitExceededException) {
+            $submission->update([
+                'status' => 'failed',
+                'error' => self::FAILURE_MESSAGE,
             ]);
         } catch (Throwable) {
             $this->markFailed($submission);

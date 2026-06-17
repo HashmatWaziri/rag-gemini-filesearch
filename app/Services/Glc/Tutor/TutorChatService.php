@@ -13,6 +13,7 @@ use App\Models\Glc\TutorConversation;
 use App\Models\Glc\TutorMessage;
 use App\Models\Setting;
 use App\Services\Glc\Admin\TutorOperationalSettings;
+use App\Services\Glc\Ai\GlcAiCostGuard;
 use App\Services\Glc\Ai\PlacementAiSettings;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
@@ -32,6 +33,7 @@ final class TutorChatService
         private readonly TutorSystemPrompt $systemPrompt,
         private readonly TutorViolationRecorder $violations,
         private readonly TutorOperationalSettings $operationalSettings,
+        private readonly GlcAiCostGuard $costGuard,
     ) {}
 
     public function respond(TutorConversation $conversation, string $text): TutorMessage
@@ -63,9 +65,9 @@ final class TutorChatService
             return $this->finishWithoutModelCall($conversation, self::MATERIALS_NOT_READY_MESSAGE);
         }
 
-        [$reply, $violation, $citations] = $this->generateReply($conversation, $assignment, $text);
+        [$reply, $violation, $formattedCitations] = $this->generateReply($conversation, $assignment, $text);
 
-        $assistantMessage = $this->persistAssistantMessage($conversation, $reply, $violation, $citations);
+        $assistantMessage = $this->persistAssistantMessage($conversation, $reply, $violation, $formattedCitations);
 
         if ($violation instanceof TutorViolationCategory) {
             $this->violations->record($conversation, $userMessage, $violation);
@@ -118,7 +120,7 @@ final class TutorChatService
     }
 
     /**
-     * @return array{0: string, 1: TutorViolationCategory|null, 2: list<string>}
+     * @return array{0: string, 1: TutorViolationCategory|null, 2: list<array{document_id?: int, version?: int, title: string, label: string}>}
      */
     private function generateReply(TutorConversation $conversation, StudentAssignment $assignment, string $text): array
     {
@@ -127,6 +129,7 @@ final class TutorChatService
         }
 
         try {
+            $this->costGuard->assertWithinLimits();
             $this->aiSettings->hydrateProviderConfig();
             $selection = $this->aiSettings->selection(PlacementAiSettings::TASK_TUTOR_CHAT);
 
@@ -157,6 +160,8 @@ final class TutorChatService
             $violation = is_string($rawViolation) ? TutorViolationCategory::tryFrom($rawViolation) : null;
 
             return [$reply, $violation, $this->formatCitations($agent->citationTitles, $assignment)];
+        } catch (GlcAiCostLimitExceededException) {
+            return [self::UNAVAILABLE_MESSAGE, null, []];
         } catch (Throwable) {
             return [self::UNAVAILABLE_MESSAGE, null, []];
         }
@@ -164,7 +169,7 @@ final class TutorChatService
 
     /**
      * @param  list<string>  $titles
-     * @return list<string>
+     * @return list<array{document_id?: int, version?: int, title: string, label: string}>
      */
     private function formatCitations(array $titles, StudentAssignment $assignment): array
     {
@@ -183,29 +188,43 @@ final class TutorChatService
             ->keyBy('title');
 
         return array_map(
-            function (string $title) use ($assignment, $documents): string {
+            function (string $title) use ($assignment, $documents): array {
                 $document = $documents->get($title);
 
-                return sprintf(
+                $label = sprintf(
                     '%s (%s / %s / %s)',
                     $title,
                     $assignment->course->name,
                     $assignment->unit->name,
                     $document?->lesson?->name ?? 'Unit-wide',
                 );
+
+                if (! $document instanceof CurriculumDocument) {
+                    return [
+                        'title' => $title,
+                        'label' => $label,
+                    ];
+                }
+
+                return [
+                    'document_id' => $document->id,
+                    'version' => $document->version,
+                    'title' => $title,
+                    'label' => $label,
+                ];
             },
             $titles,
         );
     }
 
     /**
-     * @param  list<string>  $citations
+     * @param  list<array{document_id?: int, version?: int, title: string, label: string}>  $formattedCitations
      */
     private function persistAssistantMessage(
         TutorConversation $conversation,
         string $reply,
         ?TutorViolationCategory $violation,
-        array $citations,
+        array $formattedCitations,
     ): TutorMessage {
         $metadata = [];
 
@@ -213,8 +232,24 @@ final class TutorChatService
             $metadata['violation'] = $violation->value;
         }
 
-        if ($citations !== []) {
-            $metadata['citations'] = $citations;
+        if ($formattedCitations !== []) {
+            $metadata['citations'] = array_column($formattedCitations, 'label');
+
+            $curriculumSources = array_values(array_map(
+                static fn (array $citation): array => [
+                    'document_id' => $citation['document_id'],
+                    'version' => $citation['version'],
+                    'title' => $citation['title'],
+                ],
+                array_filter(
+                    $formattedCitations,
+                    static fn (array $citation): bool => isset($citation['document_id'], $citation['version']),
+                ),
+            ));
+
+            if ($curriculumSources !== []) {
+                $metadata['curriculum_sources'] = $curriculumSources;
+            }
         }
 
         /** @var TutorMessage $message */

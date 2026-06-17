@@ -19,11 +19,18 @@ interface Assignment {
     unit: string;
 }
 
+interface CurriculumSource {
+    document_id: number;
+    version: number;
+    title: string;
+}
+
 interface Message {
     id: number;
     role: 'user' | 'assistant';
     content: string;
     citations: string[];
+    curriculum_sources: CurriculumSource[];
 }
 
 interface ConversationItem {
@@ -39,6 +46,21 @@ interface Props {
     conversations: ConversationItem[];
     assignment: Assignment;
     materialsReady: boolean;
+}
+
+function formatCitationLabel(
+    citation: string,
+    curriculumSources: CurriculumSource[],
+): string {
+    const source = curriculumSources.find((item) =>
+        citation.startsWith(`${item.title} (`),
+    );
+
+    if (!source || source.version <= 1) {
+        return citation;
+    }
+
+    return citation.replace(source.title, `${source.title} (v${source.version})`);
 }
 
 function ConversationList({
@@ -198,7 +220,11 @@ export default function TutorChat({
                                                 {message.citations.map(
                                                     (citation) => (
                                                         <p key={citation}>
-                                                            Source: {citation}
+                                                            Source:{' '}
+                                                            {formatCitationLabel(
+                                                                citation,
+                                                                message.curriculum_sources,
+                                                            )}
                                                         </p>
                                                     ),
                                                 )}

@@ -4,138 +4,192 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
-use App\Enums\Glc\CurriculumDocumentStatus;
-use App\Enums\Glc\CurriculumIndexStatus;
 use App\Models\Glc\Course;
 use App\Models\Glc\CourseLesson;
 use App\Models\Glc\CourseLevel;
 use App\Models\Glc\CourseUnit;
 use App\Models\Glc\CurriculumDocument;
+use App\Services\Glc\Curriculum\CurriculumIndexService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 final class GlcCurriculumSeeder extends Seeder
 {
-    private const array STRUCTURE = [
-        'General English' => ['Starter', 'Elementary', 'Intermediate'],
-        'Academic English' => ['Foundation', 'Advanced'],
+    private const string COURSE_NAME = 'Beehive';
+
+    /** @var list<string> */
+    private const array STARTER_LESSONS = [
+        'Lesson 1 — Words',
+        'Lesson 2 — Grammar',
+        'Lesson 3 — Words and Grammar',
+        'Lesson 4 — Numbers',
+        'Lesson 5 — Story',
+        'Lesson 6 — Phonics',
     ];
 
-    private const int UNITS_PER_LEVEL = 4;
+    /** @var list<string> */
+    private const array STANDARD_LESSONS = [
+        'Lesson 1 — Words',
+        'Lesson 2 — Grammar',
+        'Lesson 3 — Words and Grammar',
+        'Lesson 4 — Story',
+        'Lesson 5 — Skills and Culture',
+        'Lesson 6 — Writing Focus and Project Review',
+    ];
 
-    private const int LESSONS_PER_UNIT = 2;
+    /**
+     * @var array<string, list<string>>
+     */
+    private const array LEVEL_UNITS = [
+        'Starter' => [
+            'Hello!',
+            'Let\'s learn!',
+            'Colours',
+            'Farm animals',
+            'Let\'s eat!',
+            'Let\'s play!',
+            'Sea animals',
+            'My body',
+            'Let\'s celebrate!',
+        ],
+        'Level 1' => [
+            'Hello again!',
+            'At school',
+            'My things',
+            'Fun with friends',
+            'Outdoors',
+            'My body',
+            'My family',
+            'My clothes',
+            'Food',
+            'At home',
+            'At the farm',
+        ],
+        'Level 2' => [
+            'Hello again!',
+            'Time for school',
+            'Mealtime',
+            'Wild animals',
+            'My favourite things',
+            'Around town',
+            'At the weekend',
+            'My day',
+            'My talents',
+            'My home',
+            'Days out',
+        ],
+        'Level 3' => [
+            'A new year',
+            'Our friends',
+            'In the city',
+            'Our busy world',
+            'Let\'s explore!',
+            'Healthy living',
+            'In the kitchen',
+            'Family life',
+            'Our history',
+            'School life',
+            'Holiday plans',
+        ],
+        'Level 4' => [
+            'Let\'s cook!',
+            'The world of animals',
+            'Fun at home',
+            'My week at school',
+            'Attractions',
+            'Our community',
+            'Future travel',
+            'Making music',
+            'The world of games',
+            'Aches and pains',
+            'Exciting adventures',
+        ],
+        'Level 5' => [
+            'Big numbers!',
+            'Travel in the city',
+            'The seasons',
+            'The environment',
+            'A trip to the theatre',
+            'World food',
+            'Let\'s connect',
+            'In the countryside',
+            'A journey to space',
+            'Life in the past',
+            'Helping our community',
+        ],
+        'Level 6' => [
+            'Let\'s tidy up!',
+            'The world of work',
+            'Health and medicine',
+            'Let\'s go!',
+            'At the art gallery',
+            'Let\'s play music!',
+            'Science and inventions',
+            'Let\'s go shopping!',
+            'Our planet',
+            'At the wildlife park',
+            'Celebrations',
+        ],
+    ];
+
+    /** @var list<string> */
+    private const array LEGACY_COURSE_NAMES = [
+        'General English',
+        'Academic English',
+    ];
 
     public function run(): void
     {
-        foreach (self::STRUCTURE as $courseName => $levelNames) {
-            $course = Course::query()->firstOrCreate(
-                ['name' => $courseName],
-                ['description' => $courseName.' programme curriculum (GLC placeholder content).'],
+        $this->removeLegacyCurriculum();
+
+        $course = Course::query()->firstOrCreate(
+            ['name' => self::COURSE_NAME],
+            ['description' => 'Oxford Beehive — official course hierarchy for GLC tutor content tagging.'],
+        );
+
+        foreach (array_keys(self::LEVEL_UNITS) as $position => $levelName) {
+            $level = CourseLevel::query()->firstOrCreate(
+                ['course_id' => $course->id, 'name' => $levelName],
+                ['position' => $position + 1],
             );
 
-            foreach ($levelNames as $levelPosition => $levelName) {
-                $level = CourseLevel::query()->firstOrCreate(
-                    ['course_id' => $course->id, 'name' => $levelName],
-                    ['position' => $levelPosition + 1],
+            $lessonsForLevel = $levelName === 'Starter'
+                ? self::STARTER_LESSONS
+                : self::STANDARD_LESSONS;
+
+            foreach (self::LEVEL_UNITS[$levelName] as $unitPosition => $unitName) {
+                $unit = CourseUnit::query()->firstOrCreate(
+                    ['course_level_id' => $level->id, 'name' => $unitName],
+                    ['position' => $unitPosition + 1],
                 );
 
-                for ($unitNumber = 1; $unitNumber <= self::UNITS_PER_LEVEL; $unitNumber++) {
-                    $unit = CourseUnit::query()->firstOrCreate(
-                        ['course_level_id' => $level->id, 'name' => 'Unit '.$unitNumber],
-                        ['position' => $unitNumber],
+                foreach ($lessonsForLevel as $lessonPosition => $lessonName) {
+                    CourseLesson::query()->firstOrCreate(
+                        ['course_unit_id' => $unit->id, 'name' => $lessonName],
+                        ['position' => $lessonPosition + 1],
                     );
-
-                    $lessons = [];
-
-                    for ($lessonNumber = 1; $lessonNumber <= self::LESSONS_PER_UNIT; $lessonNumber++) {
-                        $lessons[$lessonNumber] = CourseLesson::query()->firstOrCreate(
-                            ['course_unit_id' => $unit->id, 'name' => 'Lesson '.$lessonNumber],
-                            ['position' => $lessonNumber],
-                        );
-                    }
-
-                    $this->seedDocument($course, $level, $unit, $lessons[1], 'Lesson Summary', CurriculumDocumentStatus::Published);
-
-                    if ($unitNumber <= 2) {
-                        $this->seedDocument($course, $level, $unit, null, 'Practice Worksheet', CurriculumDocumentStatus::Draft);
-                    }
                 }
             }
         }
     }
 
-    private function seedDocument(
-        Course $course,
-        CourseLevel $level,
-        CourseUnit $unit,
-        ?CourseLesson $lesson,
-        string $type,
-        CurriculumDocumentStatus $status,
-    ): void {
-        $title = sprintf('%s %s %s — %s', $course->name, $level->name, $unit->name, $type);
-        $filename = Str::slug($title).'.txt';
-        $path = sprintf('glc/curriculum/%d/%s', $course->id, $filename);
-
-        if (! Storage::disk('local')->exists($path)) {
-            Storage::disk('local')->put($path, $this->documentText($course->name, $level->name, $unit->name, $type));
-        }
-
-        CurriculumDocument::query()->firstOrCreate(
-            ['course_unit_id' => $unit->id, 'title' => $title],
-            [
-                'course_id' => $course->id,
-                'course_level_id' => $level->id,
-                'course_lesson_id' => $lesson?->id,
-                'original_filename' => $filename,
-                'file_path' => $path,
-                'format' => 'txt',
-                'extracted_text' => $this->documentText($course->name, $level->name, $unit->name, $type),
-                'status' => $status,
-                'version' => 1,
-                'uploaded_by' => null,
-                'published_at' => $status === CurriculumDocumentStatus::Published ? now() : null,
-                'index_status' => CurriculumIndexStatus::Pending,
-            ],
-        );
-    }
-
-    private function documentText(string $course, string $level, string $unit, string $type): string
+    private function removeLegacyCurriculum(): void
     {
-        $header = sprintf("%s — %s — %s\n%s (GLC-created placeholder)\n\n", $course, $level, $unit, $type);
+        $indexService = app(CurriculumIndexService::class);
 
-        if ($type === 'Lesson Summary') {
-            return $header.implode("\n", [
-                'This summary covers the key language points taught in this unit.',
-                '',
-                'Target grammar: present simple and present continuous in everyday contexts;',
-                'question forms and short answers; common irregular verbs.',
-                '',
-                'Key vocabulary: daily routines, classroom language, describing people and places,',
-                'time expressions, and frequency adverbs.',
-                '',
-                'Reading focus: identifying the main idea of a short passage and scanning for details.',
-                'Writing focus: building complete sentences and linking ideas with and, but, because.',
-                '',
-                'Study tips: review the vocabulary list aloud, write three example sentences for each',
-                'grammar point, and reread the unit passage before attempting the practice tasks.',
-            ]);
+        $legacyCourses = Course::query()
+            ->whereIn('name', self::LEGACY_COURSE_NAMES)
+            ->get();
+
+        foreach ($legacyCourses as $course) {
+            CurriculumDocument::query()
+                ->where('course_id', $course->id)
+                ->each(function (CurriculumDocument $document) use ($indexService): void {
+                    $indexService->deleteStoreDocumentQuietly($document->gemini_document_name);
+                    Storage::disk('local')->delete($document->file_path);
+                });
+
+            $course->delete();
         }
-
-        return $header.implode("\n", [
-            'Practice tasks for self-study. Attempt every task before checking with your teacher.',
-            '',
-            'Task 1 — Vocabulary: match each word from the unit list to its definition, then use',
-            'five of the words in your own sentences.',
-            '',
-            'Task 2 — Grammar: complete the gap-fill sentences using the correct verb form.',
-            'Explain in one sentence why you chose each answer.',
-            '',
-            'Task 3 — Reading: read the short passage from the unit and answer the five',
-            'comprehension questions in full sentences.',
-            '',
-            'Task 4 — Writing: write a short paragraph (60-80 words) on the unit topic using at',
-            'least three new vocabulary items and one linking word.',
-        ]);
     }
 }

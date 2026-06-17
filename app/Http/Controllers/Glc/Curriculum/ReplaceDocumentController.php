@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Glc\Curriculum;
 
 use App\Enums\Glc\AuditAction;
+use App\Http\Controllers\Glc\Curriculum\Concerns\AuthorizesCurriculum;
 use App\Models\Glc\CurriculumDocument;
 use App\Services\Glc\AuditLogger;
+use App\Services\Glc\Curriculum\CurriculumPermission;
 use App\Services\Glc\Curriculum\CurriculumUploadService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,6 +18,8 @@ use RuntimeException;
 
 final readonly class ReplaceDocumentController
 {
+    use AuthorizesCurriculum;
+
     public function __construct(
         private CurriculumUploadService $uploads,
         private AuditLogger $auditLogger,
@@ -23,6 +27,8 @@ final readonly class ReplaceDocumentController
 
     public function __invoke(Request $request, CurriculumDocument $document): RedirectResponse
     {
+        $this->authorizeCurriculum($request, CurriculumPermission::Replace);
+
         $validated = $request->validate([
             'file' => ['required', 'file'],
         ]);
@@ -47,7 +53,7 @@ final readonly class ReplaceDocumentController
         ]);
 
         $message = sprintf(
-            'New file saved as version %d. The document is back in draft — check the new text preview, then publish it to the AI Tutor.',
+            'New file saved as version %d. The document is back in draft — review the file details, then publish it to the AI Tutor.',
             $document->version,
         );
 

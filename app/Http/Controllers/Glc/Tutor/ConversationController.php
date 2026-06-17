@@ -59,6 +59,7 @@ final readonly class ConversationController
                 'role' => $message->role,
                 'content' => $message->content,
                 'citations' => data_get($message->metadata, 'citations', []),
+                'curriculum_sources' => data_get($message->metadata, 'curriculum_sources', []),
             ])
             ->all();
 

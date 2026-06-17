@@ -755,6 +755,12 @@ export default function SettingsEdit({
                         </p>
                         <div className="flex flex-wrap gap-2">
                             <Link
+                                href="/admin/settings/ai-cost"
+                                className={buttonSecondaryClass}
+                            >
+                                AI cost controls
+                            </Link>
+                            <Link
                                 href="/admin/settings/ai"
                                 className={buttonSecondaryClass}
                             >

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Concerns\Glc;
 
+use App\Enums\Glc\CurriculumMaterialKind;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -12,7 +13,7 @@ trait ValidatesHierarchy
     /**
      * @return array<string, array<int, mixed>>
      */
-    private function hierarchyRules(Request $request): array
+    private function hierarchyRules(Request $request, bool $requireLesson = false): array
     {
         return [
             'course_id' => ['required', 'integer', Rule::exists('courses', 'id')],
@@ -27,11 +28,27 @@ trait ValidatesHierarchy
                 Rule::exists('course_units', 'id')->where('course_level_id', $request->integer('course_level_id')),
             ],
             'course_lesson_id' => [
-                'nullable',
+                $requireLesson ? 'required' : 'nullable',
                 'integer',
                 Rule::exists('course_lessons', 'id')->where('course_unit_id', $request->integer('course_unit_id')),
             ],
         ];
+    }
+
+    /**
+     * @return array<int, mixed>
+     */
+    private function materialKindRules(bool $required = true): array
+    {
+        $rules = [Rule::enum(CurriculumMaterialKind::class)];
+
+        if ($required) {
+            array_unshift($rules, 'required');
+        } else {
+            array_unshift($rules, 'nullable');
+        }
+
+        return $rules;
     }
 
     /**

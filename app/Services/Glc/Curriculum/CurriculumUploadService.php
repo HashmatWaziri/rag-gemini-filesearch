@@ -6,12 +6,14 @@ namespace App\Services\Glc\Curriculum;
 
 use App\Enums\Glc\CurriculumDocumentStatus;
 use App\Enums\Glc\CurriculumIndexStatus;
+use App\Enums\Glc\CurriculumMaterialKind;
 use App\Models\Glc\CurriculumDocument;
+use App\Models\Glc\CurriculumDocumentVersion;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use RuntimeException;
-use Throwable;
 
 final readonly class CurriculumUploadService
 {
@@ -23,23 +25,21 @@ final readonly class CurriculumUploadService
 
     private const array PRESENTATION_EXTENSIONS = ['ppt', 'pptx', 'key', 'odp'];
 
-    public function __construct(private TextExtractor $extractor) {}
-
     /**
-     * @param  array{course_id: int, course_level_id: int, course_unit_id: int, course_lesson_id: int|null, title: string}  $attributes
+     * @param  array{course_id: int, course_level_id: int, course_unit_id: int, course_lesson_id: int|null, title: string, material_kind: CurriculumMaterialKind}  $attributes
      */
     public function store(UploadedFile $file, array $attributes, User $uploader): CurriculumDocument
     {
         $this->assertAcceptable($file);
 
-        [$path, $format, $text] = $this->storeAndExtract($file, $attributes['course_id']);
+        [$path, $format] = $this->storeFile($file, $attributes['course_id']);
 
         return CurriculumDocument::query()->create([
             ...$attributes,
             'original_filename' => $file->getClientOriginalName(),
             'file_path' => $path,
             'format' => $format,
-            'extracted_text' => $text,
+            'extracted_text' => null,
             'status' => CurriculumDocumentStatus::Draft,
             'version' => 1,
             'uploaded_by' => $uploader->id,
@@ -51,15 +51,15 @@ final readonly class CurriculumUploadService
     {
         $this->assertAcceptable($file);
 
-        [$path, $format, $text] = $this->storeAndExtract($file, $document->course_id);
+        $this->snapshotCurrentVersion($document);
 
-        $previousPath = $document->file_path;
+        [$path, $format] = $this->storeFile($file, $document->course_id);
 
         $document->update([
             'original_filename' => $file->getClientOriginalName(),
             'file_path' => $path,
             'format' => $format,
-            'extracted_text' => $text,
+            'extracted_text' => null,
             'status' => CurriculumDocumentStatus::Draft,
             'version' => $document->version + 1,
             'published_at' => null,
@@ -68,15 +68,65 @@ final readonly class CurriculumUploadService
             'index_error' => null,
         ]);
 
-        if ($previousPath !== $path) {
-            Storage::disk('local')->delete($previousPath);
+        return $document->refresh();
+    }
+
+    public function restoreFromVersion(CurriculumDocument $document, int $versionNumber): CurriculumDocument
+    {
+        $version = CurriculumDocumentVersion::query()
+            ->where('curriculum_document_id', $document->id)
+            ->where('version', $versionNumber)
+            ->firstOrFail();
+
+        if (! Storage::disk('local')->exists($version->file_path)) {
+            throw new RuntimeException('The archived file for this version is missing.');
         }
+
+        $this->snapshotCurrentVersion($document);
+
+        [$path, $format] = $this->copyStoredFile(
+            $version->file_path,
+            $document->course_id,
+            $version->format,
+        );
+
+        $document->update([
+            'original_filename' => $version->original_filename,
+            'file_path' => $path,
+            'format' => $format,
+            'extracted_text' => $version->extracted_text,
+            'status' => CurriculumDocumentStatus::Draft,
+            'version' => $document->version + 1,
+            'published_at' => null,
+            'archived_at' => null,
+            'index_status' => CurriculumIndexStatus::Pending,
+            'index_error' => null,
+        ]);
 
         return $document->refresh();
     }
 
+    public function versionedFilePath(int $courseId, int $documentId, int $version, string $format): string
+    {
+        $extension = $format !== '' ? '.'.$format : '';
+
+        return sprintf(
+            'glc/curriculum/%d/documents/%d/v%d%s',
+            $courseId,
+            $documentId,
+            $version,
+            $extension,
+        );
+    }
+
     public function fileError(UploadedFile $file): ?string
     {
+        if (! $file->isValid()) {
+            $message = $file->getErrorMessage();
+
+            return $message !== '' ? $message : 'The file did not upload correctly. Select it again and retry.';
+        }
+
         $extension = mb_strtolower($file->getClientOriginalExtension());
 
         /** @var list<string> $allowed */
@@ -96,11 +146,6 @@ final readonly class CurriculumUploadService
         }
 
         return null;
-    }
-
-    public function maxExtractedChars(): int
-    {
-        return config()->integer('glc.curriculum.max_extracted_chars', (int) env('GLC_CURRICULUM_MAX_EXTRACTED_CHARS', 500_000));
     }
 
     private function assertAcceptable(UploadedFile $file): void
@@ -146,50 +191,89 @@ final readonly class CurriculumUploadService
             : sprintf('%d KB', $kilobytes);
     }
 
+    private function snapshotCurrentVersion(CurriculumDocument $document): void
+    {
+        $versionPath = $this->versionedFilePath(
+            $document->course_id,
+            $document->id,
+            $document->version,
+            $document->format,
+        );
+
+        $storedPath = $document->file_path;
+
+        if (Storage::disk('local')->exists($storedPath)) {
+            Storage::disk('local')->move($storedPath, $versionPath);
+            $storedPath = $versionPath;
+        }
+
+        CurriculumDocumentVersion::query()->create([
+            'curriculum_document_id' => $document->id,
+            'version' => $document->version,
+            'title' => $document->title,
+            'material_kind' => $document->material_kind,
+            'original_filename' => $document->original_filename,
+            'file_path' => $storedPath,
+            'format' => $document->format,
+            'extracted_text' => $document->extracted_text,
+            'status' => $document->status,
+            'published_at' => $document->published_at,
+            'archived_at' => $document->archived_at,
+            'gemini_file_name' => $document->gemini_file_name,
+            'gemini_document_name' => $document->gemini_document_name,
+            'uploaded_by' => $document->uploaded_by,
+        ]);
+    }
+
     /**
-     * @return array{0: string, 1: string, 2: string}
+     * @return array{0: string, 1: string}
      */
-    private function storeAndExtract(UploadedFile $file, int $courseId): array
+    private function copyStoredFile(string $sourcePath, int $courseId, string $format): array
+    {
+        $contents = Storage::disk('local')->get($sourcePath);
+
+        if ($contents === null) {
+            throw new RuntimeException(sprintf('Stored file [%s] is missing.', $sourcePath));
+        }
+
+        $format = mb_strtolower($format);
+        $filename = Str::random(40).($format !== '' ? '.'.$format : '');
+        $relativePath = 'glc/curriculum/'.$courseId.'/'.$filename;
+
+        if (! Storage::disk('local')->put($relativePath, $contents)) {
+            throw new RuntimeException('Unable to store the restored file.');
+        }
+
+        return [$relativePath, $format];
+    }
+
+    /**
+     * @return array{0: string, 1: string}
+     */
+    private function storeFile(UploadedFile $file, int $courseId): array
     {
         $format = mb_strtolower($file->getClientOriginalExtension());
-        $path = $file->storeAs('glc/curriculum/'.$courseId, $file->hashName(), 'local');
+        $filename = Str::random(40).($format !== '' ? '.'.$format : '');
+        $relativePath = 'glc/curriculum/'.$courseId.'/'.$filename;
 
-        if (! is_string($path)) {
-            throw new RuntimeException('Unable to store the uploaded file.');
+        $stream = fopen($file->getPathname(), 'rb');
+
+        if ($stream === false) {
+            throw new RuntimeException('Unable to read the uploaded file.');
         }
 
         try {
-            $text = $this->extractor->extract(Storage::disk('local')->path($path), $format);
-        } catch (Throwable $throwable) {
-            Storage::disk('local')->delete($path);
-
-            if ($throwable instanceof RuntimeException) {
-                throw new RuntimeException(
-                    sprintf('%s: %s', $file->getClientOriginalName(), $throwable->getMessage()),
-                    previous: $throwable,
-                );
+            $stored = Storage::disk('local')->put($relativePath, $stream);
+        } finally {
+            if (is_resource($stream)) {
+                fclose($stream);
             }
-
-            throw new RuntimeException(
-                sprintf(
-                    'We couldn\'t read "%s". Check that the file opens correctly on your computer, then try uploading it again.',
-                    $file->getClientOriginalName(),
-                ),
-                previous: $throwable,
-            );
         }
 
-        $maxChars = $this->maxExtractedChars();
-
-        if (mb_strlen($text) > $maxChars) {
-            Storage::disk('local')->delete($path);
-
-            throw new RuntimeException(sprintf(
-                'This document has too much text for the AI Tutor (over %s characters). Split it into smaller documents and upload each part.',
-                number_format($maxChars),
-            ));
+        if (! $stored) {
+            throw new RuntimeException('Unable to store the uploaded file.');
         }
 
-        return [$path, $format, $text];
+        return [$relativePath, $format];
     }
 }

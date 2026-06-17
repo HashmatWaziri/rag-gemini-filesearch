@@ -37,8 +37,10 @@ const CONTENT: GlcNavItem[] = [
 
 const ADMINISTRATION: GlcNavItem[] = [
     { label: 'Users', href: '/admin/users' },
+    { label: 'Roles & Permissions', href: '/admin/permissions' },
     { label: 'Access Codes', href: '/admin/access-codes' },
     { label: 'Exports', href: '/admin/exports' },
+    { label: 'Backups', href: '/admin/backups' },
     { label: 'Activity Log', href: '/admin/audit' },
     { label: 'Settings', href: '/admin/settings' },
 ];

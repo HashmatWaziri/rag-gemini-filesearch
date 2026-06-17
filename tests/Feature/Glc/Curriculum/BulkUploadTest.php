@@ -61,7 +61,7 @@ it('uploads multiple files sharing one tag set and reports per-file results', fu
         ->course_level_id->toBe($this->level->id)
         ->course_unit_id->toBe($this->unit->id)
         ->status->toBe(CurriculumDocumentStatus::Draft)
-        ->extracted_text->toBe('Summary one');
+        ->extracted_text->toBeNull();
 });
 
 it('reports oversize files per-file without failing the batch', function (): void {

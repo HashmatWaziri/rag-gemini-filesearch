@@ -27,7 +27,7 @@ enum ExportBundle: string
     {
         return match ($this) {
             self::Placement => 'Every placement test question, attempt, answer, score and staff review. CSV files open in Excel; JSON files open in any text editor.',
-            self::Curriculum => 'A list of every curriculum document — its course, level, unit, lesson, status, file details and a text preview — plus the full course structure. Readable without this system.',
+            self::Curriculum => 'A list of every curriculum document — its course, level, unit, lesson, status, file details, and Gemini sync status — plus the full course structure. Readable without this system.',
             self::Students => 'Every enrolled student with guardian and consent details, plus their course assignments. CSV files open in Excel.',
             self::Tutor => 'Every AI Tutor conversation and message, flagged messages, and writing submissions, as plain JSON files.',
             self::Audit => 'The complete activity log — who did what, and when — as a CSV file that opens in Excel.',

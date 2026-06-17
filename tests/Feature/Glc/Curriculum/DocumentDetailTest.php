@@ -17,10 +17,14 @@ beforeEach(function (): void {
     $this->supervisor = User::factory()->academicSupervisor()->create();
 });
 
-it('shows the document detail page with the extracted-text preview', function (): void {
+it('shows the document detail page with stored file metadata', function (): void {
     $document = CurriculumDocument::factory()->create([
-        'extracted_text' => 'Preview me before publishing.',
+        'file_path' => 'glc/curriculum/1/draft.txt',
+        'format' => 'txt',
+        'original_filename' => 'draft.txt',
     ]);
+
+    Storage::disk('local')->put($document->file_path, 'Draft body text.');
 
     $this->actingAs($this->supervisor)
         ->get(route('curriculum.documents.show', $document))
@@ -28,10 +32,12 @@ it('shows the document detail page with the extracted-text preview', function ()
         ->assertInertia(fn ($page) => $page
             ->component('glc/curriculum/show')
             ->where('document.id', $document->id)
-            ->where('document.extracted_text', 'Preview me before publishing.')
+            ->where('document.has_stored_file', true)
+            ->where('document.file_size_label', '16 B')
             ->where('document.status', 'draft')
             ->where('document.version', 1)
-            ->where('canDelete', false));
+            ->where('canDelete', false)
+            ->has('versions', 0));
 });
 
 it('exposes the delete capability only to admins', function (): void {

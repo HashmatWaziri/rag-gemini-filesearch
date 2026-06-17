@@ -14,6 +14,7 @@ use App\Models\Glc\PlacementAnswer;
 use App\Models\Glc\PlacementAttempt;
 use App\Services\Glc\Admin\SpeakingEvaluationGuidelines;
 use App\Services\Glc\Admin\WritingEvaluationGuidelines;
+use App\Services\Glc\Ai\GlcAiCostGuard;
 use App\Services\Glc\Ai\PlacementAiSettings;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Ai\Responses\AgentResponse;
@@ -29,6 +30,7 @@ final readonly class AiDraftService
         private WritingEvaluationGuidelines $writingGuidelines,
         private SpeakingEvaluationGuidelines $speakingGuidelines,
         private ObjectiveContextBuilder $objectiveContext,
+        private GlcAiCostGuard $costGuard,
     ) {}
 
     public function generate(PlacementAttempt $attempt, PlacementSection $section): PlacementAiDraft
@@ -81,6 +83,7 @@ final readonly class AiDraftService
             throw new RuntimeException('No essay text was found for this attempt.');
         }
 
+        $this->costGuard->assertWithinLimits();
         $this->settings->hydrateProviderConfig();
         $selection = $this->settings->selection(PlacementAiSettings::TASK_WRITING);
 
@@ -111,6 +114,7 @@ final readonly class AiDraftService
         $transcript = $this->transcribe($audioPath);
 
         try {
+            $this->costGuard->assertWithinLimits();
             $selection = $this->settings->selection(PlacementAiSettings::TASK_SPEAKING_EVALUATION);
 
             $response = new SpeakingEvaluationAgent()->prompt(
@@ -148,6 +152,7 @@ final readonly class AiDraftService
 
     private function transcribe(string $audioPath): string
     {
+        $this->costGuard->assertWithinLimits();
         $this->settings->hydrateProviderConfig();
         $selection = $this->settings->selection(PlacementAiSettings::TASK_SPEAKING);
 
