@@ -26,7 +26,6 @@ final readonly class AnswerController
 
         $validated = $request->validate([
             'item_id' => ['required', 'integer'],
-            'selected' => ['required', 'integer', 'min:0'],
         ]);
 
         $item = PlacementItem::query()->active()->find($validated['item_id']);
@@ -47,13 +46,33 @@ final readonly class AnswerController
             return response()->json(['message' => 'This section is not in progress.'], 409);
         }
 
-        if ($validated['selected'] >= count($item->options ?? [])) {
-            return response()->json(['message' => 'That choice does not look right - please pick one of the options shown.'], 422);
+        if (PlacementContentService::questionFormat($item) === PlacementContentService::FORMAT_GAP_FILL) {
+            $answer = $request->validate([
+                'text' => ['required', 'string', 'max:200'],
+                'selected' => ['prohibited'],
+            ], [
+                'selected.prohibited' => 'This question expects a typed answer, not a choice.',
+            ]);
+
+            $response = ['text' => mb_trim($answer['text'])];
+        } else {
+            $answer = $request->validate([
+                'selected' => ['required', 'integer', 'min:0'],
+                'text' => ['prohibited'],
+            ], [
+                'text.prohibited' => 'This question expects one of the options shown, not a typed answer.',
+            ]);
+
+            if ($answer['selected'] >= count($item->options ?? [])) {
+                return response()->json(['message' => 'That choice does not look right - please pick one of the options shown.'], 422);
+            }
+
+            $response = ['selected' => $answer['selected']];
         }
 
         $attempt->answers()->updateOrCreate(
             ['placement_item_id' => $item->id],
-            ['response' => ['selected' => $validated['selected']]],
+            ['response' => $response],
         );
 
         return response()->json([

@@ -4,7 +4,12 @@ import McqList from '../components/mcq-list';
 import SectionShell from '../components/section-shell';
 import { sharedAudioElement, unlockAudioElement } from '../lib/audio-unlock';
 import { placementApi } from '../lib/placement-api';
-import { type McqQuestion, type SectionPageProps } from '../lib/types';
+import {
+    type McqQuestion,
+    type ObjectiveAnswers,
+    type ObjectiveAnswerValue,
+    type SectionPageProps,
+} from '../lib/types';
 import { useObjectiveAnswers } from '../lib/use-objective-answers';
 import { useUnansweredReview } from '../lib/use-unanswered-review';
 
@@ -18,7 +23,7 @@ interface Clip {
 
 interface ListeningProps extends SectionPageProps {
     clips: Clip[];
-    answers: Record<number, number>;
+    answers: ObjectiveAnswers;
 }
 
 type Playback =
@@ -129,8 +134,8 @@ function ClipBlock({
 }: {
     clip: Clip;
     index: number;
-    answers: Record<number, number>;
-    onSelect: (itemId: number, selected: number) => void;
+    answers: ObjectiveAnswers;
+    onSelect: (itemId: number, value: ObjectiveAnswerValue) => void;
     startNumber: number;
     highlightUnanswered: boolean;
     autoStartSeconds: number | null;
@@ -340,9 +345,7 @@ function ClipBlock({
                 </div>
             )}
 
-            {error && (
-                <p className="mt-2 text-sm text-destructive">{error}</p>
-            )}
+            {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
 
             {!questionsEnabled && (
                 <p className="mt-2 text-xs text-muted-foreground">

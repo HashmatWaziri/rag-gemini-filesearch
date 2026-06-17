@@ -311,6 +311,27 @@ it('exports tutor data with conversations, messages, violations, and writing sub
     $zip->close();
 });
 
+it('includes usage and progress report files in the tutor export when analytics are enabled', function (): void {
+    config(['glc.tutor.progress_analytics_enabled' => true]);
+
+    $admin = User::factory()->admin()->create();
+    $student = User::factory()->student()->create();
+
+    App\Models\Glc\TutorUsageDaily::factory()->create(['user_id' => $student->id]);
+    App\Models\Glc\TutorProgressReport::factory()->create(['user_id' => $student->id]);
+
+    $response = $this->actingAs($admin)
+        ->get(route('admin.exports.download', 'tutor'))
+        ->assertOk();
+
+    $zip = openExportZip($response);
+
+    expect($zip->locateName('tutor/usage-daily.json'))->not->toBeFalse()
+        ->and($zip->locateName('tutor/progress-reports.json'))->not->toBeFalse();
+
+    $zip->close();
+});
+
 it('exports the audit log as CSV', function (): void {
     $admin = User::factory()->admin()->create();
     AuditLog::factory()->create([

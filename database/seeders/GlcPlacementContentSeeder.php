@@ -58,20 +58,48 @@ final class GlcPlacementContentSeeder extends Seeder
     private function seedListening(): void
     {
         foreach ($this->listeningClips() as $position => $clip) {
-            $path = sprintf('glc/placement/audio/placeholder-clip-%d.wav', $position + 1);
-            Storage::disk('local')->put($path, $this->silentWav());
-
             $parent = PlacementItem::query()->create([
                 'section' => PlacementSection::Listening,
                 'type' => PlacementItemType::AudioClip,
                 'position' => $position + 1,
                 'title' => $clip['title'],
-                'media_path' => $path,
+                'media_path' => $this->storeListeningAudio($clip['audio'], $position + 1),
                 'is_active' => true,
             ]);
 
-            $this->createQuestions($parent, PlacementSection::Listening, $clip['questions']);
+            foreach ($clip['questions'] as $questionPosition => $question) {
+                PlacementItem::query()->create([
+                    'section' => PlacementSection::Listening,
+                    'type' => PlacementItemType::Question,
+                    'parent_id' => $parent->id,
+                    'position' => $questionPosition + 1,
+                    'body' => $question['body'],
+                    'options' => $question['options'] ?? null,
+                    'correct_option' => $question['correct_option'] ?? null,
+                    'settings' => isset($question['accepted_answers'])
+                        ? ['format' => 'gap_fill', 'accepted_answers' => $question['accepted_answers']]
+                        : null,
+                    'is_active' => true,
+                ]);
+            }
         }
+    }
+
+    private function storeListeningAudio(string $filename, int $position): string
+    {
+        $source = __DIR__.'/audio/'.$filename;
+
+        if (is_file($source)) {
+            $path = 'glc/placement/audio/'.$filename;
+            Storage::disk('local')->put($path, (string) file_get_contents($source));
+
+            return $path;
+        }
+
+        $path = sprintf('glc/placement/audio/placeholder-clip-%d.wav', $position);
+        Storage::disk('local')->put($path, $this->silentWav());
+
+        return $path;
     }
 
     private function seedPrompts(): void
@@ -223,29 +251,33 @@ final class GlcPlacementContentSeeder extends Seeder
     }
 
     /**
-     * @return list<array{title: string, questions: list<array{0: string, 1: list<string>, 2: int}>}>
+     * @return list<array{title: string, audio: string, questions: list<array{body: string, options?: list<string>, correct_option?: int, accepted_answers?: list<string>}>}>
      */
     private function listeningClips(): array
     {
         return [
             [
-                'title' => 'Conversation: Booking a language course (placeholder audio)',
+                'title' => 'Announcements: Trains and flights',
+                'audio' => 'listening-transport-announcements.mp3',
                 'questions' => [
-                    ['What does the caller want to do?', ['Cancel a class', 'Book a language course', 'Complain about a teacher', 'Change his address'], 1],
-                    ['Which level does the receptionist recommend?', ['Beginner', 'Elementary', 'Intermediate', 'Advanced'], 2],
-                    ['When do the evening classes start?', ['At 6 pm', 'At 6.30 pm', 'At 7 pm', 'At 7.30 pm'], 2],
-                    ['How many students are in each group?', ['Up to eight', 'Up to ten', 'Up to twelve', 'Up to fifteen'], 2],
-                    ['What should the caller bring on the first day?', ['His passport', 'A notebook and ID', 'The full course fee', 'A placement certificate'], 1],
+                    ['body' => 'What time does the train to Bristol Temple Meads leave?', 'options' => ['12.02', '12.12', '12.20', '12.40'], 'correct_option' => 2],
+                    ['body' => 'First class is at the front of the train.', 'options' => ['True', 'False'], 'correct_option' => 1],
+                    ['body' => 'The delayed Bristol train will now depart from Platform _____.', 'accepted_answers' => ['9', 'nine', 'platform 9']],
+                    ['body' => 'How long is the Bristol train delayed?', 'options' => ['About 8 minutes', 'About 18 minutes', 'About 80 minutes', 'It has been cancelled'], 'correct_option' => 0],
+                    ['body' => 'Passengers for flight EB380 to Paris should go to Gate _____ for boarding.', 'accepted_answers' => ['13', 'thirteen', 'gate 13']],
+                    ['body' => 'What should passengers have ready before boarding flight EB380?', 'options' => ['Their tickets and luggage', 'Their passports and boarding passes', 'Their visas and seat numbers', 'Their boarding passes only'], 'correct_option' => 1],
                 ],
             ],
             [
-                'title' => 'Announcement: Library opening hours (placeholder audio)',
+                'title' => 'Conversation: Meeting an old friend',
+                'audio' => 'listening-meeting-old-friend.mp3',
                 'questions' => [
-                    ['What is the announcement mainly about?', ['New library opening hours', 'A book sale', 'Building repairs', 'A reading competition'], 0],
-                    ['On which day will the library be closed?', ['Friday', 'Saturday', 'Sunday', 'Monday'], 2],
-                    ['Until what time is the library open on weekdays?', ['8 pm', '9 pm', '10 pm', '6 pm'], 1],
-                    ['Where should visitors return borrowed books?', ['The front desk', 'The book drop box', 'The second floor', 'By post'], 1],
-                    ['Who can use the new study rooms?', ['Staff only', 'Children only', 'Registered members', 'University students'], 2],
+                    ['body' => 'How long has it been since Selina and Patrick last saw each other?', 'options' => ['About five years', 'About ten years', 'At least fifteen years', 'More than twenty years'], 'correct_option' => 2],
+                    ['body' => 'Selina still lives in London.', 'options' => ['True', 'False'], 'correct_option' => 1],
+                    ['body' => 'Why did Selina leave London?', 'options' => ['She could not find a job there', 'The job disappointed her and the city was too expensive', 'Her parents asked her to come home', 'She wanted to get married'], 'correct_option' => 1],
+                    ['body' => 'Selina has been back home for almost _____ months.', 'accepted_answers' => ['5', 'five']],
+                    ['body' => 'Who does Selina live with now?', 'options' => ['Her husband', 'A flatmate', 'Her mum and dad', 'She lives alone'], 'correct_option' => 2],
+                    ['body' => 'Patrick and his wife have just celebrated their _____ wedding anniversary.', 'accepted_answers' => ['tenth', '10th', '10']],
                 ],
             ],
         ];

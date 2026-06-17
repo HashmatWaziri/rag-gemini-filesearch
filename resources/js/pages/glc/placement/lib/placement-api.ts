@@ -59,11 +59,13 @@ export const placementApi = {
             { code },
         ),
 
-    saveAnswer: (itemId: number, selected: number) =>
-        request<{ saved?: boolean; savedAt?: string }>('/placement/answers', {
-            item_id: itemId,
-            selected,
-        }),
+    saveAnswer: (itemId: number, answer: number | string) =>
+        request<{ saved?: boolean; savedAt?: string }>(
+            '/placement/answers',
+            typeof answer === 'number'
+                ? { item_id: itemId, selected: answer }
+                : { item_id: itemId, text: answer },
+        ),
 
     saveWriting: (text: string) =>
         request<{ saved?: boolean; wordCount?: number; savedAt?: string }>(

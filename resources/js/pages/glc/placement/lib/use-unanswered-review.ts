@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { questionAnchorId } from '../components/mcq-list';
-import { type McqQuestion } from './types';
+import {
+    isAnsweredValue,
+    type McqQuestion,
+    type ObjectiveAnswers,
+} from './types';
 
 /**
  * Drives the "first Finish press reviews the gaps" flow: highlights all
@@ -10,12 +14,12 @@ import { type McqQuestion } from './types';
  */
 export function useUnansweredReview(
     questions: McqQuestion[],
-    answers: Record<number, number>,
+    answers: ObjectiveAnswers,
 ) {
     const [highlightUnanswered, setHighlightUnanswered] = useState(false);
 
     const unansweredIds = questions
-        .filter((question) => answers[question.id] === undefined)
+        .filter((question) => !isAnsweredValue(answers[question.id]))
         .map((question) => question.id);
 
     const reviewUnanswered = () => {

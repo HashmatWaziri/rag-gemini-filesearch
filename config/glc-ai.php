@@ -188,16 +188,18 @@ return [
     |--------------------------------------------------------------------------
     |
     | Default rubric criteria the AI evaluates Writing submissions against.
-    | Admins manage the effective list via the UI (stored in settings under
-    | SettingKey::GlcWritingGuidelines); these defaults apply until then.
+    | Adapted from the public IELTS Writing band descriptors (Task
+    | achievement, Coherence and cohesion, Lexical resource, Grammatical
+    | range and accuracy). Admins and supervisors manage the effective list
+    | via the UI (stored in settings under SettingKey::GlcWritingGuidelines);
+    | these defaults apply until then.
     */
     'writing_guidelines' => [
         'defaults' => [
-            ['title' => 'Grammar accuracy', 'description' => 'Correct use of tenses, agreement, articles and sentence construction appropriate to the candidate level.'],
-            ['title' => 'Vocabulary range', 'description' => 'Variety and precision of word choice; appropriate register for the task.'],
-            ['title' => 'Structure and organization', 'description' => 'Clear paragraphing with an introduction, body and conclusion; logical ordering of ideas.'],
-            ['title' => 'Coherence and cohesion', 'description' => 'Ideas connect logically using appropriate linking devices; the text reads as a unified whole.'],
-            ['title' => 'Task completion', 'description' => 'The response addresses every part of the prompt within the expected word count (150-250 words).'],
+            ['title' => 'Task achievement', 'description' => 'The response addresses all parts of the prompt with a clear position throughout, presents relevant main ideas that are extended and supported with examples, and stays within the expected word count (150–250 words).'],
+            ['title' => 'Coherence and cohesion', 'description' => 'Ideas are organised logically with clear progression across the text. Paragraphing is appropriate, and cohesive devices (linking words, referencing, substitution) connect ideas naturally without being mechanical or overused.'],
+            ['title' => 'Lexical resource', 'description' => 'Range and precision of vocabulary: the candidate goes beyond basic words, uses collocation and some less common items appropriately, and spelling or word-formation errors do not impede communication.'],
+            ['title' => 'Grammatical range and accuracy', 'description' => 'A mix of simple and complex sentence structures used flexibly and accurately. Errors in grammar and punctuation are rare or minor and do not reduce clarity for the reader.'],
         ],
     ],
 
@@ -207,17 +209,20 @@ return [
     |--------------------------------------------------------------------------
     |
     | Default rubric criteria the AI evaluates Speaking transcripts against.
-    | Placeholder content authored until GLC supplies its final speaking
-    | rubric; admins manage the effective list via the UI (stored in settings
-    | under SettingKey::GlcSpeakingGuidelines).
+    | Adapted from the public IELTS Speaking band descriptors, with
+    | pronunciation replaced by transcript-based comprehensibility because
+    | the AI only sees the transcript — GLC staff judge pronunciation from
+    | the recording during review. Admins and supervisors manage the
+    | effective list via the UI (stored in settings under
+    | SettingKey::GlcSpeakingGuidelines).
     */
     'speaking_guidelines' => [
         'defaults' => [
-            ['title' => 'Fluency and coherence', 'description' => 'The response flows naturally with connected ideas, limited unnatural pauses or fragmented phrasing visible in the transcript, and logical ordering of points.'],
-            ['title' => 'Grammar accuracy', 'description' => 'Correct use of tenses, agreement, articles and sentence construction in spontaneous spoken English.'],
-            ['title' => 'Vocabulary range', 'description' => 'Variety and precision of word choice; the candidate goes beyond basic words and uses vocabulary appropriate to the prompt.'],
-            ['title' => 'Task completion', 'description' => 'The response addresses every part of the speaking prompt with sufficient development within the recording time.'],
-            ['title' => 'Comprehensibility', 'description' => 'How easily a listener can follow the response: clear phrasing, self-correction handled smoothly, and meaning rarely obscured by errors.'],
+            ['title' => 'Fluency and coherence', 'description' => 'The response flows at a natural length with connected, logically ordered ideas. Hesitation visible in the transcript (fragments, abandoned sentences, fillers) is limited, and the candidate develops topics without losing the thread.'],
+            ['title' => 'Lexical resource', 'description' => 'Vocabulary range and flexibility: the candidate paraphrases when needed, uses topic-appropriate and some less common vocabulary, and word choice rarely obscures meaning.'],
+            ['title' => 'Grammatical range and accuracy', 'description' => 'A mix of simple and complex spoken structures with consistent control. Errors occur naturally in spontaneous speech but rarely cause misunderstanding.'],
+            ['title' => 'Task fulfilment', 'description' => 'The response addresses every part of the speaking prompt with sufficient development within the recording time, staying on topic throughout.'],
+            ['title' => 'Comprehensibility', 'description' => 'How easily a listener can follow the response based on the transcript: clear phrasing, smooth self-correction, and meaning rarely obscured by errors. Pronunciation is judged by GLC staff during review, not by the AI.'],
         ],
     ],
 
@@ -256,6 +261,25 @@ return [
                 'models' => [
                     'gemini-2.5-flash' => ['label' => 'Gemini 2.5 Flash', 'input_per_mtok' => 0.30, 'output_per_mtok' => 2.50, 'tier' => 'value', 'notes' => 'Current default for tutor writing correction.'],
                     'gemini-2.5-flash-lite' => ['label' => 'Gemini 2.5 Flash-Lite', 'input_per_mtok' => 0.10, 'output_per_mtok' => 0.40, 'tier' => 'budget', 'notes' => 'Lower cost for short writing submissions.'],
+                ],
+            ],
+        ],
+    ],
+
+    'tutor_progress' => [
+
+        'default' => [
+            'provider' => 'gemini',
+            'model' => env('GLC_TUTOR_MODEL', 'gemini-2.5-flash'),
+        ],
+
+        'providers' => [
+            'gemini' => [
+                'label' => 'Google Gemini',
+                'pricing_url' => 'https://ai.google.dev/gemini-api/docs/pricing',
+                'models' => [
+                    'gemini-2.5-flash' => ['label' => 'Gemini 2.5 Flash', 'input_per_mtok' => 0.30, 'output_per_mtok' => 2.50, 'tier' => 'value', 'notes' => 'Staff-only tutor progress summaries.'],
+                    'gemini-2.5-flash-lite' => ['label' => 'Gemini 2.5 Flash-Lite', 'input_per_mtok' => 0.10, 'output_per_mtok' => 0.40, 'tier' => 'budget', 'notes' => 'Lower cost for periodic progress reports.'],
                 ],
             ],
         ],

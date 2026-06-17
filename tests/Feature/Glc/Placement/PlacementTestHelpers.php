@@ -154,6 +154,27 @@ if (! function_exists('glcSeedListening')) {
     }
 }
 
+if (! function_exists('glcSeedGapFillQuestion')) {
+    /**
+     * @param  list<string>  $acceptedAnswers
+     */
+    function glcSeedGapFillQuestion(
+        PlacementItem $parent,
+        array $acceptedAnswers = ['seven', '7'],
+        int $position = 99,
+    ): PlacementItem {
+        return PlacementItem::factory()->create([
+            'section' => $parent->section,
+            'parent_id' => $parent->id,
+            'position' => $position,
+            'body' => 'The train leaves at _____ every morning.',
+            'options' => null,
+            'correct_option' => null,
+            'settings' => ['format' => 'gap_fill', 'accepted_answers' => $acceptedAnswers],
+        ]);
+    }
+}
+
 if (! function_exists('glcSeedWritingPrompt')) {
     function glcSeedWritingPrompt(): PlacementItem
     {
@@ -183,6 +204,7 @@ if (! function_exists('glcAssertNoForbiddenKeys')) {
     {
         $forbidden = [
             'correct_option', 'correctoption', 'is_correct',
+            'accepted_answers', 'acceptedanswers',
             'score', 'scores', 'level', 'levels', 'final_level', 'skill_levels',
             'review', 'reviews', 'ai_draft', 'ai_drafts', 'aidrafts', 'draft', 'drafts',
             'media_path', 'confidence',

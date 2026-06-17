@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\Glc\Staff\NarrativeController;
 use App\Http\Controllers\Glc\Staff\PlacementContentController;
 use App\Http\Controllers\Glc\Staff\PlacementContentPdfPreviewController;
+use App\Http\Controllers\Glc\Staff\PlacementCriteriaController;
 use App\Http\Controllers\Glc\Staff\PlacementMediaController;
 use App\Http\Controllers\Glc\Staff\ResultPdfController;
 use App\Http\Controllers\Glc\Staff\ResultSendController;
@@ -42,6 +43,10 @@ Route::prefix('staff')->name('staff.')->middleware(['auth', 'glc.role:teacher,ac
         Route::post('placement-content/items', [PlacementContentController::class, 'store'])->name('content.items.store');
         Route::put('placement-content/items/{item}', [PlacementContentController::class, 'update'])->name('content.items.update');
         Route::delete('placement-content/items/{item}', [PlacementContentController::class, 'destroy'])->name('content.items.destroy');
+        Route::put('placement-content/criteria/{skill}', [PlacementCriteriaController::class, 'update'])
+            ->whereIn('skill', ['writing', 'speaking'])->name('content.criteria.update');
+        Route::delete('placement-content/criteria/{skill}', [PlacementCriteriaController::class, 'destroy'])
+            ->whereIn('skill', ['writing', 'speaking'])->name('content.criteria.reset');
         Route::post('placement-content/pdf-preview', PlacementContentPdfPreviewController::class)->name('content.pdf.preview');
     });
 });

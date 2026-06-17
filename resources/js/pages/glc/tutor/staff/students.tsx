@@ -7,13 +7,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
+import { MetronicSelect, mapIdOptions } from '@/components/glc/metronic-select';
 import {
     Table,
     TableBody,
@@ -23,7 +17,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import GlcLayout from '@/layouts/glc-layout';
-import { Head, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { Fragment, useState } from 'react';
 
 interface UnitOption {
@@ -68,8 +62,6 @@ interface Props {
     courses: CourseOption[];
     canViewAll: boolean;
 }
-
-const SELECT_EMPTY = '__empty__';
 
 function ConsentBadge({
     consent,
@@ -137,69 +129,43 @@ function AssignmentForm({
         );
     };
 
-    const empty = SELECT_EMPTY;
-
     return (
         <div className="mt-3 grid gap-2 rounded-md border border-border bg-muted/50 p-3 sm:grid-cols-4">
-            <Select
-                value={courseId ? String(courseId) : empty}
-                onValueChange={(value) => {
-                    setCourseId(value === empty ? '' : Number(value));
+            <MetronicSelect
+                aria-label="Course"
+                value={courseId ? String(courseId) : null}
+                onChange={(value) => {
+                    setCourseId(value ? Number(value) : '');
                     setLevelId('');
                     setUnitId('');
                 }}
-            >
-                <SelectTrigger aria-label="Course">
-                    <SelectValue placeholder="Course..." />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value={empty}>Course...</SelectItem>
-                    {courses.map((option) => (
-                        <SelectItem key={option.id} value={String(option.id)}>
-                            {option.name}
-                        </SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
-            <Select
-                value={levelId ? String(levelId) : empty}
-                onValueChange={(value) => {
-                    setLevelId(value === empty ? '' : Number(value));
+                options={mapIdOptions(courses)}
+                placeholder="Course..."
+                isSearchable={false}
+            />
+            <MetronicSelect
+                aria-label="Level"
+                value={levelId ? String(levelId) : null}
+                onChange={(value) => {
+                    setLevelId(value ? Number(value) : '');
                     setUnitId('');
                 }}
+                options={mapIdOptions(course?.levels ?? [])}
+                placeholder="Level..."
                 disabled={!course}
-            >
-                <SelectTrigger aria-label="Level">
-                    <SelectValue placeholder="Level..." />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value={empty}>Level...</SelectItem>
-                    {course?.levels.map((option) => (
-                        <SelectItem key={option.id} value={String(option.id)}>
-                            {option.name}
-                        </SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
-            <Select
-                value={unitId ? String(unitId) : empty}
-                onValueChange={(value) =>
-                    setUnitId(value === empty ? '' : Number(value))
+                isSearchable={false}
+            />
+            <MetronicSelect
+                aria-label="Unit"
+                value={unitId ? String(unitId) : null}
+                onChange={(value) =>
+                    setUnitId(value ? Number(value) : '')
                 }
+                options={mapIdOptions(level?.units ?? [])}
+                placeholder="Unit..."
                 disabled={!level}
-            >
-                <SelectTrigger aria-label="Unit">
-                    <SelectValue placeholder="Unit..." />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value={empty}>Unit...</SelectItem>
-                    {level?.units.map((option) => (
-                        <SelectItem key={option.id} value={String(option.id)}>
-                            {option.name}
-                        </SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
+                isSearchable={false}
+            />
             <div className="flex gap-2">
                 <Button
                     type="button"
@@ -259,40 +225,24 @@ export default function StaffStudents({
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                        <Select
+                        <MetronicSelect
+                            id="link-student"
+                            className="min-w-0 flex-1"
                             value={
                                 linkStudentId
                                     ? String(linkStudentId)
-                                    : SELECT_EMPTY
+                                    : null
                             }
-                            onValueChange={(value) =>
-                                setLinkStudentId(
-                                    value === SELECT_EMPTY
-                                        ? ''
-                                        : Number(value),
-                                )
+                            onChange={(value) =>
+                                setLinkStudentId(value ? Number(value) : '')
                             }
-                        >
-                            <SelectTrigger
-                                id="link-student"
-                                className="min-w-0 flex-1"
-                            >
-                                <SelectValue placeholder="Choose a student..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value={SELECT_EMPTY}>
-                                    Choose a student...
-                                </SelectItem>
-                                {linkableStudents.map((student) => (
-                                    <SelectItem
-                                        key={student.id}
-                                        value={String(student.id)}
-                                    >
-                                        {student.name} ({student.email})
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                            options={linkableStudents.map((student) => ({
+                                value: String(student.id),
+                                label: `${student.name} (${student.email})`,
+                            }))}
+                            placeholder="Choose a student..."
+                            isSearchable={false}
+                        />
                         <Button
                             type="button"
                             onClick={linkStudent}
@@ -413,6 +363,17 @@ export default function StaffStudents({
                                                         Link to me
                                                     </Button>
                                                 )}
+                                                <Link
+                                                    href={`/staff/tutor/students/${student.id}`}
+                                                >
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                    >
+                                                        View activity
+                                                    </Button>
+                                                </Link>
                                             </div>
                                         </TableCell>
                                     </TableRow>

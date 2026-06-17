@@ -1,11 +1,5 @@
 import { GlcDataTableCard } from '@/components/glc';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
+import { MetronicSelect } from '@/components/glc/metronic-select';
 import {
     Table,
     TableBody,
@@ -65,10 +59,10 @@ export default function AuditIndex({
     filters,
     actions,
 }: AuditIndexProps) {
-    const applyFilter = (action: string) => {
+    const applyFilter = (action: string | null) => {
         router.get(
             '/admin/audit',
-            { action: action || undefined },
+            { action: action ?? undefined },
             { preserveState: true, replace: true },
         );
     };
@@ -84,30 +78,18 @@ export default function AuditIndex({
 
             <GlcDataTableCard
                 filters={
-                    <Select
-                        value={filters.action ?? 'all'}
-                        onValueChange={(value) =>
-                            applyFilter(value === 'all' ? '' : value)
-                        }
-                    >
-                        <SelectTrigger
-                            className="w-56"
-                            aria-label="Show only one kind of activity"
-                        >
-                            <SelectValue placeholder="All activity" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All activity</SelectItem>
-                            {actions.map((option) => (
-                                <SelectItem
-                                    key={option.value}
-                                    value={option.value}
-                                >
-                                    {option.label}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                    <MetronicSelect
+                        className="w-56"
+                        aria-label="Show only one kind of activity"
+                        value={filters.action}
+                        onChange={applyFilter}
+                        options={actions.map((option) => ({
+                            value: option.value,
+                            label: option.label,
+                        }))}
+                        placeholder="All activity"
+                        isSearchable
+                    />
                 }
                 footer={<Pagination paginator={logs} />}
             >

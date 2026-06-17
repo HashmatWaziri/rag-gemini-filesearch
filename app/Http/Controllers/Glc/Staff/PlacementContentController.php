@@ -9,6 +9,9 @@ use App\Enums\Glc\PlacementItemType;
 use App\Enums\Glc\PlacementSection;
 use App\Models\Glc\PlacementItem;
 use App\Models\User;
+use App\Services\Glc\Admin\SkillEvaluationGuidelines;
+use App\Services\Glc\Admin\SpeakingEvaluationGuidelines;
+use App\Services\Glc\Admin\WritingEvaluationGuidelines;
 use App\Services\Glc\AuditLogger;
 use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Http\RedirectResponse;
@@ -24,8 +27,10 @@ final readonly class PlacementContentController
 {
     public function __construct(private AuditLogger $audit) {}
 
-    public function index(): Response
-    {
+    public function index(
+        WritingEvaluationGuidelines $writingGuidelines,
+        SpeakingEvaluationGuidelines $speakingGuidelines,
+    ): Response {
         $items = PlacementItem::query()
             ->active()
             ->whereNull('parent_id')
@@ -45,6 +50,10 @@ final readonly class PlacementContentController
                 'listening' => $bySection(PlacementSection::Listening),
                 'writing' => $bySection(PlacementSection::Writing),
                 'speaking' => $bySection(PlacementSection::Speaking),
+            ],
+            'criteria' => [
+                'writing' => $this->presentCriteria($writingGuidelines),
+                'speaking' => $this->presentCriteria($speakingGuidelines),
             ],
         ]);
     }
@@ -161,12 +170,15 @@ final readonly class PlacementContentController
             'parent_id' => ['nullable', 'integer', Rule::exists('placement_items', 'id')],
             'title' => ['nullable', 'string', 'max:255'],
             'body' => ['nullable', 'string', 'max:20000'],
-            'options' => ['nullable', 'array', 'size:4'],
+            'options' => ['nullable', 'array', 'between:2,4'],
             'options.*' => ['required', 'string', 'max:500'],
             'correct_option' => ['nullable', 'integer', 'between:0,3'],
             'position' => ['nullable', 'integer', 'min:0'],
             'audio' => ['nullable', 'file', 'max:20480', 'mimetypes:audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/wave'],
             'settings' => ['nullable', 'array'],
+            'settings.format' => ['nullable', 'string', Rule::in(['mcq', 'gap_fill'])],
+            'settings.accepted_answers' => ['nullable', 'array', 'between:1,10'],
+            'settings.accepted_answers.*' => ['required', 'string', 'max:200'],
             'settings.min_words' => ['nullable', 'integer', 'min:1'],
             'settings.max_words' => ['nullable', 'integer', 'min:1'],
             'settings.max_duration_seconds' => ['nullable', 'integer', 'min:10'],
@@ -177,6 +189,10 @@ final readonly class PlacementContentController
         $data['type'] = $data['type'] ?? $existing?->type->value;
 
         $this->validateSemantics($data, $existing);
+
+        if (($data['settings']['format'] ?? null) !== 'gap_fill') {
+            unset($data['settings']['accepted_answers']);
+        }
 
         return $data;
     }
@@ -226,8 +242,10 @@ final readonly class PlacementContentController
      */
     private function validateQuestion(PlacementSection $section, array $data, ?PlacementItem $existing, callable $fail): void
     {
-        if (blank($data['body'] ?? null) || ! is_array($data['options'] ?? null) || ! isset($data['correct_option'])) {
-            $fail('options', 'Questions require a body, four options, and the correct option.');
+        if (($data['settings']['format'] ?? 'mcq') === 'gap_fill') {
+            $this->validateGapFillQuestion($section, $data, $fail);
+        } else {
+            $this->validateMcqQuestion($data, $fail);
         }
 
         $parentId = $data['parent_id'] ?? $existing?->parent_id;
@@ -248,6 +266,46 @@ final readonly class PlacementContentController
 
         if ($parent === null || $parent->section !== $section) {
             $fail('parent_id', 'Reading and Listening questions need a parent passage or clip in the same section.');
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @param  callable(string, string): never  $fail
+     */
+    private function validateMcqQuestion(array $data, callable $fail): void
+    {
+        $options = $data['options'] ?? null;
+
+        if (blank($data['body'] ?? null) || ! is_array($options) || ! isset($data['correct_option'])) {
+            $fail('options', 'Multiple-choice questions require a body, 2 to 4 options, and the correct option.');
+        }
+
+        if ((int) $data['correct_option'] >= count($options)) {
+            $fail('correct_option', 'The correct option must be one of the listed options.');
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @param  callable(string, string): never  $fail
+     */
+    private function validateGapFillQuestion(PlacementSection $section, array $data, callable $fail): void
+    {
+        if ($section !== PlacementSection::Listening) {
+            $fail('settings.format', 'Gap fill questions are only supported in the Listening section for now.');
+        }
+
+        if (! str_contains((string) ($data['body'] ?? ''), '_____')) {
+            $fail('body', 'Gap fill questions need a body with the blank written as _____.');
+        }
+
+        if (($data['options'] ?? null) !== null || isset($data['correct_option'])) {
+            $fail('options', 'Gap fill questions cannot have multiple-choice options or a correct option.');
+        }
+
+        if (! is_array($data['settings']['accepted_answers'] ?? null) || $data['settings']['accepted_answers'] === []) {
+            $fail('settings.accepted_answers', 'Gap fill questions need at least one accepted answer.');
         }
     }
 
@@ -281,6 +339,23 @@ final readonly class PlacementContentController
             'children' => $item->children->where('is_active', true)->values()
                 ->map(fn (PlacementItem $child): array => $this->presentItem($child))
                 ->all(),
+        ];
+    }
+
+    /**
+     * @return array{criteria: list<array{title: string, description: string}>, defaults: list<array{title: string, description: string}>, isCustomized: bool, limits: array{max_criteria: int, max_title_length: int, max_description_length: int}}
+     */
+    private function presentCriteria(SkillEvaluationGuidelines $guidelines): array
+    {
+        return [
+            'criteria' => $guidelines->effective(),
+            'defaults' => $guidelines->defaults(),
+            'isCustomized' => $guidelines->isCustomized(),
+            'limits' => [
+                'max_criteria' => SkillEvaluationGuidelines::MAX_CRITERIA,
+                'max_title_length' => SkillEvaluationGuidelines::MAX_TITLE_LENGTH,
+                'max_description_length' => SkillEvaluationGuidelines::MAX_DESCRIPTION_LENGTH,
+            ],
         ];
     }
 }

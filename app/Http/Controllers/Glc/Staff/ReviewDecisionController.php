@@ -12,6 +12,7 @@ use App\Enums\Glc\PlacementSection;
 use App\Enums\Glc\UserRole;
 use App\Models\Glc\PlacementReview;
 use App\Models\User;
+use App\Services\Glc\Admin\PlacementScoringSettings;
 use App\Services\Glc\AuditLogger;
 use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Http\RedirectResponse;
@@ -21,7 +22,10 @@ use Illuminate\Validation\ValidationException;
 
 final readonly class ReviewDecisionController
 {
-    public function __construct(private AuditLogger $audit) {}
+    public function __construct(
+        private AuditLogger $audit,
+        private PlacementScoringSettings $scoringSettings,
+    ) {}
 
     public function update(Request $request, PlacementReview $review, #[CurrentUser] User $user): RedirectResponse
     {
@@ -58,7 +62,7 @@ final readonly class ReviewDecisionController
 
             if ($suggested === null) {
                 $pct = $score?->section_scores[$section->value] ?? null;
-                $suggested = is_numeric($pct) ? GlcLevel::fromComposite((float) $pct) : null;
+                $suggested = is_numeric($pct) ? $this->scoringSettings->levelFromComposite((float) $pct) : null;
             }
 
             $chosen = GlcLevel::from($data['skill_levels'][$section->value]);

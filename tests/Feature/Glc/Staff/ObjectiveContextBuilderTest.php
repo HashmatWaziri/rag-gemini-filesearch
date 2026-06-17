@@ -90,3 +90,33 @@ it('reports when no objective sections are available', function (): void {
     expect(app(ObjectiveContextBuilder::class)->build($attempt))
         ->toBe('No objective sections were available for this attempt.');
 });
+
+it('includes gap fill questions in the context and the summary counts', function (): void {
+    $attempt = PlacementAttempt::factory()->submitted()->create();
+
+    $gapFill = PlacementItem::factory()->create([
+        'section' => PlacementSection::Listening,
+        'type' => PlacementItemType::Question,
+        'body' => 'The train leaves from Platform _____.',
+        'options' => null,
+        'correct_option' => null,
+        'settings' => ['format' => 'gap_fill', 'accepted_answers' => ['9', 'nine']],
+    ]);
+
+    PlacementAnswer::factory()->create([
+        'placement_attempt_id' => $attempt->id,
+        'placement_item_id' => $gapFill->id,
+        'response' => ['text' => ' NINE '],
+    ]);
+
+    $builder = app(ObjectiveContextBuilder::class);
+
+    expect($builder->build($attempt))
+        ->toContain('Listening — auto-scored from the question bank: 1/1 correct (100%)')
+        ->toContain('Q1 (gap fill): The train leaves from Platform _____. | Accepted answers: 9 / nine | Candidate answered: NINE | correct')
+        ->and($builder->summary($attempt)['listening'])->toBe([
+            'correct' => 1,
+            'total' => 1,
+            'percentage' => 100.0,
+        ]);
+});

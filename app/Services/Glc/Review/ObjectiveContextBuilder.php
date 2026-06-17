@@ -12,6 +12,8 @@ use Illuminate\Support\Collection;
 
 final class ObjectiveContextBuilder
 {
+    public function __construct(private readonly ObjectiveAnswerGrader $grader) {}
+
     public function build(PlacementAttempt $attempt): string
     {
         $answersByItem = $attempt->answers()->get()->keyBy('placement_item_id');
@@ -89,10 +91,11 @@ final class ObjectiveContextBuilder
             ->active()
             ->forSection($section)
             ->where('type', PlacementItemType::Question)
-            ->whereNotNull('correct_option')
             ->orderBy('position')
             ->orderBy('id')
-            ->get();
+            ->get()
+            ->filter(fn (PlacementItem $item): bool => $this->grader->isGradable($item))
+            ->values();
     }
 
     /**
@@ -103,7 +106,7 @@ final class ObjectiveContextBuilder
     private function sectionSummary(Collection $items, Collection $answersByItem): array
     {
         $correct = $items->filter(
-            fn (PlacementItem $item): bool => $this->selectedOption($item, $answersByItem) === $item->correct_option,
+            fn (PlacementItem $item): bool => $this->grader->isCorrect($item, $answersByItem->get($item->id)?->response),
         )->count();
 
         return [
@@ -118,6 +121,10 @@ final class ObjectiveContextBuilder
      */
     private function questionLine(int $number, PlacementItem $item, Collection $answersByItem): string
     {
+        if ($this->grader->isGapFill($item)) {
+            return $this->gapFillLine($number, $item, $answersByItem);
+        }
+
         $selected = $this->selectedOption($item, $answersByItem);
         $options = collect($item->options ?? [])
             ->map(fn (string $option, int $index): string => sprintf('%s) %s', $this->optionLetter($index), $option))
@@ -131,6 +138,27 @@ final class ObjectiveContextBuilder
             $selected === null ? 'no answer' : $this->optionLabel($item, $selected),
             $this->optionLabel($item, (int) $item->correct_option),
             $selected === $item->correct_option ? 'correct' : 'incorrect',
+        );
+    }
+
+    /**
+     * @param  Collection<int|string, \App\Models\Glc\PlacementAnswer>  $answersByItem
+     */
+    private function gapFillLine(int $number, PlacementItem $item, Collection $answersByItem): string
+    {
+        $response = $answersByItem->get($item->id)?->response;
+        $text = $response['text'] ?? null;
+        $accepted = collect($item->settings['accepted_answers'] ?? [])
+            ->filter(fn (mixed $answer): bool => is_string($answer))
+            ->implode(' / ');
+
+        return sprintf(
+            'Q%d (gap fill): %s | Accepted answers: %s | Candidate answered: %s | %s',
+            $number,
+            mb_trim((string) $item->body),
+            $accepted !== '' ? $accepted : 'n/a',
+            is_string($text) && mb_trim($text) !== '' ? mb_trim($text) : 'no answer',
+            $this->grader->isCorrect($item, $response) ? 'correct' : 'incorrect',
         );
     }
 

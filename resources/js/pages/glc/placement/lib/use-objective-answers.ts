@@ -1,21 +1,26 @@
 import { useState } from 'react';
 import { placementApi } from './placement-api';
-import { type SaveState } from './types';
+import {
+    type ObjectiveAnswers,
+    type ObjectiveAnswerValue,
+    type SaveState,
+} from './types';
 
 /**
  * Optimistic local answer state with immediate server persistence.
- * Failed saves roll the indicator to "error"; the upsert endpoint is
- * idempotent so retrying on the next selection is safe.
+ * Values are option indexes (MCQ) or typed text (gap fill). Failed
+ * saves roll the indicator to "error"; the upsert endpoint is
+ * idempotent so retrying on the next save is safe.
  */
-export function useObjectiveAnswers(initial: Record<number, number>) {
-    const [answers, setAnswers] = useState<Record<number, number>>(initial);
+export function useObjectiveAnswers(initial: ObjectiveAnswers) {
+    const [answers, setAnswers] = useState<ObjectiveAnswers>(initial);
     const [saveState, setSaveState] = useState<SaveState>('idle');
 
-    const select = (itemId: number, selected: number) => {
-        setAnswers((current) => ({ ...current, [itemId]: selected }));
+    const select = (itemId: number, value: ObjectiveAnswerValue) => {
+        setAnswers((current) => ({ ...current, [itemId]: value }));
         setSaveState('saving');
 
-        void placementApi.saveAnswer(itemId, selected).then((result) => {
+        void placementApi.saveAnswer(itemId, value).then((result) => {
             setSaveState(result.ok ? 'saved' : 'error');
         });
     };

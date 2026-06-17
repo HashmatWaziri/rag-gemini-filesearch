@@ -3,6 +3,7 @@ import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import {
     ATTENTION_LABELS,
+    nextStepHint,
     ProcessSteps,
     REVIEW_STATUS_LABELS,
     REVIEW_STATUS_TONES,
@@ -29,9 +30,12 @@ import {
 interface Question {
     id: number;
     body: string | null;
+    format: 'mcq' | 'gap_fill';
     options: string[] | null;
     correct_option: number | null;
     selected: number | null;
+    answer_text: string | null;
+    accepted_answers: string[] | null;
     is_correct: boolean | null;
 }
 
@@ -150,6 +154,44 @@ interface PageProps {
     [key: string]: unknown;
 }
 
+function GapFillRow({
+    question,
+    index,
+}: {
+    question: Question;
+    index: number;
+}) {
+    return (
+        <div className="rounded-md border border-border/60 p-2 text-sm">
+            <p className="mb-1 font-medium text-mono">
+                {index + 1}. {question.body}
+            </p>
+            {question.answer_text !== null ? (
+                <div
+                    className={`rounded px-2 py-1 text-xs ${
+                        question.is_correct
+                            ? 'bg-primary/10 text-primary'
+                            : 'bg-red-50 text-red-700'
+                    }`}
+                >
+                    "{question.answer_text}" — candidate's answer (
+                    {question.is_correct ? 'correct' : 'incorrect'})
+                </div>
+            ) : (
+                <p className="text-xs text-muted-foreground">Not answered</p>
+            )}
+            <p className="mt-1 text-xs text-secondary-foreground">
+                Accepted answers:{' '}
+                {(question.accepted_answers ?? []).join(', ') || '—'}
+                <span className="text-muted-foreground">
+                    {' '}
+                    (checked ignoring case and extra spaces)
+                </span>
+            </p>
+        </div>
+    );
+}
+
 function QuestionRow({
     question,
     index,
@@ -157,6 +199,10 @@ function QuestionRow({
     question: Question;
     index: number;
 }) {
+    if (question.format === 'gap_fill') {
+        return <GapFillRow question={question} index={index} />;
+    }
+
     return (
         <div className="rounded-md border border-border/60 p-2 text-sm">
             <p className="mb-1 font-medium text-mono">
@@ -186,7 +232,9 @@ function QuestionRow({
                 })}
             </div>
             {question.selected === null && (
-                <p className="mt-1 text-xs text-muted-foreground">Not answered</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                    Not answered
+                </p>
             )}
         </div>
     );
@@ -522,6 +570,185 @@ function RecommendationCard({
     );
 }
 
+function ChecklistItem({ done, label }: { done: boolean; label: string }) {
+    return (
+        <li
+            className={`flex items-center gap-2 text-sm ${
+                done ? 'text-foreground' : 'text-muted-foreground'
+            }`}
+        >
+            {done ? (
+                <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-green-500 text-white">
+                    <CheckIcon className="h-2.5 w-2.5" />
+                </span>
+            ) : (
+                <span
+                    aria-hidden
+                    className="inline-block size-4 shrink-0 rounded-full border-2 border-input"
+                />
+            )}
+            {label}
+        </li>
+    );
+}
+
+/**
+ * Metronic checkout-style summary sidebar ("Order Summary / Price Details"
+ * pattern): section scores, levels and the review checklist at a glance.
+ */
+function ReviewSummarySidebar({
+    review,
+    score,
+    levels,
+    suggestedFinalLevelLabel,
+    levelConfirmed,
+    summaryApproved,
+    finalApprovalDone,
+    isMinor,
+    guardianConsentConfirmed,
+}: {
+    review: PageProps['review'];
+    score: PageProps['score'];
+    levels: PageProps['levels'];
+    suggestedFinalLevelLabel: string | null;
+    levelConfirmed: boolean;
+    summaryApproved: boolean;
+    finalApprovalDone: boolean;
+    isMinor: boolean;
+    guardianConsentConfirmed: boolean;
+}) {
+    const isSent = review.status === 'sent';
+    const confirmedLevelLabel = levels.find(
+        (level) => level.value === review.final_level,
+    )?.label;
+    const next = nextStepHint({
+        status: review.status,
+        levelConfirmed,
+        summaryApproved,
+    });
+
+    return (
+        <Card
+            title="Review summary"
+            aside={
+                <Badge tone={REVIEW_STATUS_TONES[review.status]}>
+                    {REVIEW_STATUS_LABELS[review.status]}
+                </Badge>
+            }
+        >
+            <div className="space-y-4">
+                <div>
+                    <h4 className="mb-2 text-2sm font-semibold text-mono">
+                        Section scores
+                    </h4>
+                    <dl className="space-y-1.5">
+                        {SECTION_ORDER.map((section) => {
+                            const value = score?.section_scores?.[section];
+
+                            return (
+                                <div
+                                    key={section}
+                                    className="flex items-center justify-between gap-2"
+                                >
+                                    <dt className="text-sm text-secondary-foreground">
+                                        {SECTION_LABELS[section]}
+                                    </dt>
+                                    <dd className="text-sm font-medium text-mono tabular-nums">
+                                        {value != null ? (
+                                            `${value}%`
+                                        ) : (
+                                            <span className="font-normal text-muted-foreground">
+                                                {section === 'speaking'
+                                                    ? 'staff-assigned'
+                                                    : '—'}
+                                            </span>
+                                        )}
+                                    </dd>
+                                </div>
+                            );
+                        })}
+                    </dl>
+                    <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-border pt-2.5">
+                        <span className="text-sm font-medium text-mono">
+                            Overall
+                        </span>
+                        <span className="text-sm font-semibold text-mono tabular-nums">
+                            {score?.composite != null
+                                ? `${score.composite}%`
+                                : '—'}
+                        </span>
+                    </div>
+                </div>
+
+                <div>
+                    <h4 className="mb-2 text-2sm font-semibold text-mono">
+                        Level
+                    </h4>
+                    <dl className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                            <dt className="text-sm text-secondary-foreground">
+                                Suggested
+                            </dt>
+                            <dd className="text-sm font-medium text-mono">
+                                {suggestedFinalLevelLabel ?? '—'}
+                            </dd>
+                        </div>
+                        <div className="flex items-center justify-between gap-2">
+                            <dt className="text-sm text-secondary-foreground">
+                                Confirmed by staff
+                            </dt>
+                            <dd className="text-sm font-medium text-mono">
+                                {confirmedLevelLabel ?? (
+                                    <span className="font-normal text-muted-foreground">
+                                        not yet
+                                    </span>
+                                )}
+                            </dd>
+                        </div>
+                    </dl>
+                </div>
+
+                <div>
+                    <h4 className="mb-2 text-2sm font-semibold text-mono">
+                        Checklist
+                    </h4>
+                    <ul className="space-y-1.5">
+                        <ChecklistItem
+                            done={levelConfirmed}
+                            label="Levels saved"
+                        />
+                        <ChecklistItem
+                            done={summaryApproved}
+                            label="Parent summary approved"
+                        />
+                        <ChecklistItem
+                            done={finalApprovalDone}
+                            label="Final approval given"
+                        />
+                        {isMinor && (
+                            <ChecklistItem
+                                done={guardianConsentConfirmed}
+                                label="Guardian consent confirmed"
+                            />
+                        )}
+                        <ChecklistItem done={isSent} label="Result sent" />
+                    </ul>
+                </div>
+
+                <p
+                    className={`border-t border-border pt-3 text-sm ${
+                        next.done
+                            ? 'font-medium text-primary'
+                            : 'text-secondary-foreground'
+                    }`}
+                >
+                    {next.label}
+                </p>
+            </div>
+        </Card>
+    );
+}
+
 function SaveState({ dirty, saved }: { dirty: boolean; saved: boolean }) {
     if (dirty) {
         return (
@@ -575,6 +802,7 @@ export default function ReviewShow() {
 
     const levelConfirmed = review.final_level !== null;
     const summaryApproved = review.narrative_approved_at !== null;
+    const finalApprovalDone = review.status === 'approved' || isSent;
     const canGiveFinalApproval =
         review.status === 'in_review' &&
         levelConfirmed &&
@@ -692,889 +920,990 @@ export default function ReviewShow() {
         <GlcLayout title={`Placement test — ${candidate.name}`}>
             <Head title={`Placement test — ${candidate.name}`} />
 
-            <div className="space-y-4">
-                {/* Sticky candidate context header */}
-                <div className="sticky top-14 z-30 -mx-4 border-b border-border bg-card/95 px-4 py-3 shadow-sm backdrop-blur sm:rounded-lg sm:border sm:shadow-sm">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-base font-semibold text-foreground">
-                                    {candidate.name}
-                                </span>
-                                <Badge
-                                    tone={REVIEW_STATUS_TONES[review.status]}
-                                >
-                                    {REVIEW_STATUS_LABELS[review.status]}
+            <div className="space-y-5">
+                {/* Checkout-style process stepper (Metronic Demo 7) */}
+                <div className="pt-1">
+                    <ProcessSteps input={pipelineInput} />
+                </div>
+
+                {/* Page heading + reviewer actions */}
+                <div className="flex flex-wrap items-end justify-between gap-5">
+                    <div className="flex min-w-0 flex-col gap-2">
+                        <h1 className="flex flex-wrap items-center gap-2 text-xl leading-none font-medium text-mono">
+                            {candidate.name}
+                            <Badge tone={REVIEW_STATUS_TONES[review.status]}>
+                                {REVIEW_STATUS_LABELS[review.status]}
+                            </Badge>
+                            {candidate.is_minor && (
+                                <Badge tone="amber">
+                                    Under 18 (age {candidate.age})
                                 </Badge>
-                                {candidate.is_minor && (
-                                    <Badge tone="amber">
-                                        Under 18 (age {candidate.age})
-                                    </Badge>
-                                )}
-                                {review.flags.includes('variance') && (
-                                    <Badge tone="red">
-                                        {ATTENTION_LABELS.variance}
-                                    </Badge>
-                                )}
-                                {review.flags.includes('integrity') && (
-                                    <Badge tone="red">
-                                        {ATTENTION_LABELS.integrity}
-                                    </Badge>
-                                )}
-                                {review.flags.includes(
-                                    'guardian_consent_confirmed',
-                                ) && (
-                                    <Badge tone="emerald">
-                                        Guardian consent confirmed
-                                    </Badge>
-                                )}
-                            </div>
-                            <p className="mt-1 text-xs text-muted-foreground">
-                                {candidate.email} · age {candidate.age} ·
-                                submitted {attempt.submitted_at ?? '—'} ·
-                                reviewer: {review.assignee ?? 'no reviewer yet'}
-                            </p>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2">
-                            {!isSent && !review.is_assigned_to_me && (
+                            )}
+                            {review.flags.includes('variance') && (
+                                <Badge tone="red">
+                                    {ATTENTION_LABELS.variance}
+                                </Badge>
+                            )}
+                            {review.flags.includes('integrity') && (
+                                <Badge tone="red">
+                                    {ATTENTION_LABELS.integrity}
+                                </Badge>
+                            )}
+                            {review.flags.includes(
+                                'guardian_consent_confirmed',
+                            ) && (
+                                <Badge tone="emerald">
+                                    Guardian consent confirmed
+                                </Badge>
+                            )}
+                        </h1>
+                        <p className="text-sm font-normal text-secondary-foreground">
+                            {isSent
+                                ? 'The result has been sent — this review is closed.'
+                                : 'Review the answers, confirm the level and approve the parent summary — nothing reaches parents until you send it.'}
+                        </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2.5">
+                        {!isSent && !review.is_assigned_to_me && (
+                            <button
+                                type="button"
+                                className={btnSecondary}
+                                onClick={() =>
+                                    router.post(
+                                        `${baseUrl}/claim`,
+                                        {},
+                                        { preserveScroll: true },
+                                    )
+                                }
+                            >
+                                {review.assigned_to === null
+                                    ? 'Start reviewing this test'
+                                    : 'Assign to me'}
+                            </button>
+                        )}
+                        {supervises && !isSent && (
+                            <span className="flex items-center gap-1">
+                                <select
+                                    className={inputCls}
+                                    value={assignTo}
+                                    aria-label="Hand over to another reviewer"
+                                    onChange={(e) =>
+                                        setAssignTo(e.target.value)
+                                    }
+                                >
+                                    <option value="">
+                                        Hand over to another reviewer…
+                                    </option>
+                                    {staff.map((member) => (
+                                        <option
+                                            key={member.id}
+                                            value={member.id}
+                                        >
+                                            {member.name}
+                                        </option>
+                                    ))}
+                                </select>
                                 <button
                                     type="button"
                                     className={btnSecondary}
+                                    disabled={!assignTo}
                                     onClick={() =>
                                         router.post(
-                                            `${baseUrl}/claim`,
-                                            {},
+                                            `${baseUrl}/assign`,
+                                            { user_id: Number(assignTo) },
                                             { preserveScroll: true },
                                         )
                                     }
                                 >
-                                    {review.assigned_to === null
-                                        ? 'Start reviewing this test'
-                                        : 'Assign to me'}
+                                    Hand over
                                 </button>
+                            </span>
+                        )}
+                    </div>
+                </div>
+
+                {/* Candidate facts strip (Metronic order-placed pattern) */}
+                <div className="rounded-lg border border-border bg-muted/30 px-5 py-3.5">
+                    <dl className="flex flex-wrap gap-x-10 gap-y-3">
+                        {(
+                            [
+                                ['Email', candidate.email],
+                                ['Age', String(candidate.age)],
+                                ['Submitted', attempt.submitted_at ?? '—'],
+                                [
+                                    'Reviewer',
+                                    review.assignee ?? 'No reviewer yet',
+                                ],
+                            ] as const
+                        ).map(([label, value]) => (
+                            <div key={label} className="min-w-0">
+                                <dt className="text-xs text-secondary-foreground">
+                                    {label}
+                                </dt>
+                                <dd className="mt-0.5 text-sm font-medium break-words text-mono">
+                                    {value}
+                                </dd>
+                            </div>
+                        ))}
+                    </dl>
+                </div>
+
+                {/* Main content + summary sidebar (Metronic checkout layout) */}
+                <div className="flex flex-col items-start gap-5 lg:flex-row lg:gap-7.5">
+                    <div className="w-full min-w-0 flex-1 space-y-5">
+                        {integrity_events.length > 0 && (
+                            <Card title="Test-taking alerts">
+                                <p className="mb-2 text-xs text-muted-foreground">
+                                    Recorded automatically while the candidate
+                                    took the test. Use your judgement during the
+                                    review.
+                                </p>
+                                <ul className="space-y-1 text-sm text-secondary-foreground">
+                                    {integrity_events.map((event, index) => (
+                                        <li key={index} className="flex gap-2">
+                                            <Badge tone="red">
+                                                {TEST_TAKING_EVENT_LABELS[
+                                                    event.type
+                                                ] ?? event.label}
+                                            </Badge>
+                                            <span className="text-xs text-muted-foreground">
+                                                {event.occurred_at}
+                                            </span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </Card>
+                        )}
+
+                        <Card title="Automatic scores (staff-only)">
+                            {score ? (
+                                <div>
+                                    <table className="w-full text-sm">
+                                        <thead className="text-xs text-muted-foreground uppercase">
+                                            <tr>
+                                                <th
+                                                    scope="col"
+                                                    className="py-1 text-left"
+                                                >
+                                                    Section
+                                                </th>
+                                                <th
+                                                    scope="col"
+                                                    className="py-1 text-right"
+                                                >
+                                                    Score
+                                                </th>
+                                                <th
+                                                    scope="col"
+                                                    className="py-1 text-right"
+                                                >
+                                                    Suggested level
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {SECTION_ORDER.map((section) => {
+                                                const value =
+                                                    score.section_scores?.[
+                                                        section
+                                                    ];
+                                                const suggested =
+                                                    suggested_skill_levels[
+                                                        section
+                                                    ];
+                                                const level = levels.find(
+                                                    (l) =>
+                                                        l.value === suggested,
+                                                );
+
+                                                return (
+                                                    <tr
+                                                        key={section}
+                                                        className="border-t border-border/60"
+                                                    >
+                                                        <td className="py-1.5">
+                                                            {
+                                                                SECTION_LABELS[
+                                                                    section
+                                                                ]
+                                                            }
+                                                        </td>
+                                                        <td className="py-1.5 text-right">
+                                                            {value != null ? (
+                                                                <span className="inline-flex items-center justify-end gap-2">
+                                                                    <span
+                                                                        aria-hidden
+                                                                        className="hidden h-1.5 w-20 overflow-hidden rounded-full bg-muted sm:block"
+                                                                    >
+                                                                        <span
+                                                                            className={`block h-full rounded-full ${
+                                                                                value >=
+                                                                                70
+                                                                                    ? 'bg-primary/100'
+                                                                                    : value >=
+                                                                                        40
+                                                                                      ? 'bg-amber-400'
+                                                                                      : 'bg-red-400'
+                                                                            }`}
+                                                                            style={{
+                                                                                width: `${Math.min(100, Math.max(0, value))}%`,
+                                                                            }}
+                                                                        />
+                                                                    </span>
+                                                                    <span className="font-medium tabular-nums">
+                                                                        {value}%
+                                                                    </span>
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-muted-foreground">
+                                                                    {section ===
+                                                                    'speaking'
+                                                                        ? 'staff-assigned'
+                                                                        : 'not ready yet'}
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                        <td className="py-1.5 text-right">
+                                                            {level?.label ??
+                                                                '—'}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                    <div className="mt-2 flex items-center justify-between border-t border-border pt-2 text-sm">
+                                        <span className="font-semibold">
+                                            Overall: {score.composite ?? '—'}% →{' '}
+                                            {score.suggested_level_label ?? '—'}
+                                        </span>
+                                        {score.variance_flagged && (
+                                            <Badge tone="red">
+                                                {ATTENTION_LABELS.variance}
+                                            </Badge>
+                                        )}
+                                    </div>
+                                </div>
+                            ) : (
+                                <p className="text-sm text-muted-foreground">
+                                    The automatic checks have not finished yet.
+                                </p>
                             )}
-                            {supervises && !isSent && (
-                                <span className="flex items-center gap-1">
+                        </Card>
+
+                        <Card title="AI provisional scoring (staff-only — never shown to candidates or parents)">
+                            <p className="mb-3 text-xs text-muted-foreground">
+                                Reading, Grammar & Vocabulary and Listening are
+                                scored from the question bank and supplied to
+                                the AI as context. Writing and Speaking each get
+                                an AI provisional score against the GLC
+                                guidelines (Speaking is evaluated from the AI
+                                transcript — always listen to the recording).
+                                The AI then recommends an overall GLC level and
+                                a skill-by-skill summary for you to confirm or
+                                override.
+                            </p>
+                            <div className="mb-3 grid gap-3 sm:grid-cols-3">
+                                {(
+                                    [
+                                        'reading',
+                                        'grammar_vocabulary',
+                                        'listening',
+                                    ] as const
+                                ).map((section) => (
+                                    <ObjectiveScoreTile
+                                        key={section}
+                                        section={section}
+                                        breakdown={objective_breakdown[section]}
+                                    />
+                                ))}
+                            </div>
+                            <div className="grid gap-3 sm:grid-cols-2">
+                                <ProvisionalScoreCard
+                                    sectionLabel={SECTION_LABELS.writing}
+                                    skillName="writing"
+                                    draft={ai_drafts.writing}
+                                    guidelines={writing_guidelines}
+                                    model={ai_models.writing}
+                                />
+                                <ProvisionalScoreCard
+                                    sectionLabel={SECTION_LABELS.speaking}
+                                    skillName="speaking"
+                                    draft={ai_drafts.speaking}
+                                    guidelines={speaking_guidelines}
+                                    model={ai_models.speaking_evaluation}
+                                    showTranscript
+                                />
+                            </div>
+                            <RecommendationCard
+                                recommendation={ai_recommendation}
+                                levels={levels}
+                                model={ai_models.writing}
+                            />
+                        </Card>
+
+                        <Card title="Candidate answers">
+                            <div className="space-y-3">
+                                <details className="rounded-md border border-border p-3">
+                                    <summary className="cursor-pointer text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
+                                        Reading
+                                    </summary>
+                                    {sections.reading.map((passage) => (
+                                        <div key={passage.id} className="mt-2">
+                                            <p className="text-sm font-medium text-mono">
+                                                {passage.title}
+                                            </p>
+                                            <p className="mb-2 text-xs whitespace-pre-wrap text-muted-foreground">
+                                                {passage.body}
+                                            </p>
+                                            <div className="space-y-2">
+                                                {passage.questions.map(
+                                                    (question, index) => (
+                                                        <QuestionRow
+                                                            key={question.id}
+                                                            question={question}
+                                                            index={index}
+                                                        />
+                                                    ),
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </details>
+
+                                <details className="rounded-md border border-border p-3">
+                                    <summary className="cursor-pointer text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
+                                        Grammar & Vocabulary
+                                    </summary>
+                                    <div className="mt-2 space-y-2">
+                                        {sections.grammar_vocabulary.map(
+                                            (question, index) => (
+                                                <QuestionRow
+                                                    key={question.id}
+                                                    question={question}
+                                                    index={index}
+                                                />
+                                            ),
+                                        )}
+                                    </div>
+                                </details>
+
+                                <details className="rounded-md border border-border p-3">
+                                    <summary className="cursor-pointer text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
+                                        Listening
+                                    </summary>
+                                    {sections.listening.map((clip) => (
+                                        <div key={clip.id} className="mt-2">
+                                            <p className="text-sm font-medium text-mono">
+                                                {clip.title}
+                                            </p>
+                                            {clip.audio_url && (
+                                                <audio
+                                                    controls
+                                                    src={clip.audio_url}
+                                                    className="my-1 w-full"
+                                                />
+                                            )}
+                                            <div className="space-y-2">
+                                                {clip.questions.map(
+                                                    (question, index) => (
+                                                        <QuestionRow
+                                                            key={question.id}
+                                                            question={question}
+                                                            index={index}
+                                                        />
+                                                    ),
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </details>
+
+                                <details
+                                    className="rounded-md border border-border p-3"
+                                    open
+                                >
+                                    <summary className="cursor-pointer text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
+                                        Writing — essay
+                                        {sections.writing.word_count != null &&
+                                            ` (${sections.writing.word_count} words)`}
+                                    </summary>
+                                    <p className="mt-1 text-xs text-muted-foreground">
+                                        Prompt: {sections.writing.prompt ?? '—'}
+                                    </p>
+                                    <p className="mt-2 rounded-md bg-muted/50 p-3 text-sm leading-relaxed whitespace-pre-wrap text-mono">
+                                        {sections.writing.essay ??
+                                            'No essay submitted.'}
+                                    </p>
+                                </details>
+
+                                <details
+                                    className="rounded-md border border-border p-3"
+                                    open
+                                >
+                                    <summary className="cursor-pointer text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
+                                        Speaking — recording
+                                        {sections.speaking.recording_attempts !=
+                                            null &&
+                                            ` (attempt ${sections.speaking.recording_attempts})`}
+                                    </summary>
+                                    <p className="mt-1 text-xs text-muted-foreground">
+                                        Prompt:{' '}
+                                        {sections.speaking.prompt ?? '—'}
+                                    </p>
+                                    {sections.speaking.recording_url ? (
+                                        <audio
+                                            controls
+                                            src={
+                                                sections.speaking.recording_url
+                                            }
+                                            className="mt-2 w-full"
+                                        />
+                                    ) : (
+                                        <p className="mt-2 text-sm text-muted-foreground">
+                                            No recording submitted.
+                                        </p>
+                                    )}
+                                </details>
+                            </div>
+                        </Card>
+
+                        <Card
+                            title="Confirm the level"
+                            aside={
+                                <SaveState
+                                    dirty={decisionForm.isDirty}
+                                    saved={decisionForm.recentlySuccessful}
+                                />
+                            }
+                        >
+                            <div className="grid gap-2 sm:grid-cols-3">
+                                <Field
+                                    label={`Final GLC level (suggested: ${suggestedFinalLevelLabel ?? '—'})`}
+                                    error={errors.final_level}
+                                >
                                     <select
                                         className={inputCls}
-                                        value={assignTo}
-                                        aria-label="Hand over to another reviewer"
+                                        value={decisionForm.data.final_level}
+                                        disabled={isSent}
                                         onChange={(e) =>
-                                            setAssignTo(e.target.value)
+                                            decisionForm.setData(
+                                                'final_level',
+                                                e.target.value,
+                                            )
                                         }
                                     >
-                                        <option value="">
-                                            Hand over to another reviewer…
-                                        </option>
-                                        {staff.map((member) => (
+                                        <option value="">Select level…</option>
+                                        {levels.map((level) => (
                                             <option
-                                                key={member.id}
-                                                value={member.id}
+                                                key={level.value}
+                                                value={level.value}
                                             >
-                                                {member.name}
+                                                {level.label}
                                             </option>
                                         ))}
                                     </select>
+                                </Field>
+                                {SECTION_ORDER.map((section) => (
+                                    <Field
+                                        key={section}
+                                        label={SECTION_LABELS[section]}
+                                        error={
+                                            (errors as Record<string, string>)[
+                                                `skill_levels.${section}`
+                                            ]
+                                        }
+                                    >
+                                        <select
+                                            className={inputCls}
+                                            value={
+                                                decisionForm.data.skill_levels[
+                                                    section
+                                                ]
+                                            }
+                                            disabled={isSent}
+                                            onChange={(e) =>
+                                                decisionForm.setData(
+                                                    'skill_levels',
+                                                    {
+                                                        ...decisionForm.data
+                                                            .skill_levels,
+                                                        [section]:
+                                                            e.target.value,
+                                                    },
+                                                )
+                                            }
+                                        >
+                                            <option value="">
+                                                Select level…
+                                            </option>
+                                            {levels.map((level) => (
+                                                <option
+                                                    key={level.value}
+                                                    value={level.value}
+                                                >
+                                                    {level.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </Field>
+                                ))}
+                            </div>
+
+                            {deviates && (
+                                <div className="mt-3">
+                                    <Field
+                                        label="Reason for the change (required — your levels differ from the automatic suggestion)"
+                                        error={errors.override_reason}
+                                    >
+                                        <textarea
+                                            className={`${inputCls} min-h-20`}
+                                            value={
+                                                decisionForm.data
+                                                    .override_reason
+                                            }
+                                            disabled={isSent}
+                                            onChange={(e) =>
+                                                decisionForm.setData(
+                                                    'override_reason',
+                                                    e.target.value,
+                                                )
+                                            }
+                                        />
+                                    </Field>
+                                </div>
+                            )}
+                            {!deviates && errors.override_reason && (
+                                <p className="mt-2 text-xs text-red-600">
+                                    {errors.override_reason}
+                                </p>
+                            )}
+
+                            <div className="mt-3 flex flex-wrap items-center gap-2">
+                                <button
+                                    type="button"
+                                    className={btnPrimary}
+                                    disabled={decisionForm.processing || isSent}
+                                    onClick={() =>
+                                        decisionForm.put(
+                                            `${baseUrl}/decision`,
+                                            {
+                                                preserveScroll: true,
+                                            },
+                                        )
+                                    }
+                                >
+                                    {decisionForm.processing
+                                        ? 'Saving…'
+                                        : 'Save levels'}
+                                </button>
+                                {deviates && (
+                                    <span className="text-xs text-amber-600">
+                                        Your levels differ from the automatic
+                                        suggestion.
+                                    </span>
+                                )}
+                            </div>
+                        </Card>
+
+                        <Card
+                            title="Parent summary (appears on the result PDF)"
+                            aside={
+                                <span className="flex items-center gap-2">
+                                    <SaveState
+                                        dirty={narrativeForm.isDirty}
+                                        saved={narrativeForm.recentlySuccessful}
+                                    />
+                                    {review.narrative_approved_at ? (
+                                        <Badge tone="emerald">
+                                            Summary approved{' '}
+                                            {review.narrative_approved_at}
+                                        </Badge>
+                                    ) : (
+                                        <Badge tone="amber">
+                                            Not approved yet
+                                        </Badge>
+                                    )}
+                                </span>
+                            }
+                        >
+                            <div className="mb-2 flex flex-wrap items-center gap-2">
+                                <button
+                                    type="button"
+                                    className={`${btnSecondary} gap-1.5`}
+                                    disabled={suggestionLoading || isSent}
+                                    onClick={() =>
+                                        void fetchSummarySuggestion()
+                                    }
+                                >
+                                    <span className="text-sky-500">
+                                        <SparkIcon />
+                                    </span>
+                                    {suggestionLoading
+                                        ? 'Preparing…'
+                                        : 'Get AI suggestion (staff-only)'}
+                                </button>
+                                <span className="text-xs text-muted-foreground">
+                                    The AI suggestion only fills in these fields
+                                    for you — review, edit and approve before
+                                    anything reaches parents.
+                                </span>
+                            </div>
+                            {suggestionError && (
+                                <p
+                                    className="mb-2 text-xs text-red-600"
+                                    role="alert"
+                                >
+                                    {suggestionError}
+                                </p>
+                            )}
+
+                            <div className="grid gap-2 sm:grid-cols-2">
+                                {(
+                                    [
+                                        ['strengths', 'Strengths'],
+                                        [
+                                            'areas_to_improve',
+                                            'Areas to improve',
+                                        ],
+                                        ['recommendation', 'Recommendation'],
+                                        ['next_steps', 'Next steps'],
+                                    ] as const
+                                ).map(([key, label]) => (
+                                    <Field
+                                        key={key}
+                                        label={label}
+                                        error={
+                                            (errors as Record<string, string>)[
+                                                key
+                                            ]
+                                        }
+                                    >
+                                        <textarea
+                                            className={`${inputCls} min-h-24`}
+                                            value={narrativeForm.data[key]}
+                                            disabled={isSent}
+                                            onChange={(e) =>
+                                                narrativeForm.setData(
+                                                    key,
+                                                    e.target.value,
+                                                )
+                                            }
+                                        />
+                                    </Field>
+                                ))}
+                            </div>
+                            {errors.narrative && (
+                                <p className="mt-2 text-xs text-red-600">
+                                    {errors.narrative}
+                                </p>
+                            )}
+                            <div className="mt-3 flex flex-wrap gap-2">
+                                <button
+                                    type="button"
+                                    className={btnPrimary}
+                                    disabled={
+                                        narrativeForm.processing || isSent
+                                    }
+                                    onClick={() =>
+                                        narrativeForm.put(
+                                            `${baseUrl}/narrative`,
+                                            {
+                                                preserveScroll: true,
+                                            },
+                                        )
+                                    }
+                                >
+                                    {narrativeForm.processing
+                                        ? 'Saving…'
+                                        : 'Save summary'}
+                                </button>
+                                {!review.narrative_approved_at && !isSent && (
                                     <button
                                         type="button"
                                         className={btnSecondary}
-                                        disabled={!assignTo}
                                         onClick={() =>
                                             router.post(
-                                                `${baseUrl}/assign`,
-                                                { user_id: Number(assignTo) },
+                                                `${baseUrl}/narrative/approve`,
+                                                {},
                                                 { preserveScroll: true },
                                             )
                                         }
                                     >
-                                        Hand over
+                                        Approve summary
                                     </button>
-                                </span>
-                            )}
-                        </div>
-                    </div>
-                </div>
-
-                <ProcessSteps input={pipelineInput} />
-
-                {integrity_events.length > 0 && (
-                    <Card title="Test-taking alerts">
-                        <p className="mb-2 text-xs text-muted-foreground">
-                            Recorded automatically while the candidate took the
-                            test. Use your judgement during the review.
-                        </p>
-                        <ul className="space-y-1 text-sm text-secondary-foreground">
-                            {integrity_events.map((event, index) => (
-                                <li key={index} className="flex gap-2">
-                                    <Badge tone="red">
-                                        {TEST_TAKING_EVENT_LABELS[event.type] ??
-                                            event.label}
-                                    </Badge>
-                                    <span className="text-xs text-muted-foreground">
-                                        {event.occurred_at}
-                                    </span>
-                                </li>
-                            ))}
-                        </ul>
-                    </Card>
-                )}
-
-                <Card title="Automatic scores (staff-only)">
-                    {score ? (
-                        <div>
-                            <table className="w-full text-sm">
-                                <thead className="text-xs text-muted-foreground uppercase">
-                                    <tr>
-                                        <th
-                                            scope="col"
-                                            className="py-1 text-left"
-                                        >
-                                            Section
-                                        </th>
-                                        <th
-                                            scope="col"
-                                            className="py-1 text-right"
-                                        >
-                                            Score
-                                        </th>
-                                        <th
-                                            scope="col"
-                                            className="py-1 text-right"
-                                        >
-                                            Suggested level
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {SECTION_ORDER.map((section) => {
-                                        const value =
-                                            score.section_scores?.[section];
-                                        const suggested =
-                                            suggested_skill_levels[section];
-                                        const level = levels.find(
-                                            (l) => l.value === suggested,
-                                        );
-
-                                        return (
-                                            <tr
-                                                key={section}
-                                                className="border-t border-border/60"
-                                            >
-                                                <td className="py-1.5">
-                                                    {SECTION_LABELS[section]}
-                                                </td>
-                                                <td className="py-1.5 text-right">
-                                                    {value != null ? (
-                                                        <span className="inline-flex items-center justify-end gap-2">
-                                                            <span
-                                                                aria-hidden
-                                                                className="hidden h-1.5 w-20 overflow-hidden rounded-full bg-muted sm:block"
-                                                            >
-                                                                <span
-                                                                    className={`block h-full rounded-full ${
-                                                                        value >=
-                                                                        70
-                                                                            ? 'bg-primary/100'
-                                                                            : value >=
-                                                                                40
-                                                                              ? 'bg-amber-400'
-                                                                              : 'bg-red-400'
-                                                                    }`}
-                                                                    style={{
-                                                                        width: `${Math.min(100, Math.max(0, value))}%`,
-                                                                    }}
-                                                                />
-                                                            </span>
-                                                            <span className="font-medium tabular-nums">
-                                                                {value}%
-                                                            </span>
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-muted-foreground">
-                                                            {section ===
-                                                            'speaking'
-                                                                ? 'staff-assigned'
-                                                                : 'not ready yet'}
-                                                        </span>
-                                                    )}
-                                                </td>
-                                                <td className="py-1.5 text-right">
-                                                    {level?.label ?? '—'}
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                            <div className="mt-2 flex items-center justify-between border-t border-border pt-2 text-sm">
-                                <span className="font-semibold">
-                                    Overall: {score.composite ?? '—'}% →{' '}
-                                    {score.suggested_level_label ?? '—'}
-                                </span>
-                                {score.variance_flagged && (
-                                    <Badge tone="red">
-                                        {ATTENTION_LABELS.variance}
-                                    </Badge>
                                 )}
                             </div>
-                        </div>
-                    ) : (
-                        <p className="text-sm text-muted-foreground">
-                            The automatic checks have not finished yet.
-                        </p>
-                    )}
-                </Card>
+                        </Card>
 
-                <Card title="AI provisional scoring (staff-only — never shown to candidates or parents)">
-                    <p className="mb-3 text-xs text-muted-foreground">
-                        Reading, Grammar & Vocabulary and Listening are scored
-                        from the question bank and supplied to the AI as
-                        context. Writing and Speaking each get an AI
-                        provisional score against the GLC guidelines (Speaking
-                        is evaluated from the AI transcript — always listen to
-                        the recording). The AI then recommends an overall GLC
-                        level and a skill-by-skill summary for you to confirm
-                        or override.
-                    </p>
-                    <div className="mb-3 grid gap-3 sm:grid-cols-3">
-                        {(
-                            [
-                                'reading',
-                                'grammar_vocabulary',
-                                'listening',
-                            ] as const
-                        ).map((section) => (
-                            <ObjectiveScoreTile
-                                key={section}
-                                section={section}
-                                breakdown={objective_breakdown[section]}
-                            />
-                        ))}
-                    </div>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                        <ProvisionalScoreCard
-                            sectionLabel={SECTION_LABELS.writing}
-                            skillName="writing"
-                            draft={ai_drafts.writing}
-                            guidelines={writing_guidelines}
-                            model={ai_models.writing}
-                        />
-                        <ProvisionalScoreCard
-                            sectionLabel={SECTION_LABELS.speaking}
-                            skillName="speaking"
-                            draft={ai_drafts.speaking}
-                            guidelines={speaking_guidelines}
-                            model={ai_models.speaking_evaluation}
-                            showTranscript
-                        />
-                    </div>
-                    <RecommendationCard
-                        recommendation={ai_recommendation}
-                        levels={levels}
-                        model={ai_models.writing}
-                    />
-                </Card>
-
-                <Card title="Candidate answers">
-                    <div className="space-y-3">
-                        <details className="rounded-md border border-border p-3">
-                            <summary className="cursor-pointer text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
-                                Reading
-                            </summary>
-                            {sections.reading.map((passage) => (
-                                <div key={passage.id} className="mt-2">
-                                    <p className="text-sm font-medium text-mono">
-                                        {passage.title}
-                                    </p>
-                                    <p className="mb-2 text-xs whitespace-pre-wrap text-muted-foreground">
-                                        {passage.body}
-                                    </p>
-                                    <div className="space-y-2">
-                                        {passage.questions.map(
-                                            (question, index) => (
-                                                <QuestionRow
-                                                    key={question.id}
-                                                    question={question}
-                                                    index={index}
-                                                />
-                                            ),
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                        </details>
-
-                        <details className="rounded-md border border-border p-3">
-                            <summary className="cursor-pointer text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
-                                Grammar & Vocabulary
-                            </summary>
-                            <div className="mt-2 space-y-2">
-                                {sections.grammar_vocabulary.map(
-                                    (question, index) => (
-                                        <QuestionRow
-                                            key={question.id}
-                                            question={question}
-                                            index={index}
-                                        />
-                                    ),
-                                )}
-                            </div>
-                        </details>
-
-                        <details className="rounded-md border border-border p-3">
-                            <summary className="cursor-pointer text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
-                                Listening
-                            </summary>
-                            {sections.listening.map((clip) => (
-                                <div key={clip.id} className="mt-2">
-                                    <p className="text-sm font-medium text-mono">
-                                        {clip.title}
-                                    </p>
-                                    {clip.audio_url && (
-                                        <audio
-                                            controls
-                                            src={clip.audio_url}
-                                            className="my-1 w-full"
+                        <Card
+                            title="Final approval"
+                            aside={
+                                review.approved_at ? (
+                                    <Badge tone="emerald">Approved</Badge>
+                                ) : (
+                                    <Badge tone="amber">Not yet</Badge>
+                                )
+                            }
+                        >
+                            <p className="text-sm text-secondary-foreground">
+                                Confirm you have reviewed the answers, confirmed
+                                levels, and approved the parent summary. Preview
+                                and send unlock after this step.
+                            </p>
+                            <ul className="mt-3 space-y-1 text-sm">
+                                <li
+                                    className={`flex items-center gap-1.5 ${
+                                        levelConfirmed
+                                            ? 'text-primary'
+                                            : 'text-muted-foreground'
+                                    }`}
+                                >
+                                    {levelConfirmed ? (
+                                        <CheckIcon className="h-3.5 w-3.5" />
+                                    ) : (
+                                        <span
+                                            aria-hidden
+                                            className="inline-block h-3.5 w-3.5 rounded-full border-2 border-input"
                                         />
                                     )}
-                                    <div className="space-y-2">
-                                        {clip.questions.map(
-                                            (question, index) => (
-                                                <QuestionRow
-                                                    key={question.id}
-                                                    question={question}
-                                                    index={index}
-                                                />
-                                            ),
-                                        )}
-                                    </div>
+                                    Levels saved
+                                </li>
+                                <li
+                                    className={`flex items-center gap-1.5 ${
+                                        summaryApproved
+                                            ? 'text-primary'
+                                            : 'text-muted-foreground'
+                                    }`}
+                                >
+                                    {summaryApproved ? (
+                                        <CheckIcon className="h-3.5 w-3.5" />
+                                    ) : (
+                                        <span
+                                            aria-hidden
+                                            className="inline-block h-3.5 w-3.5 rounded-full border-2 border-input"
+                                        />
+                                    )}
+                                    Parent summary approved
+                                </li>
+                            </ul>
+                            {canGiveFinalApproval && (
+                                <div className="mt-3">
+                                    <button
+                                        type="button"
+                                        className={btnPrimary}
+                                        onClick={() =>
+                                            router.post(
+                                                `${baseUrl}/approve`,
+                                                {},
+                                                { preserveScroll: true },
+                                            )
+                                        }
+                                    >
+                                        Give final approval
+                                    </button>
                                 </div>
-                            ))}
-                        </details>
-
-                        <details
-                            className="rounded-md border border-border p-3"
-                            open
-                        >
-                            <summary className="cursor-pointer text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
-                                Writing — essay
-                                {sections.writing.word_count != null &&
-                                    ` (${sections.writing.word_count} words)`}
-                            </summary>
-                            <p className="mt-1 text-xs text-muted-foreground">
-                                Prompt: {sections.writing.prompt ?? '—'}
-                            </p>
-                            <p className="mt-2 rounded-md bg-muted/50 p-3 text-sm leading-relaxed whitespace-pre-wrap text-mono">
-                                {sections.writing.essay ??
-                                    'No essay submitted.'}
-                            </p>
-                        </details>
-
-                        <details
-                            className="rounded-md border border-border p-3"
-                            open
-                        >
-                            <summary className="cursor-pointer text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
-                                Speaking — recording
-                                {sections.speaking.recording_attempts != null &&
-                                    ` (attempt ${sections.speaking.recording_attempts})`}
-                            </summary>
-                            <p className="mt-1 text-xs text-muted-foreground">
-                                Prompt: {sections.speaking.prompt ?? '—'}
-                            </p>
-                            {sections.speaking.recording_url ? (
-                                <audio
-                                    controls
-                                    src={sections.speaking.recording_url}
-                                    className="mt-2 w-full"
-                                />
-                            ) : (
-                                <p className="mt-2 text-sm text-muted-foreground">
-                                    No recording submitted.
+                            )}
+                            {review.status === 'in_review' &&
+                                !canGiveFinalApproval &&
+                                !isSent && (
+                                    <p className="mt-3 text-sm text-muted-foreground">
+                                        Complete the checklist above before
+                                        giving final approval.
+                                    </p>
+                                )}
+                            {review.approved_at && (
+                                <p className="mt-3 text-xs text-muted-foreground">
+                                    Final approval given {review.approved_at} by{' '}
+                                    {review.approved_by}
                                 </p>
                             )}
-                        </details>
-                    </div>
-                </Card>
+                            {errors.status && (
+                                <p className="mt-2 text-xs text-red-600">
+                                    {errors.status}
+                                </p>
+                            )}
+                        </Card>
 
-                <Card
-                    title="Confirm the level"
-                    aside={
-                        <SaveState
-                            dirty={decisionForm.isDirty}
-                            saved={decisionForm.recentlySuccessful}
-                        />
-                    }
-                >
-                    <div className="grid gap-2 sm:grid-cols-3">
-                        <Field
-                            label={`Final GLC level (suggested: ${suggestedFinalLevelLabel ?? '—'})`}
-                            error={errors.final_level}
-                        >
-                            <select
-                                className={inputCls}
-                                value={decisionForm.data.final_level}
-                                disabled={isSent}
-                                onChange={(e) =>
-                                    decisionForm.setData(
-                                        'final_level',
-                                        e.target.value,
-                                    )
-                                }
-                            >
-                                <option value="">Select level…</option>
-                                {levels.map((level) => (
-                                    <option
-                                        key={level.value}
-                                        value={level.value}
+                        <Card title="Send the result">
+                            {review.can_generate_pdf ? (
+                                <div className="space-y-3">
+                                    <a
+                                        href={`${baseUrl}/pdf`}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className={btnSecondary}
                                     >
-                                        {level.label}
-                                    </option>
+                                        Preview PDF
+                                    </a>
+
+                                    <div className="rounded-md border border-border bg-muted/50 p-3">
+                                        <p className="mb-2 text-sm text-secondary-foreground">
+                                            Send the result link to{' '}
+                                            <strong>{candidate.email}</strong>{' '}
+                                            (valid 30 days).
+                                        </p>
+                                        {candidate.is_minor && (
+                                            <label className="mb-2 flex items-start gap-2 text-sm text-amber-800">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={guardianConsent}
+                                                    onChange={(e) =>
+                                                        setGuardianConsent(
+                                                            e.target.checked,
+                                                        )
+                                                    }
+                                                    className="mt-0.5"
+                                                />
+                                                <span>
+                                                    Guardian consent received —
+                                                    I confirm GLC has guardian
+                                                    consent to send this
+                                                    candidate's result.
+                                                </span>
+                                            </label>
+                                        )}
+                                        {errors.guardian_consent && (
+                                            <p className="mb-2 text-xs text-red-600">
+                                                {errors.guardian_consent}
+                                            </p>
+                                        )}
+                                        <button
+                                            type="button"
+                                            className={btnPrimary}
+                                            onClick={() =>
+                                                router.post(
+                                                    `${baseUrl}/send`,
+                                                    candidate.is_minor
+                                                        ? {
+                                                              guardian_consent:
+                                                                  guardianConsent,
+                                                          }
+                                                        : {},
+                                                    { preserveScroll: true },
+                                                )
+                                            }
+                                        >
+                                            {isSent
+                                                ? 'Resend result'
+                                                : 'Send result'}
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <p className="text-sm text-muted-foreground">
+                                    {sendUnlockMessage({
+                                        status: review.status,
+                                        levelConfirmed,
+                                        summaryApproved,
+                                    })}
+                                </p>
+                            )}
+
+                            {result_links.length > 0 && (
+                                <div className="mt-3 border-t border-border pt-2">
+                                    <h3 className="mb-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                                        Sent results
+                                    </h3>
+                                    <ul className="space-y-1 text-xs text-secondary-foreground">
+                                        {result_links.map((link) => (
+                                            <li key={link.id}>
+                                                Sent to {link.email_to} on{' '}
+                                                {link.sent_at} by{' '}
+                                                {link.sent_by ?? 'staff'} —
+                                                expires {link.expires_at}
+                                                {link.expired && ' (expired)'}
+                                                {link.last_viewed_at &&
+                                                    ` — last viewed ${link.last_viewed_at}`}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                        </Card>
+
+                        <Card title="Internal notes (staff-only — never on the PDF)">
+                            <div className="mb-3 space-y-2">
+                                {notes.length === 0 && (
+                                    <p className="text-sm text-muted-foreground">
+                                        No notes yet.
+                                    </p>
+                                )}
+                                {notes.map((note) => (
+                                    <div
+                                        key={note.id}
+                                        className="rounded-md bg-muted/50 p-2 text-sm"
+                                    >
+                                        <p className="text-secondary-foreground">
+                                            {note.note}
+                                        </p>
+                                        <p className="mt-1 text-xs text-muted-foreground">
+                                            {note.author} · {note.created_at}
+                                        </p>
+                                    </div>
                                 ))}
-                            </select>
-                        </Field>
-                        {SECTION_ORDER.map((section) => (
-                            <Field
-                                key={section}
-                                label={SECTION_LABELS[section]}
-                                error={
-                                    (errors as Record<string, string>)[
-                                        `skill_levels.${section}`
-                                    ]
-                                }
-                            >
-                                <select
+                            </div>
+                            <div className="flex gap-2">
+                                <input
                                     className={inputCls}
-                                    value={
-                                        decisionForm.data.skill_levels[section]
-                                    }
-                                    disabled={isSent}
+                                    placeholder="Add an internal note…"
+                                    aria-label="Add an internal note"
+                                    value={noteForm.data.note}
                                     onChange={(e) =>
-                                        decisionForm.setData('skill_levels', {
-                                            ...decisionForm.data.skill_levels,
-                                            [section]: e.target.value,
+                                        noteForm.setData('note', e.target.value)
+                                    }
+                                    onKeyDown={(e) => {
+                                        if (
+                                            e.key === 'Enter' &&
+                                            !noteForm.processing &&
+                                            noteForm.data.note.trim() !== ''
+                                        ) {
+                                            noteForm.post(`${baseUrl}/notes`, {
+                                                preserveScroll: true,
+                                                onSuccess: () =>
+                                                    noteForm.reset(),
+                                            });
+                                        }
+                                    }}
+                                />
+                                <button
+                                    type="button"
+                                    className={btnSecondary}
+                                    disabled={noteForm.processing}
+                                    onClick={() =>
+                                        noteForm.post(`${baseUrl}/notes`, {
+                                            preserveScroll: true,
+                                            onSuccess: () => noteForm.reset(),
                                         })
                                     }
                                 >
-                                    <option value="">Select level…</option>
-                                    {levels.map((level) => (
-                                        <option
-                                            key={level.value}
-                                            value={level.value}
-                                        >
-                                            {level.label}
-                                        </option>
-                                    ))}
-                                </select>
-                            </Field>
-                        ))}
-                    </div>
-
-                    {deviates && (
-                        <div className="mt-3">
-                            <Field
-                                label="Reason for the change (required — your levels differ from the automatic suggestion)"
-                                error={errors.override_reason}
-                            >
-                                <textarea
-                                    className={`${inputCls} min-h-20`}
-                                    value={decisionForm.data.override_reason}
-                                    disabled={isSent}
-                                    onChange={(e) =>
-                                        decisionForm.setData(
-                                            'override_reason',
-                                            e.target.value,
-                                        )
-                                    }
-                                />
-                            </Field>
-                        </div>
-                    )}
-                    {!deviates && errors.override_reason && (
-                        <p className="mt-2 text-xs text-red-600">
-                            {errors.override_reason}
-                        </p>
-                    )}
-
-                    <div className="mt-3 flex flex-wrap items-center gap-2">
-                        <button
-                            type="button"
-                            className={btnPrimary}
-                            disabled={decisionForm.processing || isSent}
-                            onClick={() =>
-                                decisionForm.put(`${baseUrl}/decision`, {
-                                    preserveScroll: true,
-                                })
-                            }
-                        >
-                            {decisionForm.processing
-                                ? 'Saving…'
-                                : 'Save levels'}
-                        </button>
-                        {deviates && (
-                            <span className="text-xs text-amber-600">
-                                Your levels differ from the automatic
-                                suggestion.
-                            </span>
-                        )}
-                    </div>
-                </Card>
-
-                <Card
-                    title="Parent summary (appears on the result PDF)"
-                    aside={
-                        <span className="flex items-center gap-2">
-                            <SaveState
-                                dirty={narrativeForm.isDirty}
-                                saved={narrativeForm.recentlySuccessful}
-                            />
-                            {review.narrative_approved_at ? (
-                                <Badge tone="emerald">
-                                    Summary approved{' '}
-                                    {review.narrative_approved_at}
-                                </Badge>
-                            ) : (
-                                <Badge tone="amber">Not approved yet</Badge>
-                            )}
-                        </span>
-                    }
-                >
-                    <div className="mb-2 flex flex-wrap items-center gap-2">
-                        <button
-                            type="button"
-                            className={`${btnSecondary} gap-1.5`}
-                            disabled={suggestionLoading || isSent}
-                            onClick={() => void fetchSummarySuggestion()}
-                        >
-                            <span className="text-sky-500">
-                                <SparkIcon />
-                            </span>
-                            {suggestionLoading
-                                ? 'Preparing…'
-                                : 'Get AI suggestion (staff-only)'}
-                        </button>
-                        <span className="text-xs text-muted-foreground">
-                            The AI suggestion only fills in these fields for you
-                            — review, edit and approve before anything reaches
-                            parents.
-                        </span>
-                    </div>
-                    {suggestionError && (
-                        <p className="mb-2 text-xs text-red-600" role="alert">
-                            {suggestionError}
-                        </p>
-                    )}
-
-                    <div className="grid gap-2 sm:grid-cols-2">
-                        {(
-                            [
-                                ['strengths', 'Strengths'],
-                                ['areas_to_improve', 'Areas to improve'],
-                                ['recommendation', 'Recommendation'],
-                                ['next_steps', 'Next steps'],
-                            ] as const
-                        ).map(([key, label]) => (
-                            <Field
-                                key={key}
-                                label={label}
-                                error={(errors as Record<string, string>)[key]}
-                            >
-                                <textarea
-                                    className={`${inputCls} min-h-24`}
-                                    value={narrativeForm.data[key]}
-                                    disabled={isSent}
-                                    onChange={(e) =>
-                                        narrativeForm.setData(
-                                            key,
-                                            e.target.value,
-                                        )
-                                    }
-                                />
-                            </Field>
-                        ))}
-                    </div>
-                    {errors.narrative && (
-                        <p className="mt-2 text-xs text-red-600">
-                            {errors.narrative}
-                        </p>
-                    )}
-                    <div className="mt-3 flex flex-wrap gap-2">
-                        <button
-                            type="button"
-                            className={btnPrimary}
-                            disabled={narrativeForm.processing || isSent}
-                            onClick={() =>
-                                narrativeForm.put(`${baseUrl}/narrative`, {
-                                    preserveScroll: true,
-                                })
-                            }
-                        >
-                            {narrativeForm.processing
-                                ? 'Saving…'
-                                : 'Save summary'}
-                        </button>
-                        {!review.narrative_approved_at && !isSent && (
-                            <button
-                                type="button"
-                                className={btnSecondary}
-                                onClick={() =>
-                                    router.post(
-                                        `${baseUrl}/narrative/approve`,
-                                        {},
-                                        { preserveScroll: true },
-                                    )
-                                }
-                            >
-                                Approve summary
-                            </button>
-                        )}
-                    </div>
-                </Card>
-
-                <Card
-                    title="Final approval"
-                    aside={
-                        review.approved_at ? (
-                            <Badge tone="emerald">Approved</Badge>
-                        ) : (
-                            <Badge tone="amber">Not yet</Badge>
-                        )
-                    }
-                >
-                    <p className="text-sm text-secondary-foreground">
-                        Confirm you have reviewed the answers, confirmed levels,
-                        and approved the parent summary. Preview and send unlock
-                        after this step.
-                    </p>
-                    <ul className="mt-3 space-y-1 text-sm">
-                        <li
-                            className={`flex items-center gap-1.5 ${
-                                levelConfirmed
-                                    ? 'text-primary'
-                                    : 'text-muted-foreground'
-                            }`}
-                        >
-                            {levelConfirmed ? (
-                                <CheckIcon className="h-3.5 w-3.5" />
-                            ) : (
-                                <span
-                                    aria-hidden
-                                    className="inline-block h-3.5 w-3.5 rounded-full border-2 border-input"
-                                />
-                            )}
-                            Levels saved
-                        </li>
-                        <li
-                            className={`flex items-center gap-1.5 ${
-                                summaryApproved
-                                    ? 'text-primary'
-                                    : 'text-muted-foreground'
-                            }`}
-                        >
-                            {summaryApproved ? (
-                                <CheckIcon className="h-3.5 w-3.5" />
-                            ) : (
-                                <span
-                                    aria-hidden
-                                    className="inline-block h-3.5 w-3.5 rounded-full border-2 border-input"
-                                />
-                            )}
-                            Parent summary approved
-                        </li>
-                    </ul>
-                    {canGiveFinalApproval && (
-                        <div className="mt-3">
-                            <button
-                                type="button"
-                                className={btnPrimary}
-                                onClick={() =>
-                                    router.post(
-                                        `${baseUrl}/approve`,
-                                        {},
-                                        { preserveScroll: true },
-                                    )
-                                }
-                            >
-                                Give final approval
-                            </button>
-                        </div>
-                    )}
-                    {review.status === 'in_review' &&
-                        !canGiveFinalApproval &&
-                        !isSent && (
-                            <p className="mt-3 text-sm text-muted-foreground">
-                                Complete the checklist above before giving final
-                                approval.
-                            </p>
-                        )}
-                    {review.approved_at && (
-                        <p className="mt-3 text-xs text-muted-foreground">
-                            Final approval given {review.approved_at} by{' '}
-                            {review.approved_by}
-                        </p>
-                    )}
-                    {errors.status && (
-                        <p className="mt-2 text-xs text-red-600">
-                            {errors.status}
-                        </p>
-                    )}
-                </Card>
-
-                <Card title="Send the result">
-                    {review.can_generate_pdf ? (
-                        <div className="space-y-3">
-                            <a
-                                href={`${baseUrl}/pdf`}
-                                target="_blank"
-                                rel="noreferrer"
-                                className={btnSecondary}
-                            >
-                                Preview PDF
-                            </a>
-
-                            <div className="rounded-md border border-border bg-muted/50 p-3">
-                                <p className="mb-2 text-sm text-secondary-foreground">
-                                    Send the result link to{' '}
-                                    <strong>{candidate.email}</strong> (valid 30
-                                    days).
-                                </p>
-                                {candidate.is_minor && (
-                                    <label className="mb-2 flex items-start gap-2 text-sm text-amber-800">
-                                        <input
-                                            type="checkbox"
-                                            checked={guardianConsent}
-                                            onChange={(e) =>
-                                                setGuardianConsent(
-                                                    e.target.checked,
-                                                )
-                                            }
-                                            className="mt-0.5"
-                                        />
-                                        <span>
-                                            Guardian consent received — I
-                                            confirm GLC has guardian consent to
-                                            send this candidate's result.
-                                        </span>
-                                    </label>
-                                )}
-                                {errors.guardian_consent && (
-                                    <p className="mb-2 text-xs text-red-600">
-                                        {errors.guardian_consent}
-                                    </p>
-                                )}
-                                <button
-                                    type="button"
-                                    className={btnPrimary}
-                                    onClick={() =>
-                                        router.post(
-                                            `${baseUrl}/send`,
-                                            candidate.is_minor
-                                                ? {
-                                                      guardian_consent:
-                                                          guardianConsent,
-                                                  }
-                                                : {},
-                                            { preserveScroll: true },
-                                        )
-                                    }
-                                >
-                                    {isSent ? 'Resend result' : 'Send result'}
+                                    Add note
                                 </button>
                             </div>
-                        </div>
-                    ) : (
-                        <p className="text-sm text-muted-foreground">
-                            {sendUnlockMessage({
-                                status: review.status,
-                                levelConfirmed,
-                                summaryApproved,
-                            })}
-                        </p>
-                    )}
-
-                    {result_links.length > 0 && (
-                        <div className="mt-3 border-t border-border pt-2">
-                            <h3 className="mb-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                                Sent results
-                            </h3>
-                            <ul className="space-y-1 text-xs text-secondary-foreground">
-                                {result_links.map((link) => (
-                                    <li key={link.id}>
-                                        Sent to {link.email_to} on{' '}
-                                        {link.sent_at} by{' '}
-                                        {link.sent_by ?? 'staff'} — expires{' '}
-                                        {link.expires_at}
-                                        {link.expired && ' (expired)'}
-                                        {link.last_viewed_at &&
-                                            ` — last viewed ${link.last_viewed_at}`}
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    )}
-                </Card>
-
-                <Card title="Internal notes (staff-only — never on the PDF)">
-                    <div className="mb-3 space-y-2">
-                        {notes.length === 0 && (
-                            <p className="text-sm text-muted-foreground">
-                                No notes yet.
-                            </p>
-                        )}
-                        {notes.map((note) => (
-                            <div
-                                key={note.id}
-                                className="rounded-md bg-muted/50 p-2 text-sm"
-                            >
-                                <p className="text-secondary-foreground">{note.note}</p>
-                                <p className="mt-1 text-xs text-muted-foreground">
-                                    {note.author} · {note.created_at}
+                            {errors.note && (
+                                <p className="mt-1 text-xs text-red-600">
+                                    {errors.note}
                                 </p>
-                            </div>
-                        ))}
+                            )}
+                        </Card>
                     </div>
-                    <div className="flex gap-2">
-                        <input
-                            className={inputCls}
-                            placeholder="Add an internal note…"
-                            aria-label="Add an internal note"
-                            value={noteForm.data.note}
-                            onChange={(e) =>
-                                noteForm.setData('note', e.target.value)
-                            }
-                            onKeyDown={(e) => {
-                                if (
-                                    e.key === 'Enter' &&
-                                    !noteForm.processing &&
-                                    noteForm.data.note.trim() !== ''
-                                ) {
-                                    noteForm.post(`${baseUrl}/notes`, {
-                                        preserveScroll: true,
-                                        onSuccess: () => noteForm.reset(),
-                                    });
-                                }
-                            }}
+
+                    <aside className="w-full shrink-0 lg:sticky lg:top-20 lg:w-[330px]">
+                        <ReviewSummarySidebar
+                            review={review}
+                            score={score}
+                            levels={levels}
+                            suggestedFinalLevelLabel={suggestedFinalLevelLabel}
+                            levelConfirmed={levelConfirmed}
+                            summaryApproved={summaryApproved}
+                            finalApprovalDone={finalApprovalDone}
+                            isMinor={candidate.is_minor}
+                            guardianConsentConfirmed={review.flags.includes(
+                                'guardian_consent_confirmed',
+                            )}
                         />
-                        <button
-                            type="button"
-                            className={btnSecondary}
-                            disabled={noteForm.processing}
-                            onClick={() =>
-                                noteForm.post(`${baseUrl}/notes`, {
-                                    preserveScroll: true,
-                                    onSuccess: () => noteForm.reset(),
-                                })
-                            }
-                        >
-                            Add note
-                        </button>
-                    </div>
-                    {errors.note && (
-                        <p className="mt-1 text-xs text-red-600">
-                            {errors.note}
-                        </p>
-                    )}
-                </Card>
+                    </aside>
+                </div>
             </div>
         </GlcLayout>
     );

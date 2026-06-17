@@ -8,6 +8,7 @@ use App\Models\Glc\AuditLog;
 use App\Models\Glc\CurriculumDocument;
 use App\Models\Setting;
 use App\Models\User;
+use App\Services\Glc\Admin\PlacementScoringSettings;
 use App\Services\Glc\Admin\TutorOperationalSettings;
 
 beforeEach(function (): void {
@@ -23,6 +24,26 @@ function defaultTutorOperationalPayload(): array
         'rotation_summarize_pairs' => $defaults['rotation_summarize_pairs'],
         'violation_notification_threshold' => $defaults['violation_notification_threshold'],
         'violation_notification_window_days' => $defaults['violation_notification_window_days'],
+    ];
+}
+
+function defaultPlacementScoringPayload(): array
+{
+    $defaults = app(PlacementScoringSettings::class)->defaults();
+
+    return [
+        'section_weights' => $defaults['section_weights'],
+        'level_band_minimums' => $defaults['level_band_minimums'],
+        'variance_flag_threshold' => $defaults['variance_flag_threshold'],
+    ];
+}
+
+function defaultSettingsPayload(array $limits): array
+{
+    return [
+        'section_time_limits' => $limits,
+        'tutor_operational' => defaultTutorOperationalPayload(),
+        'placement_scoring' => defaultPlacementScoringPayload(),
     ];
 }
 
@@ -49,7 +70,9 @@ it('shows config defaults as effective values when no setting exists', function 
             ->where('defaults.reading', 900)
             ->where('effective.reading', 900)
             ->where('bounds.min', 60)
-            ->where('bounds.max', 7200));
+            ->where('bounds.max', 7200)
+            ->has('placementScoring.defaults.section_weights', 5)
+            ->where('placementScoring.effective.variance_flag_threshold', 30));
 });
 
 it('summarizes AI Tutor material health by lifecycle state', function (): void {
@@ -117,6 +140,7 @@ it('updates section time limits within bounds and audits the change', function (
         ->put(route('admin.settings.update'), [
             'section_time_limits' => $limits,
             'tutor_operational' => $tutorOperational,
+            'placement_scoring' => defaultPlacementScoringPayload(),
         ])
         ->assertRedirectToRoute('admin.settings.edit');
 
@@ -139,16 +163,13 @@ it('rejects limits outside the 60..7200 second bounds', function (int $reading):
     $admin = User::factory()->admin()->create();
 
     $this->actingAs($admin)
-        ->put(route('admin.settings.update'), [
-            'section_time_limits' => [
-                'reading' => $reading,
-                'grammar_vocabulary' => 720,
-                'listening' => 480,
-                'writing' => 1800,
-                'speaking' => 300,
-            ],
-            'tutor_operational' => defaultTutorOperationalPayload(),
-        ])
+        ->put(route('admin.settings.update'), defaultSettingsPayload([
+            'reading' => $reading,
+            'grammar_vocabulary' => 720,
+            'listening' => 480,
+            'writing' => 1800,
+            'speaking' => 300,
+        ]))
         ->assertSessionHasErrors('section_time_limits.reading');
 
     expect(Setting::get(SettingKey::GlcSectionTimeLimits))->toBeNull();
@@ -161,6 +182,7 @@ it('requires every section limit', function (): void {
         ->put(route('admin.settings.update'), [
             'section_time_limits' => ['reading' => 600],
             'tutor_operational' => defaultTutorOperationalPayload(),
+            'placement_scoring' => defaultPlacementScoringPayload(),
         ])
         ->assertSessionHasErrors([
             'section_time_limits.grammar_vocabulary',
@@ -170,20 +192,84 @@ it('requires every section limit', function (): void {
         ]);
 });
 
+it('stores configurable placement scoring settings and audits the change', function (): void {
+    $admin = User::factory()->admin()->create();
+
+    $placementScoring = [
+        'section_weights' => [
+            'reading' => 0.25,
+            'grammar_vocabulary' => 0.25,
+            'listening' => 0.20,
+            'writing' => 0.15,
+            'speaking' => 0.15,
+        ],
+        'level_band_minimums' => [
+            'beginner' => 12.0,
+            'elementary' => 28.0,
+            'pre_intermediate' => 44.0,
+            'intermediate' => 58.0,
+            'upper_intermediate' => 72.0,
+            'advanced' => 88.0,
+        ],
+        'variance_flag_threshold' => 25.0,
+    ];
+
+    $this->actingAs($admin)
+        ->put(route('admin.settings.update'), array_merge(defaultSettingsPayload([
+            'reading' => 600,
+            'grammar_vocabulary' => 720,
+            'listening' => 480,
+            'writing' => 1800,
+            'speaking' => 300,
+        ]), ['placement_scoring' => $placementScoring]))
+        ->assertRedirectToRoute('admin.settings.edit');
+
+    $stored = json_decode((string) Setting::get(SettingKey::GlcPlacementScoringSettings), true);
+
+    expect($stored['section_weights']['reading'])->toBe(0.25)
+        ->and($stored['variance_flag_threshold'])->toBe(25);
+
+    $this->actingAs($admin)
+        ->get(route('admin.settings.edit'))
+        ->assertInertia(fn ($page) => $page
+            ->where('placementScoring.effective.section_weights.reading', 0.25)
+            ->where('placementScoring.effective.variance_flag_threshold', 25));
+
+    $log = AuditLog::query()->where('action', AuditAction::SettingsUpdated)->latest('id')->firstOrFail();
+
+    expect($log->details['placement_scoring']['section_weights']['reading'])->toBe(0.25);
+});
+
+it('rejects placement scoring weights that do not add up to one hundred percent', function (): void {
+    $admin = User::factory()->admin()->create();
+
+    $payload = defaultPlacementScoringPayload();
+    $payload['section_weights']['speaking'] = 0.10;
+
+    $this->actingAs($admin)
+        ->put(route('admin.settings.update'), array_merge(defaultSettingsPayload([
+            'reading' => 600,
+            'grammar_vocabulary' => 720,
+            'listening' => 480,
+            'writing' => 1800,
+            'speaking' => 300,
+        ]), ['placement_scoring' => $payload]))
+        ->assertSessionHasErrors('placement_scoring.section_weights');
+
+    expect(Setting::get(SettingKey::GlcPlacementScoringSettings))->toBeNull();
+});
+
 it('accepts the boundary values 60 and 7200', function (): void {
     $admin = User::factory()->admin()->create();
 
     $this->actingAs($admin)
-        ->put(route('admin.settings.update'), [
-            'section_time_limits' => [
-                'reading' => 60,
-                'grammar_vocabulary' => 7200,
-                'listening' => 600,
-                'writing' => 1500,
-                'speaking' => 480,
-            ],
-            'tutor_operational' => defaultTutorOperationalPayload(),
-        ])
+        ->put(route('admin.settings.update'), defaultSettingsPayload([
+            'reading' => 60,
+            'grammar_vocabulary' => 7200,
+            'listening' => 600,
+            'writing' => 1500,
+            'speaking' => 480,
+        ]))
         ->assertSessionHasNoErrors();
 
     $stored = json_decode((string) Setting::get(SettingKey::GlcSectionTimeLimits), true);

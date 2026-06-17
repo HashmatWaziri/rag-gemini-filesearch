@@ -1,13 +1,17 @@
 import FinishSection from '../components/finish-section';
 import McqList from '../components/mcq-list';
 import SectionShell from '../components/section-shell';
-import { type McqQuestion, type SectionPageProps } from '../lib/types';
+import {
+    type McqQuestion,
+    type ObjectiveAnswers,
+    type SectionPageProps,
+} from '../lib/types';
 import { useObjectiveAnswers } from '../lib/use-objective-answers';
 import { useUnansweredReview } from '../lib/use-unanswered-review';
 
 interface GrammarVocabularyProps extends SectionPageProps {
     questions: McqQuestion[];
-    answers: Record<number, number>;
+    answers: ObjectiveAnswers;
 }
 
 export default function GrammarVocabulary({

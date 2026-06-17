@@ -43,6 +43,7 @@ it('renders the catalog, selections, and key status for an admin', function (): 
             ->has('tasks.speaking_transcription.selection')
             ->has('tasks.tutor_chat')
             ->has('tasks.tutor_writing')
+            ->has('tasks.tutor_progress')
             ->where('pricing_retrieved_at', config('glc-ai.pricing_retrieved_at'))
         );
 });

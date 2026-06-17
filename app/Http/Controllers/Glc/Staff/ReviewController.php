@@ -15,6 +15,7 @@ use App\Models\Glc\PlacementResultLink;
 use App\Models\Glc\PlacementReview;
 use App\Models\Glc\PlacementReviewNote;
 use App\Models\User;
+use App\Services\Glc\Admin\PlacementScoringSettings;
 use App\Services\Glc\Admin\SpeakingEvaluationGuidelines;
 use App\Services\Glc\Admin\WritingEvaluationGuidelines;
 use App\Services\Glc\Ai\PlacementAiSettings;
@@ -34,6 +35,7 @@ final readonly class ReviewController
         WritingEvaluationGuidelines $guidelines,
         SpeakingEvaluationGuidelines $speakingGuidelines,
         PlacementAiSettings $aiSettings,
+        PlacementScoringSettings $scoringSettings,
     ): Response {
         $this->authorizeAccess($review, $user);
 
@@ -63,7 +65,7 @@ final readonly class ReviewController
             }
 
             $pct = $score?->section_scores[$section->value] ?? null;
-            $suggestedSkillLevels[$section->value] = is_numeric($pct) ? GlcLevel::fromComposite((float) $pct)->value : null;
+            $suggestedSkillLevels[$section->value] = is_numeric($pct) ? $scoringSettings->levelFromComposite((float) $pct)->value : null;
         }
 
         $supervises = $user->role !== UserRole::Teacher;
@@ -214,13 +216,18 @@ final readonly class ReviewController
         $question = function (PlacementItem $item) use ($answersByItem): array {
             $answer = $answersByItem->get($item->id);
             $selected = $answer?->response['selected'] ?? null;
+            $isGapFill = ($item->settings['format'] ?? null) === 'gap_fill';
+            $text = $answer?->response['text'] ?? null;
 
             return [
                 'id' => $item->id,
                 'body' => $item->body,
+                'format' => $isGapFill ? 'gap_fill' : 'mcq',
                 'options' => $item->options,
                 'correct_option' => $item->correct_option,
                 'selected' => is_numeric($selected) ? (int) $selected : null,
+                'answer_text' => $isGapFill && is_string($text) ? $text : null,
+                'accepted_answers' => $isGapFill ? ($item->settings['accepted_answers'] ?? []) : null,
                 'is_correct' => $answer?->is_correct,
             ];
         };

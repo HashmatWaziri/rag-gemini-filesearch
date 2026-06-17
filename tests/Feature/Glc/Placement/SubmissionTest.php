@@ -174,7 +174,8 @@ it('never exposes correct options, scores, or levels in any candidate page paylo
         $attempt = glcStartedAttempt($section);
         glcSeedReading(passages: 1, questionsPerPassage: 2);
         glcSeedGrammarVocabulary(2);
-        glcSeedListening(clips: 1, questionsPerClip: 2);
+        ['clips' => $clips] = glcSeedListening(clips: 1, questionsPerClip: 2);
+        glcSeedGapFillQuestion($clips[0]);
         glcSeedWritingPrompt();
         glcSeedSpeakingPrompt();
 

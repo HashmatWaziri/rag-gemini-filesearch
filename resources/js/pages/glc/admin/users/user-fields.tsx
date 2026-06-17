@@ -1,11 +1,5 @@
+import { MetronicSelect } from '@/components/glc/metronic-select';
 import { Input } from '@/components/ui/input';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import { Field, type Option } from '../components';
 
 export interface UserFormData {
@@ -104,22 +98,18 @@ export function UserFields({
                     error={errors.role}
                     hint="Each account has exactly one role."
                 >
-                    <Select
-                        value={data.role || undefined}
-                        onValueChange={(value) => setData('role', value)}
-                        required
-                    >
-                        <SelectTrigger id={`${idPrefix}-role`}>
-                            <SelectValue placeholder="Select a role" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {roles.map((role) => (
-                                <SelectItem key={role.value} value={role.value}>
-                                    {role.label}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                    <MetronicSelect
+                        id={`${idPrefix}-role`}
+                        value={data.role || null}
+                        onChange={(value) => setData('role', value ?? '')}
+                        options={roles.map((role) => ({
+                            value: role.value,
+                            label: role.label,
+                        }))}
+                        placeholder="Select a role"
+                        hasError={!!errors.role}
+                        isSearchable={false}
+                    />
                 </Field>
 
                 <Field

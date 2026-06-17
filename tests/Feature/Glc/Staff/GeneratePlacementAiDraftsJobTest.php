@@ -214,8 +214,8 @@ it('judges the essay against the writing guidelines with the objective sections 
     runDraftsJob($attempt->id);
 
     WritingEvaluationAgent::assertPrompted(fn (AgentPrompt $prompt): bool => $prompt->contains('GLC writing evaluation guidelines')
-        && $prompt->contains('1. Grammar accuracy:')
-        && $prompt->contains('5. Task completion:'));
+        && $prompt->contains('1. Task achievement:')
+        && $prompt->contains('4. Grammatical range and accuracy:'));
 
     WritingEvaluationAgent::assertPrompted(fn (AgentPrompt $prompt): bool => $prompt->contains('do not let it override your assessment of the essay itself')
         && $prompt->contains('Reading — auto-scored from the question bank: 1/2 correct (50%)')

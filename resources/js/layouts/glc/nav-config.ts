@@ -25,6 +25,7 @@ const PLACEMENT: GlcNavItem[] = [
 ];
 
 const STUDENTS_TUTOR: GlcNavItem[] = [
+    { label: 'Tutor Setup', href: '/staff/tutor-setup' },
     { label: 'My Students', href: '/staff/students' },
     { label: 'Tutor Activity', href: '/staff/tutor' },
 ];

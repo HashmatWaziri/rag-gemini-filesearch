@@ -686,6 +686,31 @@ Teachers view full tutor chat history and writing submissions for **assigned** s
 
 ---
 
+### GLC-031 — Tutor usage-time, weak-area signals, and staff progress reports (Phase 2 add-on)
+
+**Type:** AFK  
+**Blocked by:** GLC-025  
+**Requirements:** Client brief "Track student usage and progress"; PRD Phase 2 optional add-on; ADR `docs/adr/0001-tutor-usage-time-heuristic.md`
+
+## What to build
+
+Behind `GLC_TUTOR_PROGRESS_ANALYTICS` feature flag: daily usage rollups (approximate active minutes from message gaps), weak-area aggregates from writing dimension scores and violation categories, and staff-triggered AI progress reports (`TutorProgressSummaryAgent`). Students never see analytics or progress reports.
+
+## Acceptance criteria
+
+- [ ] Usage rollups increment on student messages without blocking chat
+- [ ] Staff student detail shows weak-area signals when enough data exists
+- [ ] Supervisors/admins see cohort weak-area strip on Tutor Activity when flag enabled
+- [ ] Staff can queue a progress report; failure degrades gracefully without API key
+- [ ] Admin tutor export includes usage-daily and progress-reports JSON when flag enabled
+- [ ] Feature remains off by default until client signs Phase 2 scope
+
+## Blocked by
+
+- GLC-025
+
+---
+
 ### GLC-026 — Admin data export and staff audit logging
 
 **Type:** AFK  

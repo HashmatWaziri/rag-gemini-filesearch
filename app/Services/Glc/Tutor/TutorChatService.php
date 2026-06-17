@@ -45,6 +45,8 @@ final class TutorChatService
             'content' => $text,
         ]);
 
+        app(TutorUsageRecorder::class)->recordStudentMessage($userMessage);
+
         if ($conversation->title === null) {
             $conversation->title = Str::limit(mb_trim($text), 60);
         }

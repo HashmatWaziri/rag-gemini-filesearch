@@ -142,6 +142,26 @@ When an active tutor conversation exceeds 40 message pairs, the oldest 20 pairs
 are summarized to keep the working context manageable while preserving
 continuity. Full chat history remains stored and visible to staff.
 
+### Tutor usage
+
+Staff-visible engagement signals for an enrolled student: when they last used
+the AI Tutor, how many conversations they have held, and (when enabled) approximate
+active minutes derived from message activity. Tutor usage is never shown to
+students and is not the same as AI provider billing or token consumption.
+
+### Tutor progress
+
+Qualitative learning movement within the student's assigned tutor scope: topics
+touched in conversations, writing feedback trends, and guardrail violation
+patterns. Tutor progress is not a placement level, course grade, or student-facing
+scorecard.
+
+### Tutor progress report
+
+A staff-only AI-generated narrative summary of a student's recent tutor activity,
+writing submissions, and focus areas. Progress reports support teacher follow-up
+and are never shown to students or parents.
+
 ## Platform and compliance terms
 
 ### Guardian consent

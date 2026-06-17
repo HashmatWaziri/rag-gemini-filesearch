@@ -4,16 +4,21 @@ declare(strict_types=1);
 
 namespace App\Services\Glc\Review;
 
-use App\Enums\Glc\GlcLevel;
 use App\Enums\Glc\PlacementAiDraftStatus;
 use App\Enums\Glc\PlacementItemType;
 use App\Enums\Glc\PlacementSection;
 use App\Models\Glc\PlacementAttempt;
 use App\Models\Glc\PlacementItem;
 use App\Models\Glc\PlacementScore;
+use App\Services\Glc\Admin\PlacementScoringSettings;
 
 final class ScoringService
 {
+    public function __construct(
+        private readonly ObjectiveAnswerGrader $grader,
+        private readonly PlacementScoringSettings $scoringSettings,
+    ) {}
+
     public function scoreAttempt(PlacementAttempt $attempt): PlacementScore
     {
         $this->gradeObjectiveAnswers($attempt);
@@ -28,19 +33,17 @@ final class ScoringService
 
         $available = array_values(array_filter($sectionScores, fn (?float $value): bool => $value !== null));
 
-        $composite = $available === []
-            ? null
-            : round(array_sum($available) / count($available), 2);
+        $composite = $this->scoringSettings->compositeFromSectionScores($sectionScores);
 
         $varianceFlagged = count($available) >= 2
-            && (max($available) - min($available)) >= (float) config('glc.placement.variance_flag_threshold', 30.0);
+            && (max($available) - min($available)) >= $this->scoringSettings->varianceFlagThreshold();
 
         $score = PlacementScore::query()->updateOrCreate(
             ['placement_attempt_id' => $attempt->id],
             [
                 'section_scores' => $sectionScores,
                 'composite' => $composite,
-                'suggested_level' => $composite === null ? null : GlcLevel::fromComposite($composite),
+                'suggested_level' => $composite === null ? null : $this->scoringSettings->levelFromComposite($composite),
                 'variance_flagged' => $varianceFlagged,
                 'computed_at' => now(),
             ],
@@ -60,14 +63,11 @@ final class ScoringService
         foreach ($answers as $answer) {
             $item = $answer->item;
 
-            if (! $item instanceof PlacementItem || ! $item->isScoreable()) {
+            if (! $item instanceof PlacementItem || ! $this->grader->isGradable($item)) {
                 continue;
             }
 
-            $selected = $answer->response['selected'] ?? null;
-            $isCorrect = $selected !== null && (int) $selected === $item->correct_option;
-
-            $answer->update(['is_correct' => $isCorrect]);
+            $answer->update(['is_correct' => $this->grader->isCorrect($item, $answer->response)]);
         }
     }
 
@@ -77,7 +77,8 @@ final class ScoringService
             ->active()
             ->forSection($section)
             ->where('type', PlacementItemType::Question)
-            ->whereNotNull('correct_option')
+            ->get()
+            ->filter(fn (PlacementItem $item): bool => $this->grader->isGradable($item))
             ->pluck('id');
 
         if ($itemIds->isEmpty()) {

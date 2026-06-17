@@ -9,6 +9,7 @@ use App\Enums\Glc\PlacementAiDraftStatus;
 use App\Enums\Glc\PlacementSection;
 use App\Models\Glc\PlacementAiRecommendation;
 use App\Models\Glc\PlacementAttempt;
+use App\Services\Glc\Admin\PlacementScoringSettings;
 use App\Services\Glc\Admin\SpeakingEvaluationGuidelines;
 use App\Services\Glc\Admin\WritingEvaluationGuidelines;
 use App\Services\Glc\Ai\PlacementAiSettings;
@@ -24,6 +25,7 @@ final readonly class PlacementRecommendationService
         private WritingEvaluationGuidelines $writingGuidelines,
         private SpeakingEvaluationGuidelines $speakingGuidelines,
         private ObjectiveContextBuilder $objectiveContext,
+        private PlacementScoringSettings $scoringSettings,
     ) {}
 
     public function recommend(PlacementAttempt $attempt): PlacementAiRecommendation
@@ -84,23 +86,7 @@ final readonly class PlacementRecommendationService
 
     private function levelGuide(): string
     {
-        $bands = [
-            GlcLevel::Starter->value => '0-14%',
-            GlcLevel::Beginner->value => '15-29%',
-            GlcLevel::Elementary->value => '30-44%',
-            GlcLevel::PreIntermediate->value => '45-59%',
-            GlcLevel::Intermediate->value => '60-74%',
-            GlcLevel::UpperIntermediate->value => '75-89%',
-            GlcLevel::Advanced->value => '90-100%',
-        ];
-
-        $lines = [];
-
-        foreach (GlcLevel::cases() as $level) {
-            $lines[] = sprintf('- %s (%s): approx. %s', $level->label(), $level->value, $bands[$level->value]);
-        }
-
-        return implode("\n", $lines);
+        return $this->scoringSettings->levelGuide();
     }
 
     private function draftBlock(PlacementAttempt $attempt, PlacementSection $section): string

@@ -14,17 +14,53 @@ enum GlcLevel: string
     case UpperIntermediate = 'upper_intermediate';
     case Advanced = 'advanced';
 
-    public static function fromComposite(float $percentage): self
+    /**
+     * @param  array<string, float>|null  $bandMinimums
+     */
+    public static function fromComposite(float $percentage, ?array $bandMinimums = null): self
     {
-        return match (true) {
-            $percentage < 15.0 => self::Starter,
-            $percentage < 30.0 => self::Beginner,
-            $percentage < 45.0 => self::Elementary,
-            $percentage < 60.0 => self::PreIntermediate,
-            $percentage < 75.0 => self::Intermediate,
-            $percentage < 90.0 => self::UpperIntermediate,
-            default => self::Advanced,
-        };
+        $minimums = $bandMinimums ?? self::defaultBandMinimums();
+
+        $ordered = [
+            self::Advanced,
+            self::UpperIntermediate,
+            self::Intermediate,
+            self::PreIntermediate,
+            self::Elementary,
+            self::Beginner,
+        ];
+
+        foreach ($ordered as $level) {
+            if ($percentage >= ($minimums[$level->value] ?? self::fallbackMinimum($level))) {
+                return $level;
+            }
+        }
+
+        return self::Starter;
+    }
+
+    /**
+     * @return array<string, float>
+     */
+    public static function defaultBandMinimums(): array
+    {
+        $minimums = [];
+
+        foreach ([
+            self::Beginner,
+            self::Elementary,
+            self::PreIntermediate,
+            self::Intermediate,
+            self::UpperIntermediate,
+            self::Advanced,
+        ] as $level) {
+            $minimums[$level->value] = (float) config(
+                'glc.placement.level_band_minimums.'.$level->value,
+                self::fallbackMinimum($level),
+            );
+        }
+
+        return $minimums;
     }
 
     public function label(): string
@@ -50,6 +86,19 @@ enum GlcLevel: string
             self::Intermediate => 5,
             self::UpperIntermediate => 6,
             self::Advanced => 7,
+        };
+    }
+
+    private static function fallbackMinimum(self $level): float
+    {
+        return match ($level) {
+            self::Beginner => 15.0,
+            self::Elementary => 30.0,
+            self::PreIntermediate => 45.0,
+            self::Intermediate => 60.0,
+            self::UpperIntermediate => 75.0,
+            self::Advanced => 90.0,
+            self::Starter => 0.0,
         };
     }
 }

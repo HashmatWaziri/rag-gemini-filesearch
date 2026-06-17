@@ -1,12 +1,6 @@
 import { GlcDataTableCard, GlcSearchInput } from '@/components/glc';
+import { MetronicSelect } from '@/components/glc/metronic-select';
 import { Button } from '@/components/ui/button';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import {
     Table,
     TableBody,
@@ -149,32 +143,20 @@ export default function AccessCodesIndex({
                             aria-label="Search codes"
                             inputClassName="sm:w-52"
                         />
-                        <Select
-                            value={filters.status ?? 'all'}
-                            onValueChange={(value) =>
-                                applyFilters({
-                                    status: value === 'all' ? undefined : value,
-                                })
+                        <MetronicSelect
+                            className="w-40"
+                            aria-label="Filter by status"
+                            value={filters.status}
+                            onChange={(value) =>
+                                applyFilters({ status: value ?? undefined })
                             }
-                        >
-                            <SelectTrigger
-                                className="w-40"
-                                aria-label="Filter by status"
-                            >
-                                <SelectValue placeholder="All statuses" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All statuses</SelectItem>
-                                {statuses.map((option) => (
-                                    <SelectItem
-                                        key={option.value}
-                                        value={option.value}
-                                    >
-                                        {option.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                            options={statuses.map((option) => ({
+                                value: option.value,
+                                label: option.label,
+                            }))}
+                            placeholder="All statuses"
+                            isSearchable={false}
+                        />
                         <Button type="submit" variant="outline">
                             Search
                         </Button>

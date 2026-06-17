@@ -17,6 +17,8 @@ use App\Models\Glc\PlacementScore;
 use App\Models\Glc\StudentAssignment;
 use App\Models\Glc\TutorConversation;
 use App\Models\Glc\TutorMessage;
+use App\Models\Glc\TutorProgressReport;
+use App\Models\Glc\TutorUsageDaily;
 use App\Models\Glc\TutorViolation;
 use App\Models\Glc\WritingSubmission;
 use App\Models\User;
@@ -151,6 +153,11 @@ final class DataExporter
         $zip->addFromString('tutor/messages.json', $this->toJson(TutorMessage::query()->orderBy('id')->get()->toArray()));
         $zip->addFromString('tutor/violations.json', $this->toJson(TutorViolation::query()->orderBy('id')->get()->toArray()));
         $zip->addFromString('tutor/writing-submissions.json', $this->toJson(WritingSubmission::query()->orderBy('id')->get()->toArray()));
+
+        if (config('glc.tutor.progress_analytics_enabled', false)) {
+            $zip->addFromString('tutor/usage-daily.json', $this->toJson(TutorUsageDaily::query()->orderBy('id')->get()->toArray()));
+            $zip->addFromString('tutor/progress-reports.json', $this->toJson(TutorProgressReport::query()->orderBy('id')->get()->toArray()));
+        }
     }
 
     private function addAudit(ZipArchive $zip): void

@@ -62,7 +62,24 @@ return [
         'minimum_age' => 12, // under-12 candidates are blocked
 
         // Scoring: equal 20% weight per section; seven GLC levels.
-        'section_weight' => 0.20,
+        'section_weights' => [
+            'reading' => 0.20,
+            'grammar_vocabulary' => 0.20,
+            'listening' => 0.20,
+            'writing' => 0.20,
+            'speaking' => 0.20,
+        ],
+
+        // Minimum composite percentage for each GLC level (Starter is below Beginner).
+        'level_band_minimums' => [
+            'beginner' => 15.0,
+            'elementary' => 30.0,
+            'pre_intermediate' => 45.0,
+            'intermediate' => 60.0,
+            'upper_intermediate' => 75.0,
+            'advanced' => 90.0,
+        ],
+
         'variance_flag_threshold' => 30.0, // pct-point spread that flags supervisor review
 
         // Result delivery.
@@ -91,6 +108,12 @@ return [
         // Persistent direct-answer seeking notification threshold.
         'violation_notification_threshold' => 3,
         'violation_notification_window_days' => 7,
+        // Staff activity roster: violations within this window surface as "needs attention".
+        'activity_attention_window_days' => 30,
+        // Phase 2 analytics (usage-time rollups, weak areas, AI progress reports).
+        'progress_analytics_enabled' => env('GLC_TUTOR_PROGRESS_ANALYTICS', false),
+        'usage_active_gap_minutes' => 5,
+        'usage_daily_active_minutes_cap' => 120,
     ],
 
     'ai_drafts' => [

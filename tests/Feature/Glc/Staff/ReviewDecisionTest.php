@@ -99,9 +99,43 @@ it('exposes the AI provisional scoring panel props: objective counts, guideline 
             ->where('objective_breakdown.reading.total', 2)
             ->where('objective_breakdown.reading.percentage', 50)
             ->where('writing_guidelines.customized', false)
-            ->where('writing_guidelines.titles.0', 'Grammar accuracy')
+            ->where('writing_guidelines.titles.0', 'Task achievement')
             ->where('ai_models.writing.provider', 'Google Gemini')
             ->where('ai_models.speaking.model', 'Gemini 2.5 Flash (audio)')
+        );
+});
+
+it('includes gap fill answer data in the review question payload', function (): void {
+    $review = PlacementReview::factory()->create();
+
+    $clip = PlacementItem::factory()->audioClip()->create(['media_path' => null]);
+    $gapFill = PlacementItem::factory()->create([
+        'section' => PlacementSection::Listening,
+        'type' => PlacementItemType::Question,
+        'parent_id' => $clip->id,
+        'options' => null,
+        'correct_option' => null,
+        'settings' => ['format' => 'gap_fill', 'accepted_answers' => ['9', 'nine']],
+    ]);
+
+    PlacementAnswer::factory()->create([
+        'placement_attempt_id' => $review->placement_attempt_id,
+        'placement_item_id' => $gapFill->id,
+        'response' => ['text' => 'Nine'],
+        'is_correct' => true,
+    ]);
+
+    actingAs(User::factory()->academicSupervisor()->create())
+        ->get(route('staff.review.show', $review))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('sections.listening.0.questions.0.format', 'gap_fill')
+            ->where('sections.listening.0.questions.0.answer_text', 'Nine')
+            ->where('sections.listening.0.questions.0.accepted_answers', ['9', 'nine'])
+            ->where('sections.listening.0.questions.0.is_correct', true)
+            ->where('sections.listening.0.questions.0.options', null)
+            ->where('objective_breakdown.listening.correct', 1)
+            ->where('objective_breakdown.listening.total', 1)
         );
 });
 

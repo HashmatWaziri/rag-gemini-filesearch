@@ -21,6 +21,7 @@ final readonly class AiModelSettingsController
         PlacementAiSettings::TASK_SPEAKING => 'Speaking transcription',
         PlacementAiSettings::TASK_TUTOR_CHAT => 'AI Tutor chat',
         PlacementAiSettings::TASK_TUTOR_WRITING => 'AI Tutor writing correction',
+        PlacementAiSettings::TASK_TUTOR_PROGRESS => 'AI Tutor progress reports',
     ];
 
     public function __construct(

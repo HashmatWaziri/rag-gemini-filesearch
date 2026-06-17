@@ -58,10 +58,65 @@ it('reports last active date and conversation count per student', function (): v
         ->get(route('staff.tutor.index'))
         ->assertInertia(fn ($page) => $page
             ->where('students.0.conversation_count', 2)
+            ->where('students.0.writing_submission_count', 0)
+            ->where('students.0.recent_violations_count', 0)
+            ->where('students.0.needs_attention', false)
+            ->where('progressAnalyticsEnabled', false)
             ->where(
                 'students.0.last_active_at',
                 fn ($value): bool => str_starts_with((string) $value, now()->subDay()->format('Y-m-d')),
             ));
+});
+
+it('includes assignment and attention signals on the roster', function (): void {
+    $teacher = User::factory()->teacher()->create();
+    $student = User::factory()->student()->create();
+    $teacher->assignedStudents()->attach($student);
+
+    $course = App\Models\Glc\Course::factory()->create(['name' => 'Beehive']);
+    $level = App\Models\Glc\CourseLevel::factory()->for($course)->create(['name' => 'Level 1']);
+    $unit = App\Models\Glc\CourseUnit::factory()->for($level, 'level')->create(['name' => 'Unit 3']);
+
+    App\Models\Glc\StudentAssignment::factory()->create([
+        'student_id' => $student->id,
+        'course_id' => $course->id,
+        'course_level_id' => $level->id,
+        'course_unit_id' => $unit->id,
+    ]);
+
+    TutorViolation::factory()->create([
+        'user_id' => $student->id,
+        'occurred_at' => now()->subDay(),
+    ]);
+
+    actingAs($teacher)
+        ->get(route('staff.tutor.index', ['sort' => 'violations']))
+        ->assertInertia(fn ($page) => $page
+            ->where('students.0.assignment.course', 'Beehive')
+            ->where('students.0.recent_violations_count', 1)
+            ->where('students.0.needs_attention', true)
+            ->where('filters.sort', 'violations'));
+});
+
+it('filters inactive students from the roster', function (): void {
+    $supervisor = User::factory()->academicSupervisor()->create();
+    $active = User::factory()->student()->create();
+    $inactive = User::factory()->student()->create();
+
+    TutorConversation::factory()->create([
+        'user_id' => $active->id,
+        'last_activity_at' => now()->subDay(),
+    ]);
+    TutorConversation::factory()->create([
+        'user_id' => $inactive->id,
+        'last_activity_at' => now()->subDays(20),
+    ]);
+
+    actingAs($supervisor)
+        ->get(route('staff.tutor.index', ['inactive_days' => 14]))
+        ->assertInertia(fn ($page) => $page
+            ->has('students', 1)
+            ->where('students.0.id', $inactive->id));
 });
 
 it('shows a student detail with conversations, writing, violations, and activity to the linked teacher', function (): void {
@@ -83,6 +138,9 @@ it('shows a student detail with conversations, writing, violations, and activity
             ->component('glc/tutor/staff/student')
             ->where('student.id', $student->id)
             ->where('activity.conversation_count', 1)
+            ->where('activity.writing_submission_count', 1)
+            ->where('progressAnalyticsEnabled', false)
+            ->where('assignment', null)
             ->has('conversations', 1)
             ->where('conversations.0.message_count', 2)
             ->has('writingSubmissions', 1)

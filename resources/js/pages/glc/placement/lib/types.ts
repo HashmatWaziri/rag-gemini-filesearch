@@ -27,6 +27,27 @@ export interface McqQuestion {
     position: number;
     body: string | null;
     options: string[];
+    format: 'mcq' | 'gap_fill';
+}
+
+/**
+ * Saved objective answer: option index for MCQ, typed text for gap fill.
+ */
+export type ObjectiveAnswerValue = number | string;
+
+export type ObjectiveAnswers = Record<number, ObjectiveAnswerValue>;
+
+/**
+ * A question counts as answered once it has a saved option index (MCQ)
+ * or a non-empty saved text (gap fill).
+ */
+export function isAnsweredValue(
+    value: ObjectiveAnswerValue | undefined,
+): boolean {
+    return (
+        typeof value === 'number' ||
+        (typeof value === 'string' && value.trim() !== '')
+    );
 }
 
 export interface SectionPageProps {

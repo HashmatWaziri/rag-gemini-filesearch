@@ -1,12 +1,6 @@
 import { GlcDataTableCard, GlcSearchInput } from '@/components/glc';
+import { MetronicSelect } from '@/components/glc/metronic-select';
 import { Button } from '@/components/ui/button';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import {
     Table,
     TableBody,
@@ -181,32 +175,20 @@ export default function UsersIndex({
                             aria-label="Search users"
                             inputClassName="sm:w-52"
                         />
-                        <Select
-                            value={filters.role ?? 'all'}
-                            onValueChange={(value) =>
-                                applyFilters({
-                                    role: value === 'all' ? undefined : value,
-                                })
+                        <MetronicSelect
+                            className="w-40"
+                            aria-label="Filter by role"
+                            value={filters.role}
+                            onChange={(value) =>
+                                applyFilters({ role: value ?? undefined })
                             }
-                        >
-                            <SelectTrigger
-                                className="w-40"
-                                aria-label="Filter by role"
-                            >
-                                <SelectValue placeholder="All roles" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All roles</SelectItem>
-                                {roles.map((role) => (
-                                    <SelectItem
-                                        key={role.value}
-                                        value={role.value}
-                                    >
-                                        {role.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                            options={roles.map((role) => ({
+                                value: role.value,
+                                label: role.label,
+                            }))}
+                            placeholder="All roles"
+                            isSearchable={false}
+                        />
                         <Button type="submit" variant="outline">
                             Search
                         </Button>

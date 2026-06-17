@@ -1,11 +1,5 @@
 import { GlcDataTableCard } from '@/components/glc';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
+import { MetronicSelect } from '@/components/glc/metronic-select';
 import {
     Table,
     TableBody,
@@ -150,39 +144,29 @@ export default function CurriculumIndex({
                             <div className="flex flex-wrap items-end gap-3">
                                 <div className="w-full sm:w-48">
                                     <label className={labelClass}>Status</label>
-                                    <Select
-                                        value={
-                                            currentFilters.state || '__all__'
-                                        }
-                                        onValueChange={(value) =>
+                                    <MetronicSelect
+                                        value={currentFilters.state || null}
+                                        onChange={(value) =>
                                             applyFilters({
                                                 ...currentFilters,
-                                                state:
-                                                    value === '__all__'
-                                                        ? ''
-                                                        : value,
+                                                state: value ?? '',
                                             })
                                         }
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="All statuses" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="__all__">
-                                                All statuses
-                                            </SelectItem>
-                                            {documentStateFilterOptions.map(
-                                                ([value, label]) => (
-                                                    <SelectItem
-                                                        key={value}
-                                                        value={value}
-                                                    >
-                                                        {label}
-                                                    </SelectItem>
-                                                ),
-                                            )}
-                                        </SelectContent>
-                                    </Select>
+                                        options={[
+                                            {
+                                                value: '',
+                                                label: 'All statuses',
+                                            },
+                                            ...documentStateFilterOptions.map(
+                                                ([value, label]) => ({
+                                                    value,
+                                                    label,
+                                                }),
+                                            ),
+                                        ]}
+                                        placeholder="All statuses"
+                                        isSearchable={false}
+                                    />
                                 </div>
                                 <button
                                     type="button"

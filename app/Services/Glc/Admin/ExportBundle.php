@@ -61,6 +61,8 @@ enum ExportBundle: string
                 'tutor/messages.json',
                 'tutor/violations.json',
                 'tutor/writing-submissions.json',
+                'tutor/usage-daily.json',
+                'tutor/progress-reports.json',
             ],
             self::Audit => [
                 'audit/audit-log.csv',

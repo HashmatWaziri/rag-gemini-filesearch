@@ -113,16 +113,132 @@ it('creates a child MCQ under a passage', function (): void {
         ->and($passage->children()->first()->correct_option)->toBe(0);
 });
 
-it('rejects questions without four options or a correct option', function (): void {
+it('rejects questions missing options or the correct option', function (array $payload, string $errorField): void {
     actingAs(User::factory()->admin()->create())
-        ->post(route('staff.content.items.store'), [
+        ->post(route('staff.content.items.store'), array_merge([
             'section' => 'grammar_vocabulary',
             'type' => 'question',
             'body' => 'Incomplete question',
-            'options' => ['One', 'Two'],
+        ], $payload))
+        ->assertSessionHasErrors($errorField);
+})->with([
+    'a single option' => [['options' => ['Only one'], 'correct_option' => 0], 'options'],
+    'five options' => [['options' => ['A', 'B', 'C', 'D', 'E'], 'correct_option' => 0], 'options'],
+    'no correct option' => [['options' => ['A', 'B', 'C', 'D']], 'options'],
+    'no options' => [['correct_option' => 0], 'options'],
+    'correct option outside the options' => [['options' => ['Yes', 'No'], 'correct_option' => 3], 'correct_option'],
+]);
+
+it('accepts a two-option true/false question', function (): void {
+    actingAs(User::factory()->academicSupervisor()->create())
+        ->post(route('staff.content.items.store'), [
+            'section' => 'grammar_vocabulary',
+            'type' => 'question',
+            'body' => '"Children" is the plural of "child".',
+            'options' => ['True', 'False'],
             'correct_option' => 0,
         ])
-        ->assertSessionHasErrors('options');
+        ->assertRedirect()
+        ->assertSessionHasNoErrors();
+
+    $question = PlacementItem::query()->where('body', 'like', '%plural%')->firstOrFail();
+
+    expect($question->options)->toBe(['True', 'False'])
+        ->and($question->correct_option)->toBe(0);
+});
+
+it('creates a gap fill listening question with staff-only accepted answers', function (): void {
+    $clip = PlacementItem::factory()->audioClip()->create();
+
+    actingAs(User::factory()->academicSupervisor()->create())
+        ->post(route('staff.content.items.store'), [
+            'section' => 'listening',
+            'type' => 'question',
+            'parent_id' => $clip->id,
+            'body' => 'The train leaves from Platform _____.',
+            'settings' => ['format' => 'gap_fill', 'accepted_answers' => ['9', 'nine']],
+        ])
+        ->assertRedirect()
+        ->assertSessionHasNoErrors();
+
+    $question = $clip->children()->firstOrFail();
+
+    expect($question->settings)->toBe(['format' => 'gap_fill', 'accepted_answers' => ['9', 'nine']])
+        ->and($question->options)->toBeNull()
+        ->and($question->correct_option)->toBeNull();
+});
+
+it('updates an existing listening MCQ into a gap fill question', function (): void {
+    $clip = PlacementItem::factory()->audioClip()->create();
+    $question = PlacementItem::factory()->create([
+        'section' => PlacementSection::Listening,
+        'parent_id' => $clip->id,
+    ]);
+
+    actingAs(User::factory()->academicSupervisor()->create())
+        ->put(route('staff.content.items.update', $question), [
+            'body' => 'The delayed train departs from Platform _____.',
+            'settings' => ['format' => 'gap_fill', 'accepted_answers' => ['9']],
+        ])
+        ->assertRedirect()
+        ->assertSessionHasNoErrors();
+
+    $question->refresh();
+
+    expect($question->settings['format'])->toBe('gap_fill')
+        ->and($question->settings['accepted_answers'])->toBe(['9'])
+        ->and($question->options)->toBeNull()
+        ->and($question->correct_option)->toBeNull();
+});
+
+it('rejects invalid gap fill questions', function (array $payload, string $errorField): void {
+    $clip = PlacementItem::factory()->audioClip()->create();
+
+    actingAs(User::factory()->admin()->create())
+        ->post(route('staff.content.items.store'), array_merge([
+            'section' => 'listening',
+            'type' => 'question',
+            'parent_id' => $clip->id,
+            'body' => 'The train leaves from Platform _____.',
+            'settings' => ['format' => 'gap_fill', 'accepted_answers' => ['9']],
+        ], $payload))
+        ->assertSessionHasErrors($errorField);
+})->with([
+    'missing accepted answers' => [['settings' => ['format' => 'gap_fill']], 'settings.accepted_answers'],
+    'empty accepted answers' => [['settings' => ['format' => 'gap_fill', 'accepted_answers' => []]], 'settings.accepted_answers'],
+    'too many accepted answers' => [['settings' => ['format' => 'gap_fill', 'accepted_answers' => array_fill(0, 11, 'x')]], 'settings.accepted_answers'],
+    'an over-long accepted answer' => [['settings' => ['format' => 'gap_fill', 'accepted_answers' => [str_repeat('a', 201)]]], 'settings.accepted_answers.0'],
+    'options set on a gap fill' => [['options' => ['A', 'B']], 'options'],
+    'correct_option set on a gap fill' => [['correct_option' => 0], 'options'],
+    'a body without a blank' => [['body' => 'No blank in this sentence.'], 'body'],
+    'an unknown format' => [['settings' => ['format' => 'cloze', 'accepted_answers' => ['9']]], 'settings.format'],
+]);
+
+it('restricts gap fill questions to the listening section', function (): void {
+    $passage = PlacementItem::factory()->passage()->create();
+
+    actingAs(User::factory()->admin()->create())
+        ->post(route('staff.content.items.store'), [
+            'section' => 'reading',
+            'type' => 'question',
+            'parent_id' => $passage->id,
+            'body' => 'The market opens every _____.',
+            'settings' => ['format' => 'gap_fill', 'accepted_answers' => ['friday']],
+        ])
+        ->assertSessionHasErrors('settings.format');
+});
+
+it('passes marking criteria for writing and speaking to the content page', function (): void {
+    actingAs(User::factory()->academicSupervisor()->create())
+        ->get(route('staff.content.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('criteria.writing.isCustomized', false)
+            ->where('criteria.writing.criteria.0.title', 'Task achievement')
+            ->where('criteria.writing.limits.max_criteria', 20)
+            ->where('criteria.speaking.criteria.0.title', 'Fluency and coherence')
+            ->has('criteria.speaking.defaults', 5)
+        );
 });
 
 it('rejects reading questions without a parent passage', function (): void {

@@ -21,6 +21,8 @@ final class PlacementAiSettings
 
     public const string TASK_TUTOR_WRITING = 'tutor_writing';
 
+    public const string TASK_TUTOR_PROGRESS = 'tutor_progress';
+
     /** @var list<string> */
     public const array TASKS = [
         self::TASK_WRITING,
@@ -28,6 +30,7 @@ final class PlacementAiSettings
         self::TASK_SPEAKING,
         self::TASK_TUTOR_CHAT,
         self::TASK_TUTOR_WRITING,
+        self::TASK_TUTOR_PROGRESS,
     ];
 
     /**

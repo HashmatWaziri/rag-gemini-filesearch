@@ -11,6 +11,17 @@ use App\Models\Glc\PlacementItem;
 
 final class PlacementContentService
 {
+    public const string FORMAT_MCQ = 'mcq';
+
+    public const string FORMAT_GAP_FILL = 'gap_fill';
+
+    public static function questionFormat(PlacementItem $question): string
+    {
+        $format = $question->settings['format'] ?? null;
+
+        return is_string($format) && $format !== '' ? $format : self::FORMAT_MCQ;
+    }
+
     public static function countWords(string $text): int
     {
         $words = preg_split('/\s+/u', mb_trim($text), -1, PREG_SPLIT_NO_EMPTY);
@@ -141,7 +152,7 @@ final class PlacementContentService
     }
 
     /**
-     * @return array<int, int>
+     * @return array<int, int|string>
      */
     public function savedSelections(PlacementAttempt $attempt, PlacementSection $section): array
     {
@@ -153,7 +164,13 @@ final class PlacementContentService
             ->mapWithKeys(function ($answer): array {
                 $selected = $answer->response['selected'] ?? null;
 
-                return is_int($selected) ? [$answer->placement_item_id => $selected] : [];
+                if (is_int($selected)) {
+                    return [$answer->placement_item_id => $selected];
+                }
+
+                $text = $answer->response['text'] ?? null;
+
+                return is_string($text) ? [$answer->placement_item_id => $text] : [];
             })
             ->all();
     }
@@ -168,6 +185,7 @@ final class PlacementContentService
             'position' => $question->position,
             'body' => $question->body,
             'options' => $question->options ?? [],
+            'format' => self::questionFormat($question),
         ];
     }
 }

@@ -5,12 +5,14 @@ declare(strict_types=1);
 use App\Enums\Glc\GlcLevel;
 use App\Enums\Glc\PlacementItemType;
 use App\Enums\Glc\PlacementSection;
+use App\Enums\SettingKey;
 use App\Models\Glc\PlacementAiDraft;
 use App\Models\Glc\PlacementAnswer;
 use App\Models\Glc\PlacementAttempt;
 use App\Models\Glc\PlacementItem;
 use App\Models\Glc\PlacementReview;
 use App\Models\Glc\PlacementScore;
+use App\Models\Setting;
 use App\Services\Glc\Review\ScoringService;
 
 function buildObjectiveSection(
@@ -150,6 +152,36 @@ it('does not flag variance below the configured threshold', function (): void {
     expect(app(ScoringService::class)->scoreAttempt($attempt)->variance_flagged)->toBeFalse();
 });
 
+it('uses custom section weights and level bands when scoring an attempt', function (): void {
+    Setting::set(SettingKey::GlcPlacementScoringSettings, json_encode([
+        'section_weights' => [
+            'reading' => 0.50,
+            'grammar_vocabulary' => 0.30,
+            'listening' => 0.10,
+            'writing' => 0.05,
+            'speaking' => 0.05,
+        ],
+        'level_band_minimums' => [
+            'beginner' => 10.0,
+            'elementary' => 25.0,
+            'pre_intermediate' => 40.0,
+            'intermediate' => 55.0,
+            'upper_intermediate' => 70.0,
+            'advanced' => 85.0,
+        ],
+    ]));
+
+    $attempt = PlacementAttempt::factory()->submitted()->create();
+
+    buildObjectiveSection($attempt, PlacementSection::Reading, total: 10, correct: 8);
+    buildObjectiveSection($attempt, PlacementSection::GrammarVocabulary, total: 10, correct: 6);
+
+    $score = app(ScoringService::class)->scoreAttempt($attempt);
+
+    expect((float) $score->composite)->toBe(72.5)
+        ->and($score->suggested_level)->toBe(GlcLevel::UpperIntermediate);
+});
+
 it('maps composites onto all seven GLC levels', function (float $composite, GlcLevel $expected): void {
     expect(GlcLevel::fromComposite($composite))->toBe($expected);
 })->with([
@@ -161,6 +193,86 @@ it('maps composites onto all seven GLC levels', function (float $composite, GlcL
     [80.0, GlcLevel::UpperIntermediate],
     [95.0, GlcLevel::Advanced],
 ]);
+
+function gapFillQuestion(array $acceptedAnswers): PlacementItem
+{
+    return PlacementItem::factory()->create([
+        'section' => PlacementSection::Listening,
+        'type' => PlacementItemType::Question,
+        'parent_id' => null,
+        'options' => null,
+        'correct_option' => null,
+        'settings' => ['format' => 'gap_fill', 'accepted_answers' => $acceptedAnswers],
+    ]);
+}
+
+it('grades gap fill answers against accepted answers ignoring case and extra whitespace', function (string $text, bool $expected): void {
+    $attempt = PlacementAttempt::factory()->submitted()->create();
+    $item = gapFillQuestion(['platform 9', 'nine']);
+
+    $answer = PlacementAnswer::factory()->create([
+        'placement_attempt_id' => $attempt->id,
+        'placement_item_id' => $item->id,
+        'response' => ['text' => $text],
+        'is_correct' => null,
+    ]);
+
+    app(ScoringService::class)->scoreAttempt($attempt);
+
+    expect($answer->refresh()->is_correct)->toBe($expected);
+})->with([
+    'exact match' => ['platform 9', true],
+    'different case' => ['Platform 9', true],
+    'surrounding and doubled internal whitespace' => ["  PLATFORM   9 \n", true],
+    'another accepted answer' => ['Nine', true],
+    'wrong answer' => ['platform 13', false],
+    'empty answer' => ['', false],
+]);
+
+it('counts gap fill items in the objective section percentage', function (): void {
+    $attempt = PlacementAttempt::factory()->submitted()->create();
+
+    buildObjectiveSection($attempt, PlacementSection::Listening, total: 3, correct: 3);
+
+    $answeredGapFill = gapFillQuestion(['nine']);
+    gapFillQuestion(['ten']);
+
+    PlacementAnswer::factory()->create([
+        'placement_attempt_id' => $attempt->id,
+        'placement_item_id' => $answeredGapFill->id,
+        'response' => ['text' => ' NINE '],
+        'is_correct' => null,
+    ]);
+
+    $score = app(ScoringService::class)->scoreAttempt($attempt);
+
+    expect((float) $score->section_scores['listening'])->toBe(80.0);
+});
+
+it('does not treat a gap fill without accepted answers as gradable', function (): void {
+    $attempt = PlacementAttempt::factory()->submitted()->create();
+
+    $broken = PlacementItem::factory()->create([
+        'section' => PlacementSection::Listening,
+        'type' => PlacementItemType::Question,
+        'parent_id' => null,
+        'options' => null,
+        'correct_option' => null,
+        'settings' => ['format' => 'gap_fill', 'accepted_answers' => []],
+    ]);
+
+    $answer = PlacementAnswer::factory()->create([
+        'placement_attempt_id' => $attempt->id,
+        'placement_item_id' => $broken->id,
+        'response' => ['text' => 'anything'],
+        'is_correct' => null,
+    ]);
+
+    $score = app(ScoringService::class)->scoreAttempt($attempt);
+
+    expect($answer->refresh()->is_correct)->toBeNull()
+        ->and($score->section_scores['listening'])->toBeNull();
+});
 
 it('is safely re-callable and upserts a single score row', function (): void {
     $attempt = PlacementAttempt::factory()->submitted()->create();

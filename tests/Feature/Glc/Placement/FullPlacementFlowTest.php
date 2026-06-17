@@ -133,6 +133,8 @@ it('runs the full placement flow from admin access code creation through submiss
             ->assertSuccessful();
     }
 
+    $gapFill = glcSeedGapFillQuestion($clips->first());
+
     $listeningQuestions = PlacementItem::query()
         ->active()
         ->forSection(PlacementSection::Listening)
@@ -140,11 +142,17 @@ it('runs the full placement flow from admin access code creation through submiss
         ->get();
 
     foreach ($listeningQuestions as $question) {
-        $this->withCookies($cookie)->postJson(route('placement.answers.store'), [
-            'item_id' => $question->id,
-            'selected' => 0,
-        ])->assertSuccessful();
+        $payload = ($question->settings['format'] ?? 'mcq') === 'gap_fill'
+            ? ['item_id' => $question->id, 'text' => 'seven']
+            : ['item_id' => $question->id, 'selected' => 0];
+
+        $this->withCookies($cookie)
+            ->postJson(route('placement.answers.store'), $payload)
+            ->assertSuccessful();
     }
+
+    expect($attempt->answers()->where('placement_item_id', $gapFill->id)->sole()->response)
+        ->toBe(['text' => 'seven']);
 
     $this->withCookies($cookie)
         ->post(route('placement.section.complete'), ['section' => PlacementSection::Listening->value])
